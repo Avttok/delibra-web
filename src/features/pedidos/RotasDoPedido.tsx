@@ -210,7 +210,7 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
         <div className="rota-previa-pag">
           <span className="rotulo">O motoboy que pegar recebe{previaPag ? " (prévia com as mudanças)" : ""}</span>
           {pag ? <ContaMotoboy calc={pag} /> : <p className="dica">Sem cálculo ainda.</p>}
-          {pag && r.valor != null && <p className="dica" style={{ margin: 0 }}>Gestor fica com {moeda(Math.max(0, Number(r.valor) - Number(pag.total) - Number(r.valor) * Number(cfg.dev_pct ?? 5) / 100))} · Dev {moeda(Number(r.valor) * Number(cfg.dev_pct ?? 5) / 100)}</p>}
+          {pag && r.valor != null && <p className="dica" style={{ margin: 0 }}>Gestor fica com {moeda(Math.max(0, Number(r.valor) - Number(pag.total)))}</p>}
         </div>
       </div>
 

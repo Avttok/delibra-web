@@ -524,7 +524,7 @@ export function NovaCorrida({ onCriada, onVoltar }: { onCriada: (id: string) => 
             <summary>Divisão desta corrida</summary>
             <div className="grade-2">
               <label className="campo curto"><span>Motoboy (%)</span><input inputMode="decimal" placeholder="padrão" value={repasseManual} onChange={(e) => setRepasseManual(e.target.value)} /></label>
-              <label className="campo curto"><span>Dev (%)</span><input inputMode="decimal" placeholder="padrão" value={devManual} onChange={(e) => setDevManual(e.target.value)} /></label>
+              {conta.dev && <label className="campo curto"><span>Plataforma (%)</span><input inputMode="decimal" placeholder="padrão" value={devManual} onChange={(e) => setDevManual(e.target.value)} /></label>}
             </div>
             <p className="dica">Vazio = usa o do cliente ou o padrão. A gestão fica com o restante.</p>
           </details>

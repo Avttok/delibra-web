@@ -126,10 +126,9 @@ export const AJUDA: Partial<Record<Publico, Secao[]>> = {
           "Em Equipe, crie contas de motoboys e gestores, troque senhas, bloqueie ou exclua.",
           "No perfil de cada motoboy: registro, percursos, veículo, medalhas, regras próprias (como o repasse) e edição.",
         ] },
-        { id: "divisao", titulo: "Divisão da rota: motoboy, gestor e Dev", texto: [
+        { id: "divisao", titulo: "Divisão da rota: motoboy e gestor", texto: [
           "Em Configurações → Pagamento do motoboy, escolha o modelo. No Percentual, a Parte do motoboy na rota diz quanto ele leva (ex.: 40%) e o gestor fica com o resto.",
-          "Em De onde sai a parte do Dev, escolha: da parte do gestor (R$ 100: 40, 55 e 5), antes de dividir (Dev 5; 38 e 57) ou das duas partes (38, 57 e 5). Dá para mudar por cliente.",
-          "O motoboy nunca leva mais que a rota paga: o máximo é o valor da rota menos a parte do Dev. Vale no modelo por km, no percentual e com o ajuste da rota. Quando o teto corta, o cálculo mostra.",
+          "O motoboy nunca leva mais que a rota paga: o máximo é o valor da rota. Vale no modelo por km, no percentual e com o ajuste da rota. Quando o teto corta, o cálculo mostra.",
         ] },
         { id: "percursos", titulo: "Percursos e trajetos", texto: [
           "Os percursos ficam guardados: escolha Hoje, Ontem, Anteontem ou qualquer outro dia no calendário.",
@@ -148,7 +147,7 @@ export const AJUDA: Partial<Record<Publico, Secao[]>> = {
       titulo: "Finanças",
       artigos: [
         { id: "carteira", titulo: "Carteira, faturas e folha", texto: [
-          "Resumo: quanto entrou e a divisão entre motoboys, gestão e Dev no período.",
+          "Resumo: quanto entrou e a divisão entre motoboys e gestão no período.",
           "Faturas: gere, edite, emita e marque como pagas as faturas dos clientes no crédito.",
           "Folha: o holerite de cada motoboy, com ajustes de bônus ou desconto. Para o motoboy, os ajustes aparecem distribuídos nas rotas.",
           "Clientes, Extrato e PIX: o que cada cliente rendeu, cada rota com a divisão e as chaves PIX da equipe.",

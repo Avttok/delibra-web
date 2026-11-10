@@ -1,3 +1,7 @@
+"use client";
+
+import { useMarcaEmpresa } from "./marcaEmpresa";
+
 /**
  * Logo da Delibra: o D com as ondas de radar + o nome.
  * Desenhada em SVG com as cores do tema (var(--ouro) e var(--texto)), então segue
@@ -14,8 +18,20 @@ export function MarcaDelibra({ tamanho = 28 }: { tamanho?: number }) {
   );
 }
 
-export function Logo({ grande = false }: { grande?: boolean }) {
+/**
+ * Logo do topo. Se a empresa da conta tem ícone próprio, ele entra no lugar do Delibra
+ * (com o nome da empresa); `delibra` força a marca da plataforma.
+ */
+export function Logo({ grande = false, delibra = false }: { grande?: boolean; delibra?: boolean }) {
   const t = grande ? 64 : 30;
+  const marca = useMarcaEmpresa();
+  if (!delibra && marca?.logo) return (
+    <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={marca.nome}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={marca.logo} alt="" width={t} height={t} className="logo-empresa-icone" />
+      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20 }}>{marca.nome}</span>
+    </span>
+  );
   return (
     <span className={`logo-delibra${grande ? " grande" : ""}`} role="img" aria-label="Delibra">
       <MarcaDelibra tamanho={t} />

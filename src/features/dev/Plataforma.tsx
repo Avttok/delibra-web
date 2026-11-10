@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
+import { IconeEmpresa } from "@/features/empresa/IconeEmpresa";
 
 const brl = (v: number | string | null | undefined) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: number | string | null | undefined, d = 0) => Number(v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: d });
@@ -156,6 +157,16 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
 
   return (
     <div className="empresa-form">
+      {org?.id && (
+        <details className="avancado">
+          <summary>Ícone da empresa (no lugar do Delibra)</summary>
+          <IconeEmpresa orgId={org.id} nome={org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo) => {
+            const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_logo: logo ?? "", p_cor: null });
+            if (!error) onSalvo(org.id);
+            return error?.message ?? null;
+          }} />
+        </details>
+      )}
       <div className="grade-2">
         <label className="campo"><span>Nome</span><input value={f.nome ?? ""} onChange={(e) => muda("nome", e.target.value)} placeholder="Transportadora Exemplo" /></label>
         <label className="campo"><span>CNPJ</span><input value={f.documento ?? ""} onChange={(e) => muda("documento", e.target.value)} inputMode="numeric" /></label>

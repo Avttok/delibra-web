@@ -26,6 +26,8 @@ export interface DefParametro {
   escopos?: Escopo[];
   /** Só o Dev altera. */
   soDev?: boolean;
+  /** Some da tela para quem não é o Dev (assunto entre o Dev e a empresa). */
+  escondido?: boolean;
   /** Para tipo "texto": exemplo no campo. */
   exemplo?: string;
 }
@@ -65,7 +67,7 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   extensao: { area: "operacao", titulo: "Extensão de rota", descricao: "Oferecer rota nova a quem já está em corrida perto da coleta." },
   quadro: { area: "operacao", titulo: "Quadro de rotas", descricao: "O que o quadro mostra e quem é avisado quando chega rota." },
   planejadas: { area: "operacao", titulo: "Rotas planejadas", descricao: "Rotas com hora marcada: reserva, lembretes e abertura perto do horário." },
-  pagamento: { area: "motoboys", titulo: "Modelo e divisão da rota", descricao: "Por zonas, por km ou percentual; parte do motoboy, do gestor e do Dev." },
+  pagamento: { area: "motoboys", titulo: "Modelo e divisão da rota", descricao: "Por zonas, por km ou percentual; parte do motoboy e do gestor." },
   pag_combinar: { area: "motoboys", titulo: "Vários cálculos juntos", descricao: "Use mais de um modelo ao mesmo tempo (ex.: zonas + por entrega + fixo) e escolha como combinar." },
   pag_entrega: { area: "motoboys", titulo: "Pagamento por entrega", descricao: "Cada entrega paga o km dela (coleta → entrega) mais um fixo." },
   pag_fixo: { area: "motoboys", titulo: "Pagamento fixo", descricao: "Um valor por rota, por entrega e por coleta." },
@@ -169,10 +171,6 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "revisao_previa_rotas", grupo: "aprender", rotulo: "Prévia das rotas na revisão", descricao: "Ligado: ao abrir um pedido para revisar, as rotas que ele vai formar (e o que cada motoboy recebe) aparecem antes de aprovar.", tipo: "booleano", padrao: true },
   { chave: "aprender_regras_rota", grupo: "aprender", rotulo: "Repetir o que você sempre faz", descricao: "Ligado: se você põe as mesmas regras de pagamento nas rotas de um cliente várias vezes, as rotas novas dele já nascem com elas.", descricaoDesligado: "Desligado: só sugere na revisão; nada muda sozinho.", tipo: "booleano", padrao: false, escopos: ["tipo", "cliente"] },
   { chave: "aprender_minimo", grupo: "aprender", rotulo: "Quantas vezes iguais para repetir", descricao: "Nas últimas rotas do cliente.", tipo: "numero", padrao: 3, unidade: "vezes", min: 1, max: 20, passo: 1, escopos: ["tipo", "cliente"] },
-  { chave: "dev_origem", grupo: "pagamento", rotulo: "De onde sai a parte do Dev", descricao: "Como a parte do Dev entra na divisão da rota entre motoboy e gestor.", tipo: "escolha", padrao: "gestor", escopos: ["cliente"],
-    opcoes: [{ valor: "gestor", rotulo: "Da parte do gestor", dica: "R$ 100, motoboy 65%, Dev 5%: motoboy 65, gestor 30, Dev 5 (o padrão)." },
-             { valor: "total", rotulo: "Antes de dividir", dica: "R$ 100: sai o Dev (5); dos 95, motoboy 61,75 e gestor 33,25." },
-             { valor: "proporcional", rotulo: "Das duas partes", dica: "Motoboy e gestor cedem cada um 5% da sua parte: 61,75, 33,25 e 5." }] },
   { chave: "pag_valor_km", grupo: "pag_km", rotulo: "Valor do km", descricao: "Multiplica o km da entrega de referência.", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 50, passo: 0.1, escopos: ["tipo", "motoboy"] },
   { chave: "pag_entrega_extra", grupo: "pag_km", rotulo: "Por entrega a mais", descricao: "Somado para cada entrega além da primeira.", tipo: "numero", padrao: 10, unidade: "R$", min: 0, max: 500, passo: 0.5, escopos: ["tipo", "motoboy"] },
   { chave: "pag_coleta_extra", grupo: "pag_km", rotulo: "Por coleta a mais", descricao: "Somado para cada coleta além da primeira.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 500, passo: 0.5, escopos: ["tipo", "motoboy"] },
@@ -244,10 +242,10 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "precisao_max_m", grupo: "local", rotulo: "Tolerância ao erro do GPS", descricao: "Quanto da imprecisão informada pelo celular é descontada da distância.", tipo: "numero", padrao: 80, unidade: "m", min: 0, max: 500, passo: 10 },
   { chave: "posicao_valida_s", grupo: "local", rotulo: "Validade da posição", descricao: "Se o app não mandar a posição na hora, usa a última se for mais recente que isso.", tipo: "numero", padrao: 180, unidade: "s", min: 30, max: 900 },
 
-  { chave: "repasse_motoboy_pct", grupo: "pagamento", rotulo: "Parte do motoboy na rota", descricao: "No modelo \u201cPercentual\u201d: ex. 65 = o motoboy leva 65% da rota e o gestor o resto (menos a parte do Dev, como escolhido acima). Ajustável por motoboy (Regras dele), por cliente e por corrida.", tipo: "numero", padrao: 65, unidade: "%", min: 0, max: 100, escopos: ["motoboy"] },
+  { chave: "repasse_motoboy_pct", grupo: "pagamento", rotulo: "Parte do motoboy na rota", descricao: "No modelo \u201cPercentual\u201d: ex. 65 = o motoboy leva 65% da rota e o gestor o resto. Ajustável por motoboy (Regras dele), por cliente e por corrida.", tipo: "numero", padrao: 65, unidade: "%", min: 0, max: 100, escopos: ["motoboy"] },
   { chave: "pagamento_na_plataforma", grupo: "mb_ve", rotulo: "Pagar os motoboys pela plataforma", descricao: "Ligado: chaves PIX, marcar como pago e a Carteira aparecem para acertar os pagamentos por aqui.", descricaoDesligado: "Desligado: a plataforma mostra só o holerite (o que cada um tem a receber); o pagamento é feito por fora.", tipo: "booleano", padrao: false },
   { chave: "saas_compartilhar_corridas", grupo: "despacho", rotulo: "Rotas entre empresas", descricao: "Ligado: vale o que cada empresa tem em Dev → Empresas (rotas chegando a motoboys de outras). Desligado: nenhuma rota sai da própria empresa.", tipo: "booleano", padrao: true, soDev: true },
-  { chave: "dev_pct", grupo: "pagamento", rotulo: "Parte da plataforma", descricao: "Percentual da plataforma em cada rota. Normalmente vem do contrato da empresa (Dev → Empresas: percentual, licença ou isenta); aqui é só uma exceção por cliente. Só o Dev altera.", tipo: "numero", padrao: 5, unidade: "%", min: 0, max: 100, passo: 0.5, escopos: ["cliente"], soDev: true },
+  { chave: "dev_pct", grupo: "pagamento", rotulo: "Parte da plataforma", descricao: "Percentual da plataforma sobre o faturamento da empresa (vem do plano em Dev → Empresas). Não muda o que o motoboy recebe. Só o Dev vê e altera.", tipo: "numero", padrao: 5, unidade: "%", min: 0, max: 100, passo: 0.5, escopos: ["cliente"], soDev: true, escondido: true },
   { chave: "valor_km_padrao", grupo: "preco", rotulo: "Valor do km (avulso)", descricao: "Usado para clientes avulsos e empresas sem valor próprio.", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 100, passo: 0.1 },
   { chave: "valor_minimo", grupo: "preco", rotulo: "Valor mínimo", descricao: "Nenhum pedido ou corrida calculada fica abaixo disso. 0 = sem mínimo.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 1000, passo: 0.5, escopos: ["tipo", "cliente"] },
   { chave: "arredondamento", grupo: "preco", rotulo: "Arredondamento", descricao: "Arredonda o valor calculado para cima.", tipo: "opcoes", padrao: 0, opcoes: [{ valor: 0, rotulo: "Centavos" }, { valor: 0.5, rotulo: "R$ 0,50" }, { valor: 1, rotulo: "R$ 1,00" }, { valor: 5, rotulo: "R$ 5,00" }] },
@@ -299,7 +297,7 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "zona_entrega_raio_m", grupo: "pag_zonas", rotulo: "Raio de cada entrega", descricao: "Duas entregas estão juntas quando os raios se encostam (distância entre elas de até 2 raios).", tipo: "numero", padrao: 1500, unidade: "m", min: 50, max: 20000, passo: 50, escopos: ["tipo", "cliente", "motoboy"] },
   { chave: "zona_regra", grupo: "pag_zonas", rotulo: "Quando a rota conta como entregas juntas", descricao: "", tipo: "escolha", padrao: "todas", escopos: ["tipo", "cliente", "motoboy"],
     opcoes: [{ valor: "todas", rotulo: "Todas juntas", dica: "Toda entrega encosta em pelo menos outra. Se alguma fica isolada, paga a porcentagem." }, { valor: "alguma", rotulo: "Duas ou mais juntas", dica: "Basta existir um par de entregas que se encostam." }] },
-  { chave: "zona_fora_pct", grupo: "pag_zonas", rotulo: "Entregas espalhadas: parte do motoboy", descricao: "Porcentagem da rota quando há entrega fora das zonas (o gestor fica com o resto; o Dev sai de onde você escolheu).", tipo: "numero", padrao: 65, unidade: "%", min: 0, max: 100, passo: 0.5, escopos: ["tipo", "cliente", "motoboy"] },
+  { chave: "zona_fora_pct", grupo: "pag_zonas", rotulo: "Entregas espalhadas: parte do motoboy", descricao: "Porcentagem da rota quando há entrega fora das zonas (o gestor fica com o resto).", tipo: "numero", padrao: 65, unidade: "%", min: 0, max: 100, passo: 0.5, escopos: ["tipo", "cliente", "motoboy"] },
   { chave: "zona_km_regra", grupo: "pag_zonas", rotulo: "Entregas juntas: km de qual entrega", descricao: "", tipo: "escolha", padrao: "mais_perto", escopos: ["tipo", "cliente", "motoboy"],
     opcoes: [{ valor: "mais_perto", rotulo: "Mais próxima", dica: "A entrega mais perto da coleta." }, { valor: "mediana", rotulo: "Do meio", dica: "A do meio." }, { valor: "media", rotulo: "Média", dica: "A média das distâncias." }, { valor: "mais_longe", rotulo: "Mais longe", dica: "A entrega mais longe da coleta." }, { valor: "total_rota", rotulo: "Rota inteira", dica: "Os km da rota toda." }] },
   { chave: "zona_valor_km", grupo: "pag_zonas", rotulo: "Entregas juntas: valor do km", descricao: "Multiplica o km da entrega de referência.", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 50, passo: 0.1, escopos: ["tipo", "cliente", "motoboy"] },

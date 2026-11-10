@@ -152,7 +152,6 @@ function DetalheFatura({ f, pedidos, nome, onAcao, onPlanilha, onFechar }: {
         <div className="orcamento-linha"><span>Subtotal ({pedidos.length} pedido{pedidos.length === 1 ? "" : "s"})</span><strong>{moedaBr(f.subtotal)}</strong></div>
         {Number(f.ajuste) !== 0 && <div className="orcamento-linha"><span>Ajuste{f.ajuste_motivo && <small>{f.ajuste_motivo}</small>}</span><strong>{moedaBr(f.ajuste)}</strong></div>}
         <div className="orcamento-linha total"><span>Total</span><strong>{moedaBr(f.total)}</strong></div>
-        <p className="dica" style={{ margin: 0 }}>Dev {Number(f.dev_pct ?? 5).toLocaleString("pt-BR")}%: {moedaBr(f.valor_dev)} · gestão {moedaBr(Number(f.total) - Number(f.valor_dev ?? 0))}</p>
       </div>
       <div className="linha-botoes">
         {editavel && <button className="botao-texto" onClick={() => onAcao(f, "ajustar", { p_ajuste: Number(ajuste.replace(",", ".")) || 0, p_motivo: motivo || null, p_vencimento: venc || null })}>Salvar ajuste</button>}

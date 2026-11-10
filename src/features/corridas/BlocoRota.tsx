@@ -16,7 +16,6 @@ const REGRA: Record<string, string> = {
 };
 
 /** O cálculo do motoboy, linha a linha. */
-const ORIGEM_DEV: Record<string, string> = { gestor: "a parte do Dev sai da parte do gestor", total: "a parte do Dev sai antes de dividir", proporcional: "a parte do Dev sai das duas partes" };
 
 export function ContaMotoboy({ calc }: { calc: CalculoPagamento }) {
   const z = (calc as CalculoPagamento & { zona?: { raio_m: number; agrupada: boolean; juntas: number; entregas: number } }).zona;
@@ -26,7 +25,7 @@ export function ContaMotoboy({ calc }: { calc: CalculoPagamento }) {
     </p>
   );
   const teto = calc.limitado && calc.teto != null && (
-    <p className="dica" style={{ margin: 0, color: "var(--ouro)" }}>Limitado a {moeda(calc.teto)}: o motoboy nunca leva mais que a rota paga (valor da rota menos a parte do Dev).</p>
+    <p className="dica" style={{ margin: 0, color: "var(--ouro)" }}>Limitado a {moeda(calc.teto)}: o motoboy nunca leva mais que o valor da rota.</p>
   );
   const regrasRota = calc.regras_rota && Object.keys(calc.regras_rota).length > 0 && (
     <p className="dica" style={{ margin: 0, color: "var(--ouro)" }}>Esta rota tem regras de pagamento próprias ({Object.keys(calc.regras_rota).length}).</p>
@@ -77,7 +76,7 @@ export function ContaMotoboy({ calc }: { calc: CalculoPagamento }) {
     <>
       {regrasRota}
       {zona}
-      <p className="dica" style={{ margin: 0 }}>Percentual: {calc.pct}% do valor da rota{calc.dev_origem ? ` (${ORIGEM_DEV[calc.dev_origem]})` : ""} = <strong>{moeda(calc.total)}</strong></p>
+      <p className="dica" style={{ margin: 0 }}>Percentual: {calc.pct}% do valor da rota = <strong>{moeda(calc.total)}</strong></p>
       {teto}
     </>
   );

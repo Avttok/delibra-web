@@ -111,6 +111,7 @@ const sem = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase
 /** Peças do lego de um cliente ou motoboy, direto no perfil dele. */
 export function RegrasDoAlvo({ escopo, alvo, nome }: { escopo: Escopo; alvo: string; nome: string }) {
   const cfg = useConfiguracoes();
+  const conta = useConta();
   const [valores, setValores] = useState<Record<string, ValorParametro>>({});
   const [estado, setEstado] = useState<Record<string, "salvando" | "salvo" | "erro" | undefined>>({});
   const [busca, setBusca] = useState("");
@@ -132,7 +133,7 @@ export function RegrasDoAlvo({ escopo, alvo, nome }: { escopo: Escopo; alvo: str
     <div className="excecoes">
       <p className="dica" style={{ margin: 0 }}><Layers size={12} aria-hidden /> Regras só de <strong>{nome}</strong>{n ? ` · ${n} diferente${n === 1 ? "" : "s"} do padrão` : " · tudo no padrão"}. {escopo === "cliente" ? "Valem para todos os pedidos dele (um pedido pode ter regras próprias)." : "Valem para todas as rotas dele."}</p>
       <label className="busca-mini"><Search size={14} aria-hidden /><input placeholder="Buscar regra" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
-      <EditorRegras params={PARAMETROS.filter((p) => p.escopos?.includes(escopo))} valores={valores} cfg={cfg} estado={estado} onDefinir={definir} filtro={busca} />
+      <EditorRegras params={PARAMETROS.filter((p) => p.escopos?.includes(escopo) && (conta.dev || !p.escondido))} valores={valores} cfg={cfg} estado={estado} onDefinir={definir} filtro={busca} />
     </div>
   );
 }
@@ -160,7 +161,7 @@ export function Excecoes({ cfg }: { cfg: Configuracoes }) {
   }, [escopo, empresas, equipe, tipos]);
   useEffect(() => { if (!alvos.some((a) => a.id === alvo)) setAlvo(alvos[0]?.id ?? ""); }, [alvos, alvo]);
 
-  const params = PARAMETROS.filter((p) => p.escopos?.includes(escopo));
+  const params = PARAMETROS.filter((p) => p.escopos?.includes(escopo) && (conta.dev || !p.escondido));
   const minhas = politicas.filter((x) => x.escopo === escopo && x.alvo === alvo);
   const contagem = (id: string) => politicas.filter((x) => x.escopo === escopo && x.alvo === id).length;
 

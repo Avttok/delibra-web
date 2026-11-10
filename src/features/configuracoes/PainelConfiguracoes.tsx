@@ -46,6 +46,7 @@ export function PainelConfiguracoes() {
     try { return (localStorage.getItem("pwex-config-pagina") as Pagina) || "clientes"; } catch { return "clientes"; }
   });
   const conta = useConta();
+  const visiveis = PARAMETROS.filter((p) => conta.dev || !p.escondido);
   const [busca, setBusca] = useState("");
   const [soMudados, setSoMudados] = useState(false);
   const [estado, setEstado] = useState<Record<string, Estado>>({});
@@ -62,7 +63,7 @@ export function PainelConfiguracoes() {
   const termo = sem(busca.trim());
   const filtrar = (lista: DefParametro[]) => (soMudados ? lista.filter((p) => mudou(p, cfg[p.chave])) : lista);
   const resultado = useMemo(
-    () => (termo ? filtrar(PARAMETROS.filter((p) => sem(`${p.rotulo} ${p.descricao} ${p.descricaoDesligado ?? ""} ${GRUPOS[p.grupo].titulo} ${p.chave}`).includes(termo))) : []),
+    () => (termo ? filtrar(visiveis.filter((p) => sem(`${p.rotulo} ${p.descricao} ${p.descricaoDesligado ?? ""} ${GRUPOS[p.grupo].titulo} ${p.chave}`).includes(termo))) : []),
     [termo, soMudados, cfg], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const extra = PAGINAS_EXTRAS.find((x) => x.chave === pagina);
@@ -88,7 +89,7 @@ export function PainelConfiguracoes() {
         <nav className="config-grupos" aria-label="Áreas das configurações">
           {AREAS.map((a) => {
             const I = ICONES_AREA[a.chave];
-            const params = PARAMETROS.filter((p) => GRUPOS[p.grupo].area === a.chave);
+            const params = visiveis.filter((p) => GRUPOS[p.grupo].area === a.chave);
             const nm = nMudados(params);
             return (
               <button key={a.chave} type="button" className={`config-grupo ${!termo && pagina === a.chave ? "ativo" : ""}`} onClick={() => ir(a.chave)}>
@@ -144,11 +145,11 @@ export function PainelConfiguracoes() {
                 {PAGINAS_EXTRAS.filter((x) => x.area === area.chave).map((x) => <button key={x.chave} type="button" className="chip" onClick={() => ir(x.chave)}><x.icone size={13} aria-hidden /> {x.titulo}</button>)}
               </nav>
               {gruposDaArea.map((g) => {
-                const lista = filtrar(PARAMETROS.filter((p) => p.grupo === g));
+                const lista = filtrar(visiveis.filter((p) => p.grupo === g));
                 if (!lista.length && soMudados) return null;
                 return (
                   <section key={g} id={`cfg-${g}`} className="config-secao">
-                    <h3><span>{GRUPOS[g].titulo}</span>{nMudados(PARAMETROS.filter((p) => p.grupo === g)) > 0 && <small>{nMudados(PARAMETROS.filter((p) => p.grupo === g))} mudado(s)</small>}</h3>
+                    <h3><span>{GRUPOS[g].titulo}</span>{nMudados(visiveis.filter((p) => p.grupo === g)) > 0 && <small>{nMudados(visiveis.filter((p) => p.grupo === g))} mudado(s)</small>}</h3>
                     <p className="dica">{GRUPOS[g].descricao}</p>
                     {g === "distancia" && <ExemploAcrescimo cfg={cfg} />}
                     {g === "pagamento" && <ExemploPagamento cfg={cfg} />}
@@ -158,7 +159,7 @@ export function PainelConfiguracoes() {
                   </section>
                 );
               })}
-              {soMudados && nMudados(PARAMETROS.filter((p) => GRUPOS[p.grupo].area === area.chave)) === 0 && <p className="vazio">Tudo nesta área está no padrão.</p>}
+              {soMudados && nMudados(visiveis.filter((p) => GRUPOS[p.grupo].area === area.chave)) === 0 && <p className="vazio">Tudo nesta área está no padrão.</p>}
             </>
           ) : null}
         </div>
@@ -357,15 +358,14 @@ function ExemploPagamento({ cfg }: { cfg: Record<string, ValorParametro> }) {
   const total = Math.max(min, fixo + ref * vkm + (n - 1) * vext);
   const m = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   // divisão de uma rota de R$ 100 (o mesmo cálculo do banco)
-  const pct = Number(cfg.repasse_motoboy_pct ?? 67.5) || 0, dev = Number(cfg.dev_pct ?? 5) || 0, origem = String(cfg.dev_origem ?? "gestor");
+  const pct = Number(cfg.repasse_motoboy_pct ?? 67.5) || 0;
   const r2 = (v: number) => Math.round(v * 100) / 100;
-  const pDev = r2(100 * dev / 100), teto = r2(100 - pDev);
-  const pMoto = Math.min(teto, r2(origem === "total" ? (100 - pDev) * pct / 100 : origem === "proporcional" ? 100 * pct / 100 * (1 - dev / 100) : 100 * pct / 100));
+  const teto = 100;
+  const pMoto = Math.min(teto, r2(100 * pct / 100));
   if (cfg.pag_modo === "percentual") return (
     <div className="config-exemplo"><span className="rotulo">Exemplo</span>
-      <p>Rota de <strong>R$ 100,00</strong>, motoboy {pct.toLocaleString("pt-BR")}%, Dev {dev.toLocaleString("pt-BR")}%:</p>
-      <p className="config-exemplo-conta">Motoboy <strong className="texto-grad">{m(pMoto)}</strong> · Gestor <strong>{m(r2(100 - pMoto - pDev))}</strong> · Dev <strong>{m(pDev)}</strong></p>
-      {100 * pct / 100 > teto && <p className="dica" style={{ margin: 0 }}>O motoboy nunca passa de {m(teto)} (a rota menos o Dev).</p>}
+      <p>Rota de <strong>R$ 100,00</strong>, motoboy {pct.toLocaleString("pt-BR")}%:</p>
+      <p className="config-exemplo-conta">Motoboy <strong className="texto-grad">{m(pMoto)}</strong> · Gestor <strong>{m(r2(100 - pMoto))}</strong></p>
     </div>
   );
   return (
@@ -375,7 +375,7 @@ function ExemploPagamento({ cfg }: { cfg: Record<string, ValorParametro> }) {
       <p className="config-exemplo-conta">
         {fixo ? <>{m(fixo)} + </> : null}{ref.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km × {m(vkm)} + 4 × {m(vext)} = <strong className="texto-grad">{m(total)}</strong>
       </p>
-      <p className="dica" style={{ margin: 0 }}>Nunca passa do que a rota paga: numa rota de {m(100)} com Dev {dev.toLocaleString("pt-BR")}%, o máximo é {m(teto)}{total > teto ? `, então esta pagaria ${m(teto)}` : ""}.</p>
+      <p className="dica" style={{ margin: 0 }}>Nunca passa do que a rota paga: numa rota de {m(100)}, o máximo é {m(teto)}{total > teto ? `, então esta pagaria ${m(teto)}` : ""}.</p>
     </div>
   );
 }
@@ -407,11 +407,11 @@ function ExemploAcrescimo({ cfg }: { cfg: Record<string, ValorParametro> }) {
 function ExemploZonas({ cfg }: { cfg: Record<string, ValorParametro> }) {
   const m = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const raio = Number(cfg.zona_entrega_raio_m ?? 1500), vkm = Number(cfg.zona_valor_km ?? 2), ext = Number(cfg.zona_entrega_extra ?? 10);
-  const fixo = Number(cfg.zona_fixo_rota ?? 0), min = Number(cfg.zona_minimo ?? 0), pct = Number(cfg.zona_fora_pct ?? 65), dev = Number(cfg.dev_pct ?? 5);
+  const fixo = Number(cfg.zona_fixo_rota ?? 0), min = Number(cfg.zona_minimo ?? 0), pct = Number(cfg.zona_fora_pct ?? 65);
   const regra = String(cfg.zona_km_regra ?? "mais_perto");
   const ds = [4, 4.8, 5.5];
   const ref = regra === "mais_longe" ? ds[2] : regra === "media" ? (ds[0] + ds[1] + ds[2]) / 3 : regra === "mediana" ? ds[1] : regra === "total_rota" ? 7.2 : ds[0];
-  const teto = 100 - dev;
+  const teto = 100;
   const juntas = Math.min(teto, Math.max(min, fixo + ref * vkm + 2 * ext));
   const espalhadas = Math.min(teto, (100 * pct) / 100);
   return (
@@ -419,8 +419,8 @@ function ExemploZonas({ cfg }: { cfg: Record<string, ValorParametro> }) {
       <span className="rotulo">Exemplo · raio de {raio.toLocaleString("pt-BR")} m em cada entrega</span>
       <p><strong>3 entregas juntas</strong> (a {ds.map((d) => d.toLocaleString("pt-BR")).join(", ")} km da coleta):</p>
       <p className="config-exemplo-conta">{fixo ? <>{m(fixo)} + </> : null}{ref.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km × {m(vkm)} + 2 × {m(ext)} = <strong className="texto-grad">{m(juntas)}</strong></p>
-      <p><strong>Entregas espalhadas</strong> numa rota de {m(100)}: {pct.toLocaleString("pt-BR")}% = <strong className="texto-grad">{m(espalhadas)}</strong> · gestor e Dev dividem o resto.</p>
-      <p className="dica" style={{ margin: 0 }}>Nos dois casos o motoboy nunca passa de {m(teto)} (a rota menos o Dev).</p>
+      <p><strong>Entregas espalhadas</strong> numa rota de {m(100)}: {pct.toLocaleString("pt-BR")}% = <strong className="texto-grad">{m(espalhadas)}</strong> · o gestor fica com o resto.</p>
+      <p className="dica" style={{ margin: 0 }}>Nos dois casos o motoboy nunca passa do valor da rota ({m(teto)}).</p>
     </div>
   );
 }

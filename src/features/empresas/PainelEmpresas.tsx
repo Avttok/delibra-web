@@ -130,7 +130,6 @@ function AcessosCliente({ empresaId, nome }: { empresaId: string; nome: string }
 export function PainelEmpresas() {
   const cfgGeral = useConfiguracoes() as unknown as Record<string, unknown>;
   const cfgRepasse = Number(cfgGeral.repasse_motoboy_pct ?? 67.5);
-  const cfgDev = Number(cfgGeral.dev_pct ?? 5);
   const { empresas, favoritos, recarregar } = useEmpresas();
   const equipe = useEquipe();
   const [selecionada, setSelecionada] = useState<string | "nova" | null>(null);
@@ -447,8 +446,6 @@ export function PainelEmpresas() {
               <div className="grade-2">
                 <label className="campo curto"><span>Motoboy (%) neste cliente</span>
                   <input inputMode="decimal" placeholder={`padrão: ${cfgRepasse}%`} value={form.repasse_pct} onChange={(e) => set({ repasse_pct: e.target.value })} /></label>
-                <label className="campo curto"><span>Dev (%) neste cliente</span>
-                  <input inputMode="decimal" placeholder={`padrão: ${cfgDev}%`} value={form.dev_pct} onChange={(e) => set({ dev_pct: e.target.value })} /></label>
               </div>
               <p className="dica">A gestão fica com o restante. Vazio = usa o padrão das Configurações.</p>
             </section>

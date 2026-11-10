@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Camera, CodeXml, FlaskConical, Heart, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X } from "lucide-react";
+import { Camera, CodeXml, FlaskConical, Heart, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { ESTILOS, useTema } from "@/features/tema/tema";
 import { abrirTour } from "@/features/ui/Tour";
@@ -113,6 +113,11 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
           )}
           {erroTeste && <p className="erro menu-erro">{erroTeste}</p>}
 
+          {(conta.dev || conta.papeis.includes("gestor")) && (
+            <Link href="/gestor/empresa" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
+              <Landmark size={17} aria-hidden /> Minha empresa e plano
+            </Link>
+          )}
           {conta.dev && (
             <Link href="/gestor/dev" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
               <CodeXml size={17} aria-hidden /> Console Dev

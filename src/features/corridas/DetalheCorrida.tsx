@@ -224,8 +224,8 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           {corrida.valor_motoboy != null && (
             <div className="numeros">
               <div><span className="rotulo">Motoboy{corrida.pag_calculo?.modo === "percentual" ? ` (${Number(corrida.repasse_pct)}%)` : ""}</span><strong>{moeda(corrida.valor_motoboy)}</strong></div>
-              <div><span className="rotulo">Gestor</span><strong className="texto-grad">{moeda(Number(corrida.valor ?? 0) - Number(corrida.valor_motoboy ?? 0) - Number(corrida.valor_dev ?? 0))}</strong></div>
-              {Number(corrida.valor_dev) > 0 && <div><span className="rotulo">Dev ({Number(corrida.dev_pct)}%)</span><strong>{moeda(corrida.valor_dev ?? 0)}</strong></div>}
+              <div><span className="rotulo">Gestor</span><strong className="texto-grad">{moeda(Number(corrida.valor ?? 0) - Number(corrida.valor_motoboy ?? 0))}</strong></div>
+              {conta.dev && Number(corrida.valor_dev) > 0 && <div><span className="rotulo">Plataforma ({Number(corrida.dev_pct)}%)</span><strong>{moeda(corrida.valor_dev ?? 0)}</strong></div>}
             </div>
           )}
           {corrida.status === "aguardando_pagamento" && (

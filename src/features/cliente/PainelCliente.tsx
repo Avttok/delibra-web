@@ -67,13 +67,13 @@ interface FaturaC {
 }
 
 const STATUS: Record<StatusP, { rotulo: string; cor: string; dica: string }> = {
-  recebido: { rotulo: "Recebido", cor: "#f59e0b", dica: "A Delibra está conferindo o seu pedido." },
+  recebido: { rotulo: "Recebido", cor: "#f59e0b", dica: "A empresa está conferindo o seu pedido." },
   aprovado: { rotulo: "Confirmado", cor: "#60a5fa", dica: "Confirmado. Estamos montando a rota." },
   roteirizado: { rotulo: "Em preparação", cor: "#a78bfa", dica: "A rota está pronta e um motoboy vai pegar." },
   em_rota: { rotulo: "A caminho", cor: "var(--ouro)", dica: "Um motoboy está com o seu pedido." },
   concluido: { rotulo: "Entregue", cor: "#2ecc71", dica: "Tudo entregue." },
   cancelado: { rotulo: "Cancelado", cor: "#8a8a8a", dica: "Pedido cancelado." },
-  recusado: { rotulo: "Não aceito", cor: "#e5484d", dica: "A Delibra não pôde aceitar este pedido." },
+  recusado: { rotulo: "Não aceito", cor: "#e5484d", dica: "A empresa não pôde aceitar este pedido." },
 };
 const ATIVOS: StatusP[] = ["recebido", "aprovado", "roteirizado", "em_rota"];
 const CICLO: Record<string, string> = { diario: "todo dia", semanal: "toda semana", quinzenal: "a cada 15 dias", mensal: "todo mês", manual: "quando combinado" };
@@ -99,7 +99,7 @@ export function PainelCliente() {
   useEffect(() => { void carregar(); const t = setInterval(carregar, 15_000); return () => clearInterval(t); }, [carregar]);
 
   if (conta === undefined || pedidos === null) return <p className="subtitulo" style={{ padding: 24 }}>Carregando…</p>;
-  if (!conta) return <div className="cliente-cartao vidro"><p className="erro">Sua conta ainda não está ligada a um cadastro de cliente. Fale com a Delibra.</p></div>;
+  if (!conta) return <div className="cliente-cartao vidro"><p className="erro">Sua conta ainda não está ligada a um cadastro de cliente. Fale com a empresa.</p></div>;
 
   const pedido = pedidos.find((p) => p.id === aberto);
   const abertas = faturas.filter((f) => f.status === "emitida");
@@ -109,7 +109,7 @@ export function PainelCliente() {
         <div>
           <h1 className="display" style={{ margin: 0 }}>{conta.nome}</h1>
           <p className="dica" style={{ margin: 0 }}>
-            {conta.pode_express ? <><Zap size={12} aria-hidden /> Peça na hora ou agende.</> : <><CalendarClock size={12} aria-hidden /> Pedidos agendados (o Express é liberado pela Delibra).</>}
+            {conta.pode_express ? <><Zap size={12} aria-hidden /> Peça na hora ou agende.</> : <><CalendarClock size={12} aria-hidden /> Pedidos agendados (o Express é liberado pela empresa).</>}
             {" · "}{conta.cobranca === "credito" ? <>Fatura {CICLO[conta.fatura_ciclo] ?? ""}</> : <>Pagamento antes de sair</>}
           </p>
         </div>
@@ -469,7 +469,7 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
     if (conta.categoria_obrigatoria && itens.some((x) => !x.categoria_id)) return toast("Escolha o tipo de cada item.", "aviso");
     const falta = faltandoItens(itens, conta.categorias);
     if (falta) return toast(falta, "aviso");
-    if (!agendar && !podeAgora) return toast(podeAgendar ? "Agora não dá para pedir na hora. Escolha Agendar." : "Agora não dá para fazer pedidos. Fale com a Delibra.", "aviso");
+    if (!agendar && !podeAgora) return toast(podeAgendar ? "Agora não dá para pedir na hora. Escolha Agendar." : "Agora não dá para fazer pedidos. Fale com a empresa.", "aviso");
     if (agendar && horario && conta.agendar_max_dias && new Date(horario).getTime() > Date.now() + conta.agendar_max_dias * 86_400_000) return toast(`Dá para agendar até ${conta.agendar_max_dias} dias à frente.`, "aviso");
     const jan = pontos.find((p) => p.janela_de && p.janela_ate && p.janela_de >= p.janela_ate);
     if (jan) return toast(`O horário do ponto ${pontos.indexOf(jan) + 1} termina antes de começar.`, "aviso");
@@ -523,7 +523,7 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
               ))}
             </div>
           )}
-          {conta.pode_urgente !== false && <label className="opcao"><span><Zap size={14} aria-hidden style={{ color: "var(--vermelho)" }} /> Urgente<Dica titulo="Urgente" texto="Passa na frente: a rota sai sozinha, não espera juntar com outros pedidos e chega até motoboys fora do raio deles. Pode custar mais, conforme o combinado com a Delibra." /></span><input type="checkbox" role="switch" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} /></label>}
+          {conta.pode_urgente !== false && <label className="opcao"><span><Zap size={14} aria-hidden style={{ color: "var(--vermelho)" }} /> Urgente<Dica titulo="Urgente" texto="Passa na frente: a rota sai sozinha, não espera juntar com outros pedidos e chega até motoboys fora do raio deles. Pode custar mais, conforme o combinado com a empresa." /></span><input type="checkbox" role="switch" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} /></label>}
         </div>
 
         <div className="cliente-cartao vidro">
@@ -694,7 +694,7 @@ function MinhaConta({ conta }: { conta: Conta }) {
           <div><span className="rotulo">Coleta padrão</span><strong>{conta.endereco ?? "—"}</strong></div>
           <div><span className="rotulo">Pagamento</span><strong>{conta.cobranca === "credito" ? `Fatura ${CICLO[conta.fatura_ciclo] ?? ""}` : conta.metodos.map((m) => (m === "pix" ? "PIX" : "Cartão")).join(" ou ")}</strong></div>
         </div>
-        <p className="dica" style={{ margin: 0 }}>Para mudar algum dado, fale com a Delibra.</p>
+        <p className="dica" style={{ margin: 0 }}>Para mudar algum dado, fale com a empresa.</p>
       </div>
       <CoresDoSite />
       {conta.troca_senha !== false && <TrocarSenha />}
@@ -770,7 +770,7 @@ function TrocarSenha() {
 
 /** Tour do site do cliente: abre na primeira vez; depois, em Minha conta → Ver o tour. */
 const TOUR_CLIENTE: PassoTour[] = [
-  { titulo: "Bem-vindo à Delibra", texto: "Um passeio rápido pelo seu painel. Dá para rever quando quiser, em Minha conta." },
+  { titulo: "Bem-vindo", texto: "Um passeio rápido pelo seu painel. Dá para rever quando quiser, em Minha conta." },
   { alvo: '[data-tour="aba-novo"]', titulo: "Novo pedido", texto: "Marque a coleta e as entregas, diga o que vai em cada uma e escolha agora ou agendado. O mapa mostra o caminho." },
   { alvo: '[data-tour="aba-pedidos"]', titulo: "Pedidos", texto: "Todos os seus pedidos. Abra um para ver o mapa, a situação de cada entrega e quem recebeu." },
   { alvo: '[data-tour="aba-faturas"]', titulo: "Faturas e pagamentos", texto: "No crédito, as faturas de cada ciclo. No pagamento antecipado, os pagamentos de cada pedido." },

@@ -6,6 +6,7 @@ import { Eye, FlaskConical, Heart, Hourglass, LogOut } from "lucide-react";
 import { sair, supabase } from "@/lib/supabase/client";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { Logo } from "@/features/marca/Logo";
+import { definirMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { BotaoTema } from "@/features/tema/BotaoTema";
 import { Toasts } from "@/features/ui/toast";
 import { CriarConta } from "./CriarConta";
@@ -26,13 +27,24 @@ export function AreaCliente({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Estado>({ fase: "carregando" });
   const [cadastrando, setCadastrando] = useState(false);
   // /entrar?criar=1 abre direto o cadastro da empresa
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("criar") === "1") setCadastrando(true); }, []);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("criar") === "1") setCadastrando(true);
+    // link da empresa (?empresa=slug): a tela de entrar já abre com o ícone e o nome dela
+    const slug = q.get("empresa");
+    if (slug) void supabase().rpc("marca_publica", { p_slug: slug }).then(({ data }) => {
+      const m = data as { nome: string; logo: string | null; cor: string | null } | null;
+      if (m) definirMarcaEmpresa(m);
+    });
+  }, []);
   const [modoCadastro, setModoCadastro] = useState<string>("desligado");
   const [versao, setVersao] = useState(0); // recria o painel ao trocar de cliente
 
   const verificar = useCallback(async (s: Session | null) => {
     if (!s) return setEstado({ fase: "anonimo" });
-    const { data } = await supabase().rpc("meu_acesso_cliente");
+    const [{ data }, perfil] = await Promise.all([supabase().rpc("meu_acesso_cliente"), supabase().rpc("meu_perfil")]);
+    const org = (perfil.data as { organizacao?: { nome: string; logo?: string | null; cor?: string | null } | null } | null)?.organizacao;
+    if (org) definirMarcaEmpresa({ nome: org.nome, logo: org.logo ?? null, cor: org.cor });
     setEstado({ fase: "logado", a: (data as Acesso | null) ?? { tipo: "nenhum" } });
   }, []);
 
@@ -70,10 +82,10 @@ export function AreaCliente({ children }: { children: ReactNode }) {
           {a.tipo === "cadastro" && a.status === "pendente" && <>
             <p className="cadastro-ok" style={{ color: "var(--ouro)" }}><Hourglass size={28} aria-hidden /></p>
             <p style={{ textAlign: "center", margin: 0 }}><strong>Cadastro em análise</strong></p>
-            <p className="dica" style={{ textAlign: "center" }}>A Delibra está conferindo os dados de {a.nome}. Assim que liberar, você já pode pedir por aqui.</p>
+            <p className="dica" style={{ textAlign: "center" }}>A empresa está conferindo os dados de {a.nome}. Assim que liberar, você já pode pedir por aqui.</p>
           </>}
-          {a.tipo === "cadastro" && a.status === "recusado" && <p className="erro" style={{ textAlign: "center" }}>O cadastro não foi aprovado{a.motivo ? `: ${a.motivo}` : ""}. Fale com a Delibra.</p>}
-          {a.tipo === "nenhum" && <p className="erro" style={{ textAlign: "center" }}>Esta conta não tem acesso de cliente. Fale com a Delibra.</p>}
+          {a.tipo === "cadastro" && a.status === "recusado" && <p className="erro" style={{ textAlign: "center" }}>O cadastro não foi aprovado{a.motivo ? `: ${a.motivo}` : ""}. Fale com a empresa.</p>}
+          {a.tipo === "nenhum" && <p className="erro" style={{ textAlign: "center" }}>Esta conta não tem acesso de cliente. Fale com a empresa.</p>}
           {comoGestor && <>
             <p style={{ textAlign: "center", margin: 0 }}><strong>Ver o site como um cliente</strong></p>
             <p className="dica" style={{ textAlign: "center", margin: 0 }}>Você é da equipe: escolha o cliente para testar o site como ele (pedidos de cliente de teste saem como teste).</p>

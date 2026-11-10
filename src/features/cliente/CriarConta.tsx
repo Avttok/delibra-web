@@ -10,8 +10,8 @@ import { MapaCorridas } from "@/features/corridas/MapaCorridas";
 const ERROS: Record<string, string> = {
   email_invalido: "E-mail inválido.", senha_curta: "A senha precisa de pelo menos 8 caracteres.", nome_invalido: "Informe o nome da empresa.",
   documento_invalido: "CNPJ ou CPF inválido.", email_existe: "Já existe uma conta com esse e-mail. Entre com ela.",
-  cadastro_desligado: "O cadastro pelo site está fechado. Fale com a Delibra.", muitas_tentativas: "Muitas tentativas. Tente de novo mais tarde.",
-  servidor_sem_chave: "O cadastro ainda não foi ligado pela Delibra.",
+  cadastro_desligado: "O cadastro pelo site está fechado. Fale com a empresa.", muitas_tentativas: "Muitas tentativas. Tente de novo mais tarde.",
+  servidor_sem_chave: "O cadastro ainda não foi ligado pela empresa.",
 };
 const mascaraDoc = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 14);
@@ -19,7 +19,7 @@ const mascaraDoc = (v: string) => {
   return d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
 };
 
-/** Empresa (ou pessoa) cria a conta pelo site. Pode precisar da aprovação da Delibra. */
+/** Empresa (ou pessoa) cria a conta pelo site. Pode precisar da aprovação da empresa. */
 export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: string }) {
   const [tipo, setTipo] = useState<"pj" | "pf">("pj");
   const [f, setF] = useState({ nome: "", documento: "", responsavel: "", telefone: "", email: "", senha: "", endereco: "", lat: null as number | null, lng: null as number | null, observacoes: "", site: "" });
@@ -41,7 +41,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
       await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.senha });
       setFeito(j.status === "aprovado" ? "aprovado" : "pendente");
     } catch {
-      setErro("Sem conexão com a Delibra. Tente de novo.");
+      setErro("Sem conexão. Tente de novo.");
     }
     setEnviando(false);
   }
@@ -51,7 +51,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
       <Logo grande />
       <p className="cadastro-ok"><CheckCircle2 size={28} aria-hidden /></p>
       <h2 className="display" style={{ textAlign: "center", margin: 0 }}>{feito === "aprovado" ? "Conta criada!" : "Recebemos o seu cadastro"}</h2>
-      <p className="dica" style={{ textAlign: "center" }}>{feito === "aprovado" ? "Você já pode fazer pedidos." : "A Delibra confere os dados e libera o acesso. Você entra com este e-mail e senha."}</p>
+      <p className="dica" style={{ textAlign: "center" }}>{feito === "aprovado" ? "Você já pode fazer pedidos." : "A empresa confere os dados e libera o acesso. Você entra com este e-mail e senha."}</p>
       <button type="button" className="botao-ouro" onClick={() => window.location.reload()}>Continuar</button>
     </div></main>
   );
@@ -62,7 +62,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
         <button type="button" className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Já tenho conta</button>
         <Logo />
         <h2 className="display" style={{ margin: 0 }}>Criar conta</h2>
-        {modo === "aprovacao" && <p className="dica" style={{ margin: 0 }}>Depois de enviar, a Delibra confere os dados e libera os pedidos.</p>}
+        {modo === "aprovacao" && <p className="dica" style={{ margin: 0 }}>Depois de enviar, a empresa confere os dados e libera os pedidos.</p>}
         <div className="segmentado" style={{ gridTemplateColumns: "1fr 1fr" }}>
           <button type="button" className={tipo === "pj" ? "ativo" : ""} onClick={() => setTipo("pj")}><Building2 size={14} aria-hidden /> Empresa</button>
           <button type="button" className={tipo === "pf" ? "ativo" : ""} onClick={() => setTipo("pf")}><UserRound size={14} aria-hidden /> Pessoa</button>

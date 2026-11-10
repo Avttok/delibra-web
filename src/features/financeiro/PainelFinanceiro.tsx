@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Bike, CodeXml, Copy, Download, Landmark, Search, TrendingUp, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Bike, Copy, Download, Landmark, Search, TrendingUp, Wallet } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { moeda } from "@/features/precos/estrategias";
@@ -32,7 +32,7 @@ function inicio(p: Periodo) {
   return d.toISOString();
 }
 
-/** Carteira da gestão: o que entrou, quanto é de cada parte (motoboy, gestão, Dev), extrato e chaves PIX. */
+/** Carteira da gestão: o que entrou, quanto é de cada parte (motoboy e gestão), extrato e chaves PIX. */
 export function PainelFinanceiro() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [aba, setAba] = useState<Aba>("resumo");
@@ -69,9 +69,9 @@ export function PainelFinanceiro() {
   }, [periodo, teste]);
 
   const soma = (f: (l: Linha) => number | null, ls = linhas) => ls.reduce((s, l) => s + Number(f(l) ?? 0), 0);
-  // cada rota se divide em três partes que somam o valor dela: motoboy + gestor + Dev
-  const total = soma((l) => l.valor), motoboys = soma((l) => l.valor_motoboy), dev = soma((l) => l.valor_dev);
-  const gestor = total - motoboys - dev;
+  // cada rota se divide em duas partes que somam o valor dela: motoboy + gestor
+  const total = soma((l) => l.valor), motoboys = soma((l) => l.valor_motoboy);
+  const gestor = total - motoboys;
   const pct = (v: number) => (total ? `${(Math.round((v / total) * 1000) / 10).toLocaleString("pt-BR")}%` : "0%");
   const km = soma((l) => l.distancia_real_m ?? l.distancia_planejada_m) / 1000;
 
@@ -94,10 +94,10 @@ export function PainelFinanceiro() {
   const extrato = linhas.filter((l) => !termo || `${l.numero} ${nomeM(l.motoboy_id)} ${clienteDe(l)}`.toLowerCase().includes(termo));
 
   function exportar() {
-    const cab = ["Rota", "Concluída em", "Cliente", "Motoboy", "Valor", "Motoboy %", "Motoboy R$", "Gestor R$", "Dev %", "Dev R$", "Km", "Pagamento"];
+    const cab = ["Rota", "Concluída em", "Cliente", "Motoboy", "Valor", "Motoboy %", "Motoboy R$", "Gestor R$", ...(conta.dev ? ["Plataforma %", "Plataforma R$"] : []), "Km", "Pagamento"];
     const linhasCsv = extrato.map((l) => [
       `${l.teste ? "T" : "#"}${l.numero}`, new Date(l.concluida_em).toLocaleString("pt-BR"), clienteDe(l), nomeM(l.motoboy_id),
-      l.valor, l.repasse_pct, l.valor_motoboy, Number(l.valor ?? 0) - Number(l.valor_motoboy ?? 0) - Number(l.valor_dev ?? 0), l.dev_pct, l.valor_dev,
+      l.valor, l.repasse_pct, l.valor_motoboy, Number(l.valor ?? 0) - Number(l.valor_motoboy ?? 0), ...(conta.dev ? [l.dev_pct, l.valor_dev] : []),
       ((l.distancia_real_m ?? l.distancia_planejada_m ?? 0) / 1000).toFixed(1), l.pagamento_metodo ?? l.pagamento_status ?? "",
     ].map((v) => `"${String(v ?? "").replace(".", ",").replace(/"/g, '""')}"`).join(";"));
     const blob = new Blob(["﻿" + [cab.join(";"), ...linhasCsv].join("\n")], { type: "text/csv;charset=utf-8" });
@@ -127,12 +127,10 @@ export function PainelFinanceiro() {
           <div className="barra-divisao" aria-hidden>
             <span style={{ flex: motoboys || 0.0001, background: "var(--texto-2)" }} />
             <span style={{ flex: Math.max(gestor, 0) || 0.0001, background: "var(--ouro)" }} />
-            <span style={{ flex: dev || 0.0001, background: "var(--cor-dev)" }} />
           </div>
           <div className="carteira-parte"><i style={{ background: "var(--texto-2)" }} /><Bike size={14} aria-hidden /><span>Motoboys</span><strong>{moeda(motoboys)}</strong><small>{pct(motoboys)}</small></div>
           <div className="carteira-parte"><i style={{ background: "var(--ouro)" }} /><Landmark size={14} aria-hidden /><span>Fica com o gestor</span><strong>{moeda(gestor)}</strong><small>{pct(gestor)}</small></div>
-          <div className="carteira-parte"><i style={{ background: "var(--cor-dev)" }} /><CodeXml size={14} aria-hidden /><span>Dev</span><strong>{moeda(dev)}</strong><small>{pct(dev)}</small></div>
-          <p className="dica" style={{ margin: 0 }}>As três partes somam o valor das rotas. A divisão de cada rota segue Configurações → Motoboys.</p>
+          <p className="dica" style={{ margin: 0 }}>As duas partes somam o valor das rotas. A divisão de cada rota segue Configurações → Motoboys.</p>
         </div>
         <div className="grade-2 grade-igual">
           <button type="button" className="bloco carteira-pendente" onClick={() => setAba("faturas")}>
@@ -173,8 +171,8 @@ export function PainelFinanceiro() {
           {aba === "folha" && <Folha />}
 
           {aba === "clientes" && (
-            <div className="dev-rolagem"><table className="tabela"><thead><tr><th>Cliente</th><th>Rotas</th><th>Valor</th><th>Motoboys</th><th>Gestor</th><th>Dev</th></tr></thead>
-              <tbody>{porCliente.map(([id, a]) => <tr key={id}><td>{nomeC(id)}</td><td>{a.n}</td><td>{moeda(a.valor)}</td><td>{moeda(a.motoboy)}</td><td>{moeda(a.valor - a.motoboy - a.dev)}</td><td>{moeda(a.dev)}</td></tr>)}</tbody></table></div>
+            <div className="dev-rolagem"><table className="tabela"><thead><tr><th>Cliente</th><th>Rotas</th><th>Valor</th><th>Motoboys</th><th>Gestor</th></tr></thead>
+              <tbody>{porCliente.map(([id, a]) => <tr key={id}><td>{nomeC(id)}</td><td>{a.n}</td><td>{moeda(a.valor)}</td><td>{moeda(a.motoboy)}</td><td>{moeda(a.valor - a.motoboy)}</td></tr>)}</tbody></table></div>
           )}
 
           {aba === "extrato" && (
@@ -184,11 +182,11 @@ export function PainelFinanceiro() {
                 <button className="botao-texto" onClick={exportar} disabled={!extrato.length}><Download size={15} aria-hidden /> Planilha</button>
               </div>
               <div className="dev-rolagem">
-                <table className="tabela"><thead><tr><th>Rota</th><th>Quando</th><th>Cliente</th><th>Motoboy</th><th>Valor</th><th>Motoboy recebe</th><th>Gestor</th><th>Dev</th></tr></thead>
+                <table className="tabela"><thead><tr><th>Rota</th><th>Quando</th><th>Cliente</th><th>Motoboy</th><th>Valor</th><th>Motoboy recebe</th><th>Gestor</th></tr></thead>
                   <tbody>{extrato.map((l) => (
                     <tr key={l.id}><td>{l.teste ? "T" : "#"}{l.numero}</td><td>{new Date(l.concluida_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
                       <td>{clienteDe(l)}</td><td>{nomeM(l.motoboy_id)}</td><td>{moeda(Number(l.valor ?? 0))}</td>
-                      <td>{moeda(Number(l.valor_motoboy ?? 0))}</td><td>{moeda(Number(l.valor ?? 0) - Number(l.valor_motoboy ?? 0) - Number(l.valor_dev ?? 0))}</td><td>{moeda(Number(l.valor_dev ?? 0))}</td></tr>
+                      <td>{moeda(Number(l.valor_motoboy ?? 0))}</td><td>{moeda(Number(l.valor ?? 0) - Number(l.valor_motoboy ?? 0))}</td></tr>
                   ))}</tbody></table>
               </div>
             </>
