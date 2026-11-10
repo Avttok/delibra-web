@@ -1,0 +1,207 @@
+/* =====================================================================
+   Páginas públicas: início, app do motoboy e central de ajuda.
+   A marca (dourado sobre preto) e a Archivo larga do resto do site;
+   o que é só daqui: o trecho de cidade com a rota se desenhando no topo.
+   ===================================================================== */
+
+.lp { min-height: 100dvh; background: var(--fundo); color: var(--texto); overflow-x: clip; }
+.lp a { color: inherit; }
+.lp :focus-visible { outline: 2px solid var(--ouro); outline-offset: 3px; border-radius: 8px; }
+
+/* ---------------------------------------------------------------- topo */
+.lp-topo {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 24px;
+  padding: 14px clamp(16px, 5vw, 64px); background: color-mix(in srgb, var(--fundo) 82%, transparent);
+  backdrop-filter: blur(14px); border-bottom: 1px solid var(--borda);
+}
+.lp-marca { display: flex; text-decoration: none; }
+.lp-nav { display: flex; gap: 22px; margin-left: auto; }
+.lp-nav a { text-decoration: none; color: var(--texto-2); font-weight: 500; font-size: .95rem; }
+.lp-nav a:hover, .lp-nav a.ativo { color: var(--texto); }
+.lp-entrar {
+  text-decoration: none; font-weight: 700; padding: 9px 18px; border-radius: 99px;
+  border: 1px solid var(--ouro); color: var(--ouro) !important;
+}
+.lp-entrar:hover { background: color-mix(in srgb, var(--ouro) 12%, transparent); }
+@media (max-width: 720px) {
+  .lp-nav { display: none; }
+  .lp-entrar { margin-left: auto; }
+}
+
+/* ---------------------------------------------------------------- hero */
+.lp-hero {
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: center; gap: clamp(24px, 4vw, 56px);
+  padding: clamp(40px, 8vw, 110px) clamp(16px, 5vw, 64px) clamp(48px, 7vw, 96px);
+  max-width: 1280px; margin: 0 auto;
+}
+.lp-hero h1 {
+  margin: 0; font-stretch: 125%; font-weight: 880; letter-spacing: -0.035em;
+  font-size: clamp(2.3rem, 4.6vw, 4.3rem); line-height: 1; text-wrap: balance;
+}
+.lp-lead { color: var(--texto-2); font-size: clamp(1.02rem, 1.4vw, 1.18rem); line-height: 1.6; max-width: 34em; margin: 18px 0 0; }
+.lp-nota { color: var(--texto-3); font-size: .9rem; margin: 18px 0 0; }
+.lp-nota a { color: var(--ouro); }
+.lp-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.lp-botao {
+  display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 750; font-size: 1rem;
+  padding: 15px 24px; border-radius: 16px; color: var(--sobre-ouro) !important;
+  background: linear-gradient(135deg, var(--ouro-claro), var(--ouro) 55%, var(--ouro-escuro));
+  box-shadow: 0 14px 34px -16px color-mix(in srgb, var(--ouro) 70%, transparent);
+  transition: transform .15s, filter .15s;
+}
+.lp-botao:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.lp-botao-vazio { background: none; color: var(--texto) !important; border: 1px solid var(--borda-forte); box-shadow: none; }
+.lp-botao-vazio:hover { border-color: var(--ouro); }
+@media (max-width: 900px) {
+  .lp-hero { grid-template-columns: 1fr; }
+}
+
+/* o trecho de cidade */
+.lp-mapa {
+  position: relative; border-radius: 30px; overflow: hidden; aspect-ratio: 520 / 440;
+  background:
+    radial-gradient(120% 90% at 80% 10%, var(--brilho-1), transparent 60%),
+    linear-gradient(160deg, var(--fundo-2), var(--fundo));
+  border: 1px solid var(--borda-forte);
+}
+.lp-mapa svg { width: 100%; height: 100%; display: block; }
+.lp-ruas path { fill: none; stroke: var(--borda-forte); stroke-width: 7; stroke-linecap: round; }
+.lp-ruas path.avenida { stroke: color-mix(in srgb, var(--texto) 16%, transparent); stroke-width: 13; }
+.lp-rota {
+  fill: none; stroke: url(#lpOuro); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: lp-desenha 2.6s .4s cubic-bezier(.6, .05, .25, 1) forwards;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ouro) 55%, transparent));
+}
+.lp-pino circle { fill: var(--fundo); stroke: var(--texto); stroke-width: 3.5; }
+.lp-pino.coleta circle { fill: var(--ouro); stroke: var(--fundo); }
+.lp-pino text { fill: var(--texto); font: 800 14px/1 "Archivo Variable", sans-serif; text-anchor: middle; }
+.lp-pino.coleta text { fill: var(--sobre-ouro); }
+.lp-moto circle { fill: var(--ouro-claro); stroke: var(--fundo); stroke-width: 3; }
+.lp-moto {
+  offset-path: path("M92 300 L180 294 L186 165 L330 152 L338 300 L432 304 L440 160"); offset-rotate: 0deg;
+  offset-distance: 0%; animation: lp-anda 2.6s .4s cubic-bezier(.6, .05, .25, 1) forwards;
+}
+@keyframes lp-desenha { to { stroke-dashoffset: 0; } }
+@keyframes lp-anda { 90% { opacity: 1; } to { offset-distance: 100%; opacity: 0; } }
+.lp-mapa-legenda {
+  position: absolute; left: 16px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; color: var(--texto-2);
+  background: color-mix(in srgb, var(--fundo) 80%, transparent); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--borda);
+}
+.lp-mapa-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-mapa-legenda .ponto { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--texto); }
+.lp-mapa-legenda .ponto.coleta { background: var(--ouro); border-color: var(--ouro); }
+.lp-mapa-legenda .linha { width: 18px; height: 4px; border-radius: 4px; background: var(--ouro); }
+@media (prefers-reduced-motion: reduce) {
+  .lp-rota { animation: none; stroke-dashoffset: 0; }
+  .lp-moto { animation: none; opacity: 0; }
+}
+
+/* ---------------------------------------------------------------- seções */
+.lp-secao { max-width: 1180px; margin: 0 auto; padding: clamp(48px, 7vw, 96px) clamp(16px, 5vw, 64px); border-top: 1px solid var(--borda); }
+.lp-secao h2 { margin: 0; font-stretch: 118%; font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.7rem, 3.4vw, 2.6rem); line-height: 1.08; }
+.lp-secao h1 { margin: 0; font-stretch: 122%; font-weight: 860; letter-spacing: -0.03em; font-size: clamp(2.2rem, 5vw, 3.8rem); line-height: 1; }
+.lp-icone-titulo { color: var(--ouro); margin-bottom: 14px; }
+
+/* passos de verdade (é uma sequência) */
+.lp-passos { list-style: none; margin: 36px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px 36px; counter-reset: none; }
+.lp-passos li { display: flex; gap: 16px; align-items: flex-start; }
+.lp-num {
+  flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+  font-stretch: 120%; font-weight: 850; font-size: 1.1rem; color: var(--sobre-ouro);
+  background: linear-gradient(135deg, var(--ouro-claro), var(--ouro) 55%, var(--ouro-escuro));
+}
+.lp-passos h3 { margin: 6px 0 6px; font-size: 1.08rem; font-weight: 750; }
+.lp-passos p { margin: 0; color: var(--texto-2); line-height: 1.55; }
+.lp-passos strong { color: var(--texto); }
+
+/* duas colunas: texto e lista */
+.lp-dupla { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(24px, 5vw, 72px); align-items: start; }
+.lp-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 28px; }
+.lp-lista li { display: flex; gap: 12px; align-items: flex-start; }
+.lp-lista li > svg { flex: none; color: var(--ouro); margin-top: 2px; }
+.lp-lista strong { display: block; font-weight: 700; margin-bottom: 3px; }
+.lp-lista span { color: var(--texto-2); line-height: 1.5; font-size: .96rem; }
+.lp-lista-curta { grid-template-columns: 1fr 1fr; margin: 28px 0 30px; }
+.lp-lista-grade { margin-top: 30px; }
+@media (max-width: 860px) {
+  .lp-dupla { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .lp-lista, .lp-lista-curta { grid-template-columns: 1fr; }
+}
+
+/* motoboy: o celular com a orbe (o mesmo botão do app) */
+.lp-motoboy { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(24px, 5vw, 72px); align-items: center; }
+.lp-celular {
+  justify-self: center; width: min(260px, 70vw); aspect-ratio: 9 / 18.5; border-radius: 40px; padding: 12px;
+  background: linear-gradient(160deg, #2a2a30, #0c0c0f); box-shadow: 0 40px 80px -40px rgb(0 0 0 / .8), inset 0 0 0 1px rgb(255 255 255 / .08);
+}
+.lp-celular-tela {
+  height: 100%; border-radius: 30px; background: radial-gradient(90% 60% at 50% 30%, rgb(52 211 153 / .16), transparent 70%), #08080a;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+}
+.lp-celular-orbe {
+  width: 62%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 35%, #1d1d21, #09090b 70%);
+  box-shadow: 0 0 0 7px rgb(52 211 153 / .85), 0 0 46px rgb(52 211 153 / .45);
+}
+.lp-celular-orbe span { font-stretch: 125%; font-weight: 900; letter-spacing: .08em; font-size: .9rem; color: #a7f3d0; }
+.lp-celular-linha { width: 70%; height: 10px; border-radius: 8px; background: rgb(255 255 255 / .08); }
+.lp-celular-linha.curta { width: 46%; }
+@media (max-width: 860px) {
+  .lp-motoboy { grid-template-columns: 1fr; }
+}
+
+.lp-fim { text-align: center; }
+.lp-fim .lp-lead { margin-left: auto; margin-right: auto; }
+.lp-fim .lp-acoes { justify-content: center; }
+
+/* ---------------------------------------------------------------- download */
+.lp-baixar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr); gap: 40px; align-items: center; border-top: 0; }
+.lp-qr {
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 30px; border-radius: 26px;
+  border: 1px dashed var(--borda-forte); color: var(--texto-2);
+}
+.lp-qr svg { color: var(--ouro); }
+@media (max-width: 760px) { .lp-baixar { grid-template-columns: 1fr; } .lp-qr { display: none; } }
+.lp-faq { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
+.lp-faq details, .aj-secao details { border: 1px solid var(--borda); border-radius: 16px; background: var(--vidro-sutil); }
+.lp-faq summary, .aj-secao summary { cursor: pointer; padding: 16px 18px; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.lp-faq summary::after, .aj-secao summary::after { content: "+"; color: var(--ouro); font-weight: 800; }
+.lp-faq details[open] summary::after, .aj-secao details[open] summary::after { content: "−"; }
+.lp-faq details p { margin: 0; padding: 0 18px 18px; color: var(--texto-2); line-height: 1.6; }
+
+/* ---------------------------------------------------------------- ajuda */
+.aj-cabeca { border-top: 0; padding-bottom: 24px; }
+.aj-publicos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 30px; }
+.aj-publicos button {
+  display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 16px; border-radius: 18px; cursor: pointer;
+  background: var(--vidro-sutil); border: 1px solid var(--borda); color: var(--texto-2); font: inherit;
+}
+.aj-publicos button svg { flex: none; color: var(--texto-3); margin-top: 2px; }
+.aj-publicos button strong { display: block; color: var(--texto); font-size: 1.02rem; margin-bottom: 3px; }
+.aj-publicos button small { font-size: .86rem; line-height: 1.4; }
+.aj-publicos button.ativo { border-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 9%, transparent); }
+.aj-publicos button.ativo svg { color: var(--ouro); }
+@media (max-width: 720px) { .aj-publicos { grid-template-columns: 1fr; } }
+.aj-busca { display: flex; align-items: center; gap: 10px; margin-top: 18px; max-width: 560px; padding: 0 16px; border-radius: 14px; background: var(--campo); border: 1px solid var(--borda-forte); color: var(--texto-3); }
+.aj-busca input { flex: 1; border: 0; background: none; color: var(--texto); padding: 14px 0; font: inherit; outline: none; }
+.aj-corpo { padding-top: 24px; display: grid; gap: 40px; }
+.aj-secao { display: flex; flex-direction: column; gap: 10px; max-width: 860px; }
+.aj-secao h2 { font-size: clamp(1.3rem, 2.4vw, 1.7rem); margin-bottom: 6px; }
+.aj-secao details { scroll-margin-top: 90px; }
+.aj-texto { padding: 0 18px 18px; color: var(--texto-2); line-height: 1.65; max-width: 72ch; }
+.aj-texto p { margin: 0 0 10px; }
+.aj-texto ol { margin: 0 0 12px; padding-left: 22px; }
+.aj-texto li { margin-bottom: 6px; }
+.aj-texto li::marker { color: var(--ouro); font-weight: 800; }
+
+/* ---------------------------------------------------------------- rodapé */
+.lp-rodape {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px 32px; padding: 34px clamp(16px, 5vw, 64px);
+  border-top: 1px solid var(--borda); color: var(--texto-3); font-size: .9rem;
+}
+.lp-rodape nav { display: flex; flex-wrap: wrap; gap: 18px; }
+.lp-rodape nav a { text-decoration: none; color: var(--texto-2); }
+.lp-rodape nav a:hover { color: var(--ouro); }
+.lp-rodape p { margin: 0 0 0 auto; }

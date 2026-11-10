@@ -1,0 +1,76 @@
+name: Migrar banco (Supabase)
+
+# Aplica no Supabase as migrações de supabase/migrations que ainda não rodaram, em ordem.
+# Precisa do segredo SUPABASE_DB_URL (Settings → Secrets and variables → Actions), com a
+# "Connection string" do Supabase (Project Settings → Database → Session pooler, URI),
+# já com a senha do banco. O segredo fica só no GitHub; nunca aparece no log.
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: "Endereço do site na Vercel (para os avisos push). Ex.: https://delibra-web.vercel.app"
+        required: false
+        default: ""
+      dev_email:
+        description: "E-mail da conta que vira Dev (crie a conta antes, entrando pelo site)."
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+
+concurrency:
+  group: migrar-banco
+  cancel-in-progress: false
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar o psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Aplicar migrações novas
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB" ]; then echo "::error::Falta o segredo SUPABASE_DB_URL no GitHub."; exit 1; fi
+          psql "$DB" -v ON_ERROR_STOP=1 -q -c "create schema if not exists controle; create table if not exists controle.migracoes (nome text primary key, aplicada_em timestamptz not null default now());"
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            n=$(basename "$f")
+            ja=$(psql "$DB" -tA -c "select 1 from controle.migracoes where nome = '$n'")
+            if [ "$ja" = "1" ]; then echo "já aplicada: $n"; continue; fi
+            echo "::group::aplicando $n"
+            psql "$DB" -v ON_ERROR_STOP=1 -q --single-transaction -f "$f"
+            psql "$DB" -v ON_ERROR_STOP=1 -q -c "insert into controle.migracoes (nome) values ('$n')"
+            echo "::endgroup::"
+          done
+
+      - name: Ajustar endereço do push
+        if: ${{ github.event.inputs.site_url != '' }}
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          SITE: ${{ github.event.inputs.site_url }}
+        run: |
+          URL="${SITE%/}/api/push"
+          psql "$DB" -v ON_ERROR_STOP=1 -q -v url="$URL" <<'SQL'
+          insert into privado.config (chave, valor) values ('push_url', :'url') on conflict (chave) do update set valor = excluded.valor;
+          SQL
+          echo "push_url = $URL"
+
+      - name: Tornar Dev
+        if: ${{ github.event.inputs.dev_email != '' }}
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          EMAIL: ${{ github.event.inputs.dev_email }}
+        run: |
+          psql "$DB" -v ON_ERROR_STOP=1 -q -v email="$EMAIL" <<'SQL'
+          update public.perfis p
+             set papeis = (select array_agg(distinct x) from unnest(p.papeis || array['dev', 'gestor', 'motoboy']::public.papel_usuario[]) x)
+           where p.id in (select id from auth.users where lower(email) = lower(:'email'));
+          insert into public.motoboys (id) select id from auth.users where lower(email) = lower(:'email') on conflict (id) do nothing;
+          SQL
+          echo "Pronto: a conta virou Dev (se existir)."

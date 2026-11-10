@@ -1,0 +1,59 @@
+import { importPKCS8, SignJWT } from "jose";
+
+interface ContaServico {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+}
+
+let conta: ContaServico | null = null;
+let tokenCache: { valor: string; expira: number } | null = null;
+
+function lerConta(): ContaServico {
+  if (conta) return conta;
+  const bruto = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!bruto) throw new Error("FIREBASE_SERVICE_ACCOUNT não configurada na Vercel");
+  const json = JSON.parse(bruto) as ContaServico;
+  json.private_key = json.private_key.replace(/\\n/g, "\n");
+  conta = json;
+  return json;
+}
+
+/** Token OAuth do Google para a API do FCM (válido ~1 h, guardado em cache). */
+async function tokenGoogle(): Promise<string> {
+  if (tokenCache && tokenCache.expira > Date.now() + 60_000) return tokenCache.valor;
+  const c = lerConta();
+  const chave = await importPKCS8(c.private_key, "RS256");
+  const agora = Math.floor(Date.now() / 1000);
+  const assertion = await new SignJWT({ scope: "https://www.googleapis.com/auth/firebase.messaging" })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setIssuer(c.client_email)
+    .setAudience("https://oauth2.googleapis.com/token")
+    .setIssuedAt(agora)
+    .setExpirationTime(agora + 3600)
+    .sign(chave);
+
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
+  });
+  if (!r.ok) throw new Error(`Google OAuth ${r.status}: ${await r.text()}`);
+  const j = (await r.json()) as { access_token: string; expires_in: number };
+  tokenCache = { valor: j.access_token, expira: Date.now() + j.expires_in * 1000 };
+  return j.access_token;
+}
+
+/** Envia uma mensagem "data" de alta prioridade (acorda o app mesmo fechado). */
+export async function enviarFcm(token: string, dados: Record<string, string>) {
+  const c = lerConta();
+  const r = await fetch(`https://fcm.googleapis.com/v1/projects/${c.project_id}/messages:send`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await tokenGoogle()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      // oferta vale poucos segundos; o resto (cancelamento, planejadas) precisa chegar mesmo se o celular estiver sem sinal um tempo
+      message: { token, data: dados, android: { priority: "HIGH", ttl: dados.tipo === "oferta" ? "40s" : "3600s" } },
+    }),
+  });
+  return { ok: r.ok, status: r.status, corpo: r.ok ? undefined : await r.text() };
+}

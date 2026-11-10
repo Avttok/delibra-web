@@ -1,0 +1,28 @@
+{
+  "name": "delibra-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/copiar-worker-mapa.mjs",
+    "dev": "node scripts/copiar-worker-mapa.mjs && next dev",
+    "build": "node scripts/copiar-worker-mapa.mjs && next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@supabase/supabase-js": "^2.119.0",
+    "jose": "^6.2.15",
+    "lucide-react": "^1.69.0",
+    "maplibre-gl": "^6.16.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "5.9.3"
+  }
+}
