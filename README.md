@@ -30,8 +30,8 @@ O banco isola uma empresa da outra (regras restritivas no Supabase). Hierarquia:
    - `SUPABASE_SECRET_KEY` (Project Settings → API Keys → Secret key) — **só na Vercel**
    - `PUSH_SECRET`: rode `select valor from privado.config where chave = 'push_secret';` no SQL Editor e copie
    - `FIREBASE_SERVICE_ACCOUNT` (JSON da conta de serviço do Firebase) — **só na Vercel**
-5. Entre no site e **crie a sua conta**. Rode o workflow de novo com `dev_email` = seu e-mail
-   (vira Dev) e `site_url` = endereço da Vercel (para os avisos push).
+5. Crie a conta master **dev@delibra.com** (Supabase → Authentication → Add user, ou pelo site):
+   ela já nasce Dev. Rode o workflow de novo com `site_url` = endereço da Vercel (para os avisos push).
 6. No **Dev → Empresas**, crie a primeira empresa e escolha o gestor dela.
 
 Nunca coloque a secret key, a senha do banco ou a conta de serviço do Firebase no código ou no chat.

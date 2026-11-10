@@ -818,7 +818,7 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     'nome', p.nome,
     'foto_url', p.foto_url,
     'papeis', to_jsonb(p.papeis),
-    'gestor', 'gestor' = any (p.papeis) or 'dev' = any (p.papeis),
+    'gestor', 'gestor' = any (p.papeis) or 'dev' = any (p.papeis) or 'supervisor' = any (p.papeis),
     'motoboy', 'motoboy' = any (p.papeis),
     'dev', 'dev' = any (p.papeis),
     'cor_tema', p.cor_tema,

@@ -29,7 +29,7 @@ $$;
 -- A conta do Ruan é a conta Dev (continua gestor e motoboy também)
 update public.perfis p
    set papeis = (select array_agg(distinct x) from unnest(p.papeis || array['dev', 'gestor']::public.papel_usuario[]) x)
- where p.id in (select id from auth.users where lower(email) = 'ruan.carlos@pwexpress.com');
+ where p.id in (select id from auth.users where lower(email) = 'dev@delibra.com');
 
 -- ------------------------------------------------------------- editar membro com as proteções
 create or replace function public.editar_membro(p_usuario uuid, p_nome text, p_papeis public.papel_usuario[], p_repasse numeric default null)
