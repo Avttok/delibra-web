@@ -1,6 +1,6 @@
 "use client";
 
-import { useMarcaEmpresa } from "./marcaEmpresa";
+import { nomeDoApp, useMarcaEmpresa } from "./marcaEmpresa";
 
 /**
  * Logo da Delibra: o D com as ondas de radar + o nome.
@@ -25,11 +25,11 @@ export function MarcaDelibra({ tamanho = 28 }: { tamanho?: number }) {
 export function Logo({ grande = false, delibra = false }: { grande?: boolean; delibra?: boolean }) {
   const t = grande ? 64 : 30;
   const marca = useMarcaEmpresa();
-  if (!delibra && marca?.logo) return (
-    <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={marca.nome}>
+  if (!delibra && (marca?.logo || marca?.nomeApp)) return (
+    <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={nomeDoApp(marca)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={marca.logo} alt="" width={t} height={t} className="logo-empresa-icone" />
-      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20 }}>{marca.nome}</span>
+      {marca.logo ? <img src={marca.logo} alt="" width={t} height={t} className="logo-empresa-icone" /> : <MarcaDelibra tamanho={t} />}
+      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20 }}>{nomeDoApp(marca)}</span>
     </span>
   );
   return (

@@ -7,7 +7,11 @@ import { useSyncExternalStore } from "react";
  * aparece no lugar do Delibra em todo o site (cabeçalhos, tela de entrar, ícone da aba).
  * Fica guardada no navegador para a próxima visita já abrir com ela.
  */
-export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null };
+/** `nomeApp`: nome que aparece no lugar de "Delibra" (vazio = Delibra). */
+export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null; nomeApp?: string | null };
+
+/** Nome do app para esta conta: o escolhido pela empresa, ou o da empresa quando ela tem ícone, ou Delibra. */
+export const nomeDoApp = (m: MarcaEmpresa | null) => m?.nomeApp || (m?.logo ? m.nome : "Delibra");
 
 const CHAVE = "delibra_marca";
 let atual: MarcaEmpresa | null = null;
@@ -23,6 +27,20 @@ function garantir() {
   carregado = true;
   atual = ler();
   aplicarFavicon(atual?.logo ?? null);
+  aplicarTitulo(atual);
+}
+
+let observador: MutationObserver | null = null;
+/** Troca "Delibra" pelo nome do app no título da aba (e continua trocando quando a página muda). */
+function aplicarTitulo(m: MarcaEmpresa | null) {
+  if (typeof document === "undefined") return;
+  const nome = nomeDoApp(m);
+  const trocar = () => { if (nome !== "Delibra" && document.title.includes("Delibra")) document.title = document.title.replace(/Delibra/g, nome); };
+  trocar();
+  observador?.disconnect();
+  if (nome === "Delibra") return;
+  const t = document.querySelector("title");
+  if (t) { observador = new MutationObserver(trocar); observador.observe(t, { childList: true }); }
 }
 
 function aplicarFavicon(url: string | null) {
@@ -39,10 +57,11 @@ function aplicarFavicon(url: string | null) {
 }
 
 export function definirMarcaEmpresa(m: MarcaEmpresa | null) {
-  const v = m && (m.logo || m.nome) ? m : null;
+  const v = m && (m.logo || m.nomeApp) ? m : null;
   atual = v;
   try { if (v) localStorage.setItem(CHAVE, JSON.stringify(v)); else localStorage.removeItem(CHAVE); } catch { /* sem armazenamento */ }
   aplicarFavicon(v?.logo ?? null);
+  aplicarTitulo(v);
   ouvintes.forEach((f) => f());
 }
 

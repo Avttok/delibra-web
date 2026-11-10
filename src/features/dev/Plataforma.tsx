@@ -12,7 +12,7 @@ const brl = (v: number | string | null | undefined) => Number(v ?? 0).toLocaleSt
 const num = (v: number | string | null | undefined, d = 0) => Number(v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: d });
 
 export interface Organizacao {
-  id: string; nome: string; slug: string | null; documento: string | null; logo_url: string | null; cor: string | null;
+  id: string; nome: string; nome_app?: string | null; slug: string | null; documento: string | null; logo_url: string | null; cor: string | null;
   dono_id: string | null; status: "teste" | "ativa" | "suspensa" | "cancelada";
   cobranca_modelo: "percentual" | "licenca" | "isento"; cobranca_pct: number; mensalidade: number; vencimento_dia: number;
   compartilhar: "nunca" | "sem_livre" | "sempre" | "parceiros"; compartilhar_apos_min: number; receber_de_outras: boolean; parceiros: string[];
@@ -159,8 +159,9 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
     <div className="empresa-form">
       {org?.id && (
         <details className="avancado">
-          <summary>Ícone da empresa (no lugar do Delibra)</summary>
-          <IconeEmpresa orgId={org.id} nome={org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo) => {
+          <summary>Ícone e nome do app (no lugar do Delibra)</summary>
+          <NomeAppDev org={org} onSalvo={() => onSalvo(org.id)} />
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo) => {
             const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_logo: logo ?? "", p_cor: null });
             if (!error) onSalvo(org.id);
             return error?.message ?? null;
@@ -426,6 +427,28 @@ export function ConversasDev() {
           </>)}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Dev: nome do app que esta empresa mostra no lugar de "Delibra". */
+function NomeAppDev({ org, onSalvo }: { org: Organizacao; onSalvo: () => void }) {
+  const [nome, setNome] = useState(org.nome_app ?? "");
+  const [salvando, setSalvando] = useState(false);
+  async function salvar() {
+    const v = nome.trim();
+    if (v && (v.length < 2 || v.length > 30)) return toast("O nome do app precisa ter de 2 a 30 letras.", "erro");
+    setSalvando(true);
+    const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_nome_app: v, p_so_nome: true });
+    setSalvando(false);
+    if (error) return toast(error.message, "erro");
+    toast(v ? `O app desta empresa agora se chama ${v}.` : "Voltou a se chamar Delibra.", "ok");
+    onSalvo();
+  }
+  return (
+    <div className="linha-botoes" style={{ alignItems: "flex-end", marginBottom: 10 }}>
+      <label className="campo" style={{ flex: 1 }}><span>Nome do app</span><input value={nome} maxLength={30} placeholder="Delibra" onChange={(e) => setNome(e.target.value)} /></label>
+      <button type="button" className="botao" disabled={salvando || nome.trim() === (org.nome_app ?? "")} onClick={salvar}>{salvando ? "Salvando…" : "Salvar nome"}</button>
     </div>
   );
 }

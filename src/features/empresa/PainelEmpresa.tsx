@@ -6,8 +6,9 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { definirMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { IconeEmpresa } from "./IconeEmpresa";
+import { toast } from "@/features/ui/toast";
 
-type Org = { id: string; nome: string; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
+type Org = { id: string; nome: string; nome_app: string | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
 type Plano = {
   empresa: string; status: string; modelo: "percentual" | "licenca" | "isento"; pct: number; mensalidade: number;
   vencimento_dia: number; proximo_vencimento: string; de: string; ate: string; faturamento: number; rotas: number; devido: number;
@@ -27,6 +28,7 @@ export function PainelEmpresa() {
   const [plano, setPlano] = useState<Plano | null>(null);
   const [nome, setNome] = useState("");
   const [cor, setCor] = useState("#d4af37");
+  const [nomeApp, setNomeApp] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -34,7 +36,7 @@ export function PainelEmpresa() {
     const [{ data: o }, { data: p }] = await Promise.all([sb.rpc("minha_organizacao"), sb.rpc("meu_plano")]);
     const og = (o as Org | null) ?? null;
     setOrg(og); setPlano((p as Plano | null) ?? null);
-    if (og) { setNome(og.nome); setCor(og.cor ?? "#d4af37"); }
+    if (og) { setNome(og.nome); setCor(og.cor ?? "#d4af37"); setNomeApp(og.nome_app ?? ""); }
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -43,13 +45,16 @@ export function PainelEmpresa() {
     if (error) return error.message.includes("apenas_gestor") ? "Só o dono da empresa (ou o Dev) muda isto." : error.message;
     const novo = { ...org!, ...(campos as Partial<Org>) };
     setOrg(novo);
-    definirMarcaEmpresa({ nome: novo.nome, logo: novo.logo_url, cor: novo.cor });
+    definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, logo: novo.logo_url, cor: novo.cor });
     return null;
   }
 
   async function salvarNomeCor() {
     setSalvando(true);
-    await salvar({ nome, cor });
+    const app = nomeApp.trim();
+    if (app && (app.length < 2 || app.length > 30)) { setSalvando(false); return toast("O nome do app precisa ter de 2 a 30 letras.", "erro"); }
+    const erro = await salvar({ nome, cor, nome_app: app || "" });
+    if (erro) toast(erro, "erro"); else toast("Salvo. O app e o site já mostram o nome novo.", "ok");
     setSalvando(false);
   }
 
@@ -64,14 +69,16 @@ export function PainelEmpresa() {
         <CabecaPagina icone={Landmark} titulo="Minha empresa" subtitulo="Marca no app e no site · seu plano" />
         <section className="bloco">
           <h3 className="titulo-bloco"><Palette size={16} aria-hidden /> Ícone e nome</h3>
-          <IconeEmpresa orgId={org.id} nome={org.nome} logo={org.logo_url} cor={org.cor} onSalvar={(logo) => salvar({ logo_url: logo ?? "" })} />
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={(logo) => salvar({ logo_url: logo ?? "" })} />
           <div className="grade-2" style={{ marginTop: 12 }}>
-            <label className="campo"><span>Nome que aparece</span><input value={nome} maxLength={40} onChange={(e) => setNome(e.target.value)} /></label>
+            <label className="campo"><span>Nome do app</span><input value={nomeApp} maxLength={30} placeholder="Delibra" onChange={(e) => setNomeApp(e.target.value)} /></label>
+            <label className="campo"><span>Nome da empresa</span><input value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} /></label>
             <label className="campo curto"><span>Cor da marca</span><input type="color" value={cor} onChange={(e) => setCor(e.target.value)} /></label>
           </div>
+          <p className="dica" style={{ margin: "0 0 8px" }}>O nome do app aparece no lugar de “Delibra” no topo do app do motoboy e do site, no atalho do celular e nas telas de entrar. Em branco = Delibra.</p>
           <div className="linha-botoes">
-            <button type="button" className="botao" disabled={salvando || (nome.trim() === org.nome && cor === (org.cor ?? "#d4af37"))} onClick={salvarNomeCor}>
-              {salvando ? "Salvando…" : "Salvar nome e cor"}
+            <button type="button" className="botao" disabled={salvando || (nome.trim() === org.nome && cor === (org.cor ?? "#d4af37") && nomeApp.trim() === (org.nome_app ?? ""))} onClick={salvarNomeCor}>
+              {salvando ? "Salvando…" : "Salvar nomes e cor"}
             </button>
           </div>
           {org.slug && <p className="dica" style={{ margin: 0 }}>Link para seus clientes criarem conta já com sua marca: <code>{typeof window !== "undefined" ? window.location.origin : ""}/entrar?criar=1&empresa={org.slug}</code></p>}
