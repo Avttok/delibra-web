@@ -32,6 +32,12 @@ drop trigger if exists conta_master_motoboy on public.perfis;
 create trigger conta_master_motoboy after insert on public.perfis for each row execute function privado.conta_master_motoboy();
 revoke execute on function privado.conta_master_motoboy() from public, anon, authenticated;
 
+-- contas criadas antes do banco existir ficaram sem perfil: cria agora (o gatilho acima já faz o Dev)
+insert into public.perfis (id, nome)
+select u.id, coalesce(nullif(u.raw_user_meta_data ->> 'nome', ''), split_part(u.email, '@', 1))
+  from auth.users u
+ where not exists (select 1 from public.perfis p where p.id = u.id);
+
 -- se a conta já existe
 update public.perfis p
    set papeis = (select array_agg(distinct x) from unnest(p.papeis || array['dev', 'gestor', 'motoboy']::public.papel_usuario[]) x),
