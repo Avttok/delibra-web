@@ -35,7 +35,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
     if (f.senha.length < 8) return setErro(ERROS.senha_curta);
     setEnviando(true);
     try {
-      const r = await fetch(`${base}/api/cadastro`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, documento: f.documento.replace(/\D/g, "") }) });
+      const r = await fetch(`${base}/api/cadastro`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, documento: f.documento.replace(/\D/g, ""), empresa: new URLSearchParams(window.location.search).get("empresa") }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErro(ERROS[j.erro] ?? `Não deu certo (${j.erro ?? r.status}).`); setEnviando(false); return; }
       await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.senha });

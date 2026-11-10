@@ -59,10 +59,12 @@ export async function POST(req: Request) {
   const r = await admin.rpc("registrar_cadastro", { d: {
     perfil_id: data.user.id, email, nome, responsavel: responsavel || null, documento: documento || null,
     telefone: c.telefone ?? null, endereco: c.endereco ?? null, lat: c.lat ?? null, lng: c.lng ?? null, observacoes: c.observacoes ?? null,
+    // transportadora do cadastro (link /entrar?empresa=slug); sem ela, vale a única empresa ativa
+    empresa: (c as { empresa?: string }).empresa ?? new URL(req.url).searchParams.get("empresa") ?? null,
   } });
   if (r.error) {
     await admin.auth.admin.deleteUser(data.user.id).catch(() => null);
-    return resp({ erro: r.error.message.includes("documento_invalido") ? "documento_invalido" : r.error.message.includes("cadastro_desligado") ? "cadastro_desligado" : "falha_no_cadastro" }, 400);
+    return resp({ erro: r.error.message.includes("documento_invalido") ? "documento_invalido" : r.error.message.includes("cadastro_desligado") ? "cadastro_desligado" : r.error.message.includes("empresa_obrigatoria") ? "empresa_obrigatoria" : "falha_no_cadastro" }, 400);
   }
   return resp({ ok: true, status: (r.data as { status?: string } | null)?.status ?? "pendente" });
 }
