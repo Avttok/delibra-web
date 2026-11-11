@@ -40,7 +40,7 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
       const png = await quadrado(f);
       const caminho = `${orgId}/icone-${Date.now()}.png`;
       const sb = supabase();
-      const { error } = await sb.storage.from("marcas").upload(caminho, png, { contentType: "image/png", upsert: true });
+      const { error } = await sb.storage.from("marcas").upload(caminho, png, { contentType: "image/png", upsert: false });
       if (error) throw new Error(error.message);
       const url = sb.storage.from("marcas").getPublicUrl(caminho).data.publicUrl;
       const erro = await onSalvar(url);

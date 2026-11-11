@@ -13,6 +13,7 @@ import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas"
 import { buscarPercursos } from "@/lib/mapa/percursos";
 import { SelosPonto, type OpcoesDoPonto } from "./OpcoesPonto";
 import { EditarOrcamento } from "./EditarOrcamento";
+import { OrcamentoNoMapa } from "./OrcamentoNoMapa";
 import { RotasDoPedido } from "./RotasDoPedido";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { formatarKm } from "@/features/corridas/tipos";
@@ -254,6 +255,13 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
       <div className="formulario vidro">
         <h3 className="display" style={{ margin: 0 }}><Wallet size={18} aria-hidden /> Cobrança</h3>
         {p.orcamento ? <EditarOrcamento key={JSON.stringify(p.orcamento.linhas)} pedidoId={p.id} orc={p.orcamento} bloqueado={["cancelado", "recusado"].includes(p.status)} /> : <p className="dica">Sem orçamento.</p>}
+        {p.orcamento && pontos.length >= 2 && (
+          <details className="avancado">
+            <summary>Como chegou no valor, no mapa</summary>
+            <OrcamentoNoMapa pontos={pontos.map((x) => ({ id: x.id, tipo: x.tipo, lat: x.lat, lng: x.lng }))}
+              linhas={(p.orcamento.linhas ?? []) as { chave?: string; valor?: number }[]} trajeto={(p.orcamento as { trajeto?: string }).trajeto} />
+          </details>
+        )}
         <div className="pedido-valor">
           <label className="campo"><span>Valor final</span>
             <span className="passo-campo"><span className="unidade">R$</span><input inputMode="decimal" value={valor} disabled={p.status === "cancelado" || p.status === "recusado"} onChange={(e) => setValor(e.target.value)} /></span></label>

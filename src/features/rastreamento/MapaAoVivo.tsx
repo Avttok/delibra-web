@@ -163,12 +163,32 @@ export function MapaAoVivo() {
     }
   }, [mapa, motoboys, nomes, fotos, pronto, seguindo, filtro, someH, esmaecer, Math.floor(agora / 60_000)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // seguir motoboy
+  // seguir motoboy: a câmera acompanha até você arrastar o mapa (aí fica livre; "Centralizar" volta a seguir)
   const alvo = seguindo ? motoboys[seguindo] : null;
+  const [acompanhar, setAcompanhar] = useState(true);
+  useEffect(() => { setAcompanhar(true); }, [seguindo]);
   useEffect(() => {
-    if (!alvo || alvo.lat == null || alvo.lng == null) return;
+    const m = mapa.current;
+    if (!m || !pronto) return;
+    const soltar = (e: { originalEvent?: unknown }) => { if (e.originalEvent) setAcompanhar(false); };
+    m.on("dragstart", soltar);
+    return () => { m.off("dragstart", soltar); };
+  }, [mapa, pronto]);
+  useEffect(() => {
+    if (!acompanhar || !alvo || alvo.lat == null || alvo.lng == null) return;
     mapa.current?.easeTo({ center: [alvo.lng, alvo.lat], zoom: Math.max(mapa.current.getZoom(), 15), duration: 800 });
-  }, [mapa, alvo?.lat, alvo?.lng, alvo]);
+  }, [mapa, alvo?.lat, alvo?.lng, alvo, acompanhar]);
+
+  // camadas: percursos e pings aparecem ou somem (fica guardado neste navegador)
+  const [verPercursos, setVerPercursos] = useState(() => { try { return localStorage.getItem("delibra-mapa-percursos") !== "0"; } catch { return true; } });
+  const [verPings, setVerPings] = useState(() => { try { return localStorage.getItem("delibra-mapa-pings") !== "0"; } catch { return true; } });
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !pronto) return;
+    try { localStorage.setItem("delibra-mapa-percursos", verPercursos ? "1" : "0"); localStorage.setItem("delibra-mapa-pings", verPings ? "1" : "0"); } catch { /* sem armazenamento */ }
+    for (const id of ["percursos", "percursos-contorno"]) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", verPercursos ? "visible" : "none");
+    if (m.getLayer("pings")) m.setLayoutProperty("pings", "visibility", verPings ? "visible" : "none");
+  }, [mapa, pronto, verPercursos, verPings, registros, seguindo]);
 
   const todos = useMemo(
     () => Object.values(motoboys).sort((a, b) => ORDEM[a.status] - ORDEM[b.status] || (nomes[a.id] ?? "").localeCompare(nomes[b.id] ?? "")),
@@ -209,6 +229,11 @@ export function MapaAoVivo() {
               </select>
             )}
           </label>
+        </div>
+        <div className="camadas-liga">
+          <label><input type="checkbox" role="switch" checked={verPercursos} onChange={(e) => setVerPercursos(e.target.checked)} /> Percursos</label>
+          <label><input type="checkbox" role="switch" checked={verPings} onChange={(e) => setVerPings(e.target.checked)} /> Pings</label>
+          {seguindo && !acompanhar && <button type="button" className="botao-texto" onClick={() => setAcompanhar(true)}><LocateFixed size={14} aria-hidden /> Centralizar</button>}
         </div>
 
         <div className="filtro filtro-rolavel">

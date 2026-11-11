@@ -1,5 +1,7 @@
 "use client";
 
+import { CartaoChatRico } from "./CartaoChat";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CodeXml, ArrowLeft, Bell, BellOff, Building2, ClipboardList, ImagePlus, MapPin, MessageCircle, MessagesSquare, Plus, Route, Search, Send, Trash2, UserRound, Users, X,
@@ -174,7 +176,8 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
     const I = ICONE_ANEXO[a.tipo] ?? ClipboardList;
     const href = a.tipo === "local" && a.lat != null ? `https://www.openstreetmap.org/?mlat=${a.lat}&mlon=${a.lng}#map=17/${a.lat}/${a.lng}` : linkDe?.(a) ?? null;
     const corpo = <><span className="chat-cartao-icone"><I size={16} aria-hidden /></span><span><strong>{a.titulo ?? a.tipo}</strong>{a.sub && <small>{a.sub}</small>}</span></>;
-    return href ? <a className="chat-cartao" href={href} target={a.tipo === "local" ? "_blank" : undefined} rel="noreferrer">{corpo}</a> : <span className="chat-cartao">{corpo}</span>;
+    const simples = href ? <a className="chat-cartao" href={href} target={a.tipo === "local" ? "_blank" : undefined} rel="noreferrer">{corpo}</a> : <span className="chat-cartao">{corpo}</span>;
+    return <CartaoChatRico tipo={a.tipo} id={(a as Anexo & { id?: string }).id} simples={simples} />;
   };
 
   return (
