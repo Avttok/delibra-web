@@ -1564,3 +1564,20 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .titulo-bloco { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; }
 .selo-ativa { color: #34d399; } .selo-teste { color: var(--ouro); } .selo-suspensa, .selo-cancelada { color: var(--vermelho, #e5484d); }
 .botao-icone.perigo:hover { color: var(--vermelho, #e5484d); border-color: var(--vermelho, #e5484d); }
+
+/* Modo Dev: seletor de empresa no topo */
+.modo-dev { position: relative; }
+.modo-dev-botao { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 99px; border: 1px solid color-mix(in srgb, var(--cor-dev, #e5484d) 55%, transparent);
+  background: color-mix(in srgb, var(--cor-dev, #e5484d) 14%, transparent); color: var(--texto); font-weight: 650; font-size: 13px; cursor: pointer; max-width: 220px; }
+.modo-dev-botao span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modo-dev-botao.modo-vazio { border-style: dashed; }
+.modo-dev-caixa { position: absolute; right: 0; top: calc(100% + 10px); z-index: 70; width: min(320px, calc(100vw - 24px)); padding: 8px; border-radius: 16px; display: grid; gap: 2px; }
+.modo-dev-titulo { margin: 8px 8px 4px; font-size: 12px; color: var(--texto-3); }
+.modo-dev-lista { max-height: 50vh; overflow-y: auto; display: grid; gap: 2px; }
+.modo-dev-item { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; border: 0; background: none; color: var(--texto); text-align: left; cursor: pointer; }
+.modo-dev-item:hover { background: var(--vidro, rgba(255,255,255,.05)); }
+.modo-dev-item strong { display: block; font-size: 14px; }
+.modo-dev-item small { display: block; font-size: 12px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modo-dev-icone { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--fundo-2, #15151a) center / cover; color: var(--ouro); border: 1px solid var(--borda); }
+.modo-dev-ok { color: var(--ouro); }
+@media (max-width: 640px) { .modo-dev-botao span { max-width: 90px; } }

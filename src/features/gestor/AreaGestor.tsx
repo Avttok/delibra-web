@@ -13,6 +13,7 @@ import { definirMarcaEmpresa, useMarcaEmpresa } from "@/features/marca/marcaEmpr
 import { useEstabelecimentos } from "@/lib/mapa/estabelecimentos";
 import { ProvedorTeste } from "@/features/teste/modoTeste";
 import { MenuPerfil } from "./MenuPerfil";
+import { ModoDev } from "@/features/dev/ModoDev";
 import { Tour, type PassoTour } from "@/features/ui/Tour";
 import { ProvedorConta, type ContextoConta, type CorTema, type Papel } from "@/features/conta/conta";
 import { Toasts, toast } from "@/features/ui/toast";
@@ -228,6 +229,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <span className="espaco" />
+          {dev && <ModoDev />}
           <MenuPerfil
             id={sessao!.user.id}
             email={sessao?.user.email ?? ""}
