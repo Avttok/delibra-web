@@ -14,6 +14,8 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { CampoRaio } from "@/features/ui/CampoRaio";
 import { AREAS, GRUPOS, PARAMETROS, ehRaio, igualPadrao, type AreaParametro, type DefParametro, type GrupoParametro, type ValorParametro } from "./definicoes";
+import { CampoNumero } from "@/features/ui/CampoNumero";
+import { CompartilharMotoboys } from "@/features/equipe/CompartilharMotoboys";
 import { useConfiguracoes } from "./useConfiguracoes";
 
 const ICONES_AREA: Record<AreaParametro, LucideIcon> = {
@@ -44,7 +46,8 @@ const mudou = (p: DefParametro, v: ValorParametro | undefined) => !igualPadrao(p
 export function PainelConfiguracoes() {
   const cfg = useConfiguracoes();
   const [pagina, setPagina] = useState<Pagina>(() => {
-    try { return (localStorage.getItem("pwex-config-pagina") as Pagina) || "clientes"; } catch { return "clientes"; }
+    // link direto (?area=operacao) vence a última página aberta
+    try { return (new URLSearchParams(window.location.search).get("area") as Pagina) || (localStorage.getItem("pwex-config-pagina") as Pagina) || "clientes"; } catch { return "clientes"; }
   });
   const conta = useConta();
   const visiveis = PARAMETROS.filter((p) => conta.dev || !p.escondido);
@@ -154,6 +157,7 @@ export function PainelConfiguracoes() {
                     <p className="dica">{GRUPOS[g].descricao}</p>
                     {g === "distancia" && <ExemploAcrescimo cfg={cfg} />}
                     {g === "pagamento" && <ExemploPagamento cfg={cfg} />}
+                    {g === "despacho" && <CompartilharMotoboys />}
                     {g === "pag_zonas" && <ExemploZonas cfg={cfg} />}
                     <div className="config-lista">{lista.map((p) => linha(p, false))}</div>
                     {g === "rastreamento" && <p className="dica">O app aplica estes ajustes na próxima sincronização. Cada motoboy pode ter um ritmo próprio em Exceções.</p>}
@@ -331,20 +335,9 @@ export function Parametro({ p, valor, estado, mostrarGrupo, onSalvar, bloqueado,
             ))}
           </div>
         ) : (
-          <div className="passo">
-            <button type="button" onClick={() => somar(-passo)} aria-label="Diminuir" disabled={bloqueado || (p.min != null && Number(valor) <= p.min)}><Minus size={16} /></button>
-            <span className="passo-campo">
-              {p.unidade === "R$" && <span className="unidade">R$</span>}
-              <input inputMode="decimal" disabled={bloqueado} value={rascunho ?? formatar(Number(valor), passo)} onChange={(e) => digitar(e.target.value)} aria-label={p.rotulo}
-                onKeyDown={(e) => { if (e.key === "Enter") confirmar(); if (e.key === "Escape") setRascunho(null); }} />
-              {p.unidade && p.unidade !== "R$" && <span className="unidade">{p.unidade}</span>}
-            </span>
-            <button type="button" onClick={() => somar(passo)} aria-label="Aumentar" disabled={bloqueado || (p.max != null && Number(valor) >= p.max)}><Plus size={16} /></button>
-            {mudou && <>
-              <button type="button" className="passo-ok" onClick={confirmar} disabled={!rascunhoValido} aria-label="Salvar" title="Salvar (Enter)"><Check size={16} /></button>
-              <button type="button" className="passo-desfazer" onClick={() => setRascunho(null)} aria-label="Desfazer" title="Desfazer (Esc)"><X size={15} /></button>
-            </>}
-          </div>
+          // barra ou digitando (a pessoa escolhe no ícone; vale no site todo); salva só no ✓
+          <CampoNumero valor={Number(valor)} min={p.min ?? 0} max={p.max ?? 1e9} passo={passo} unidade={p.unidade} desabilitado={bloqueado}
+            onSalvar={(v) => onSalvar(arred(limitar(v)))} />
         )}
       </div>
     </div>

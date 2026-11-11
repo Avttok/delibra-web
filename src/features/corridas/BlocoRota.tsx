@@ -166,7 +166,7 @@ export function BlocoRota({ corrida, equipe }: { corrida: Corrida; equipe: Membr
         <section className="bloco">
           <span className="rotulo"><ClipboardList size={12} aria-hidden /> Pedidos nesta rota</span>
           <div className="linha-botoes">
-            {pedidos.map((p) => <Link key={p.id} href="/gestor/pedidos" className="chip">#{p.numero} · {p.cliente}</Link>)}
+            {pedidos.map((p) => <Link key={p.id} href={`/gestor/pedidos?p=${p.id}`} className="chip"><ClipboardList size={13} aria-hidden /> Ver pedido #{p.numero} · {p.cliente}</Link>)}
           </div>
           {aberta && corrida.paradas.filter((p) => p.tipo === "entrega").map((p) => (
             <div key={p.id} className="mover-entrega">

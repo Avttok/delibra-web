@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ChamadosPendentes } from "@/features/penalidades/Chamados";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Building2, ChevronDown, ClipboardList, Heart, List, Map, Route, Settings2, Store, Users, Wallet, MessagesSquare } from "lucide-react";
@@ -52,6 +53,22 @@ export function AreaGestor({ children }: { children: ReactNode }) {
   // celular: lista sobre o mapa, mostrando ou escondida
   const [gaveta, setGaveta] = useState<"mostrando" | "oculta">("mostrando");
   const telaDeMapa = caminho?.startsWith("/gestor/mapa") || caminho?.startsWith("/gestor/corridas");
+  const roteador = useRouter();
+  const cfgG = useConfiguracoes();
+  useEffect(() => { try { localStorage.setItem("pwex_lembrar_pagina", cfgG.lembrar_pagina === false ? "0" : "1"); } catch { /* sem armazenamento */ } }, [cfgG.lembrar_pagina]);
+  // volta para a última tela aberta (Ajustes → lembrar_pagina); depois guarda cada tela nova
+  useEffect(() => {
+    if (!caminho?.startsWith("/gestor/")) return;
+    try {
+      if (!sessionStorage.getItem("pwex_restaurou")) {
+        sessionStorage.setItem("pwex_restaurou", "1");
+        const ultima = localStorage.getItem("pwex_ultima_tela");
+        const ligado = localStorage.getItem("pwex_lembrar_pagina") !== "0";
+        if (ligado && ultima && ultima !== caminho && caminho === "/gestor/mapa" && !window.location.search) { roteador.replace(ultima); return; }
+      }
+      localStorage.setItem("pwex_ultima_tela", caminho);
+    } catch { /* sem armazenamento */ }
+  }, [caminho, roteador]);
 
   // provedor/perfil das rotas (Ajustes → Navegação): vale para todos os mapas do site
   useEffect(() => {
@@ -80,7 +97,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
       setEmpresa(d?.organizacao?.nome ?? null);
       // empresa suspensa ou cancelada pelo Dev: a equipe fica sem acesso
       setBloqueio(!d?.dev && d?.organizacao && ["suspensa", "cancelada"].includes(d.organizacao.status ?? "") ? { status: d.organizacao.status!, motivo: d.organizacao.suspensa_motivo ?? null } : null);
-      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, nomeTopo: d.organizacao.nome_topo ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
+      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, nomeTopo: d.organizacao.nome_topo ?? null, nomes: (d.organizacao as { nomes?: Record<string, string> }).nomes ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
       setTeste(Boolean(d?.modo_teste));
       setPapeis(d?.papeis ?? []);
       setCorTema(d?.dev && d?.cor_tema === "vermelho" ? "vermelho" : "ouro");

@@ -17,6 +17,7 @@ import { EditarOrcamento } from "./EditarOrcamento";
 import { OrcamentoNoMapa } from "./OrcamentoNoMapa";
 import { distanciasColetaEntrega } from "@/features/geo";
 import { RotasDoPedido } from "./RotasDoPedido";
+import { PainelJuntar } from "./PainelJuntar";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { formatarKm } from "@/features/corridas/tipos";
 import { useModoTeste } from "@/features/teste/modoTeste";
@@ -175,7 +176,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
 
   async function acao(a: "aprovar" | "ajustar" | "recusar" | "recalcular" | "voltar_revisao") {
     if (a === "recusar" && !confirm(`Recusar o pedido #${p.numero}?`)) return;
-    if (a === "voltar_revisao" && !confirm(`Voltar o pedido #${p.numero} para a revisão? Ele sai das rotas (as que ficarem vazias são canceladas) e espera você aprovar de novo.`)) return;
+    if (a === "voltar_revisao" && cfg.pedido_confirmar_revisao !== false && !confirm(`Voltar o pedido #${p.numero} para a revisão? Ele sai das rotas (as que ficarem vazias são canceladas) e espera você aprovar de novo.`)) return;
     setOcupado(true);
     const { error } = await supabase().rpc("revisar_pedido", { p_pedido: p.id, p_acao: a, p_valor: (a === "aprovar" || a === "ajustar") && mudouValor ? valorNum : null, p_motivo: motivo || null });
     setOcupado(false);
@@ -327,6 +328,9 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
         {!finalizado && p.status !== "recebido" && <SituacaoRota pedidoId={p.id} chave={`${p.status}|${p.pagamento_status}|${JSON.stringify(regras)}|${rotas.length}`} />}
         <p className="dica" style={{ margin: 0 }}>{formatarKm(p.distancia_estimada_m)} estimados · {(p.pedido_pontos ?? []).filter((x) => x.tipo === "entrega").length} entrega(s)</p>
       </div>
+      {["recebido", "aprovado"].includes(p.status) && (
+        <PainelJuntar pedidoId={p.id} empresaId={p.empresa_id ?? null} regras={regras} onMudar={setRegras} />
+      )}
       {!["cancelado", "recusado"].includes(p.status) && (p.status !== "recebido" || cfg.revisao_previa_rotas !== false) && (
         <div className="formulario vidro">
           <RotasDoPedido pedidoId={p.id} status={p.status} chave={`${p.status}|${p.valor}|${JSON.stringify(regras)}|${rotas.map((r) => r.corrida_id + r.status).join()}`} />

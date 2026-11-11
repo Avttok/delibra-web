@@ -1467,7 +1467,7 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .aparelho-detalhe dd { margin: 0; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 .chat-selos { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
 .chat-selo { font-size: 10px; font-weight: 800; letter-spacing: 0.02em; padding: 1px 6px; border-radius: 99px; line-height: 1.5; border: 1px solid currentColor; }
-.chat-selo.dev { color: #ef4444; } .chat-selo.gestor { color: var(--ouro); } .chat-selo.supervisor { color: #f59e0b; } .chat-selo.motoboy { color: #22c55e; } .chat-selo.cliente { color: #38bdf8; }
+.chat-selo.dev { color: #ef4444; } .chat-selo.gestor { color: var(--ouro); } .chat-selo.supervisor { color: #60a5fa; } .chat-selo.motoboy { color: var(--texto-2); } .chat-selo.cliente { color: #a78bfa; }
 
 /* ---------------------------------------------------------------- logo Delibra (SVG, segue as cores do tema) */
 .logo-delibra { display: inline-flex; align-items: center; gap: 8px; line-height: 1; }
@@ -1738,3 +1738,77 @@ body.com-mapa-cheio { overflow: hidden; }
 .barra-pontos { height: 8px; border-radius: 99px; background: var(--borda); overflow: hidden; }
 .barra-pontos i { display: block; height: 100%; background: linear-gradient(90deg, var(--ouro), var(--vermelho)); }
 .linha-item.apagado { opacity: .6; }
+
+/* ------------------------------------------------------------------ juntar com outros pedidos */
+.painel-juntar { display: grid; gap: 12px; }
+.juntar-escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.juntar-escolha button { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil, transparent); color: var(--texto); cursor: pointer; transition: border-color .15s, background .15s; }
+.juntar-escolha button span { display: grid; gap: 2px; }
+.juntar-escolha button small { color: var(--texto-3); font-size: 12px; }
+.juntar-escolha button.ativo { border-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 10%, transparent); }
+.juntar-escolha button.ativo svg { color: var(--ouro); }
+.juntar-blocos { display: grid; gap: 8px; }
+.juntar-bloco { border: 1px solid var(--borda); border-radius: 14px; background: var(--vidro-sutil, transparent); transition: border-color .15s; }
+.juntar-bloco.origem-pedido { border-color: color-mix(in srgb, var(--ouro) 60%, transparent); }
+.juntar-bloco.origem-cliente { border-color: color-mix(in srgb, #60a5fa 50%, transparent); }
+.juntar-bloco.ativo { border-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 7%, transparent); }
+.juntar-cabeca { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; text-align: left; }
+.juntar-icone { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--ouro) 14%, transparent); color: var(--ouro); flex-shrink: 0; }
+.juntar-texto { display: grid; flex: 1; min-width: 0; }
+.juntar-texto small { color: var(--texto-3); font-size: 11.5px; font-weight: 600; }
+.juntar-texto strong { font-size: 14.5px; }
+.juntar-editar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0 12px 12px; }
+@media (max-width: 560px) { .juntar-escolha { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------------------ número: barra ou digitando */
+.campo-numero { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.campo-numero-passo { display: flex; align-items: center; gap: 4px; border: 1px solid var(--borda-forte, var(--borda)); border-radius: 12px; padding: 3px; background: var(--campo, transparent); }
+.campo-numero.mudou .campo-numero-passo, .campo-numero.mudou .campo-numero-barra { border-color: var(--ouro); }
+.campo-numero-passo input { width: 84px; text-align: center; border: 0; background: transparent; font-weight: 700; padding: 6px 2px; }
+.campo-numero-unidade { color: var(--texto-3); font-size: 12.5px; font-weight: 600; padding-right: 4px; }
+.campo-numero-barra { display: grid; gap: 2px; min-width: 200px; border: 1px solid var(--borda-forte, var(--borda)); border-radius: 12px; padding: 6px 12px; background: var(--campo, transparent); }
+.campo-numero-barra input[type="range"] { accent-color: var(--ouro); width: 100%; }
+.campo-numero-modo { opacity: .75; }
+.campo-numero-modo:hover { opacity: 1; }
+.passar-corrida { display: grid; gap: 8px; }
+.compartilhar-motoboys { display: grid; gap: 10px; }
+.compartilhar-motoboy { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--borda); }
+
+/* ------------------------------------------------------------------ perfil público */
+.perfil-publico { width: min(520px, 94vw); display: grid; gap: 14px; }
+.perfil-cabeca { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 18px 12px; border-radius: 22px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ouro) 16%, transparent), transparent); border: 1px solid color-mix(in srgb, var(--ouro) 30%, transparent); }
+.perfil-cabeca .display { font-size: 22px; }
+.perfil-foto { position: relative; width: 96px; height: 96px; border-radius: 50%; background: var(--vidro) center/cover; display: grid; place-items: center; font-size: 34px; font-weight: 800; border: 2px solid var(--ouro); }
+.perfil-foto i { position: absolute; right: 4px; bottom: 4px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--fundo, #0b0b0d); }
+.perfil-numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.perfil-numeros div { display: grid; justify-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil, transparent); }
+.perfil-numeros svg { color: var(--ouro); }
+.perfil-numeros strong { font-size: 18px; }
+.perfil-numeros small { color: var(--texto-3); font-size: 11px; }
+.perfil-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.perfil-linha svg { color: var(--ouro); }
+.placa-mini { margin-left: 6px; padding: 2px 8px; border-radius: 6px; background: #f5f5f5; color: #111; letter-spacing: 1px; font-size: 12px; }
+.perfil-medalhas { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+@media (max-width: 520px) { .perfil-numeros { grid-template-columns: repeat(2, 1fr); } }
+
+/* ------------------------------------------------------------------ minha empresa: prévias por lugar */
+.empresa-previas { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.empresa-previas > div { flex: 0 0 auto; display: grid; gap: 6px; padding: 12px; border-radius: 16px; border: 1px solid var(--borda); background: var(--fundo-2, var(--vidro)); }
+.empresa-previas small { color: var(--texto-3); font-size: 11px; font-weight: 600; }
+.empresa-previas em { font-style: normal; color: var(--texto-2); font-size: 12px; }
+.previa-logo { width: 30px; height: 30px; border-radius: 9px; background: var(--ouro) center/contain no-repeat; flex-shrink: 0; }
+.previa-logo.grande { width: 54px; height: 54px; border-radius: 16px; justify-self: center; }
+.previa-notif { width: 250px; grid-template-columns: auto 1fr; align-items: center; }
+.previa-notif small { grid-column: 1 / -1; }
+.previa-notif span:last-child { display: grid; }
+.previa-entrada { width: 150px; justify-items: center; text-align: center; }
+.previa-entrada em { letter-spacing: 2px; font-weight: 300; font-size: 10px; }
+.previa-atalho { width: 110px; justify-items: center; }
+.previa-site { width: 220px; }
+.previa-site .linha { display: flex; align-items: center; gap: 6px; }
+.nomes-lugares summary { cursor: pointer; display: flex; gap: 6px; align-items: center; font-weight: 600; margin-bottom: 8px; }
+.forca-senha { display: flex; align-items: center; gap: 6px; }
+.forca-senha i { flex: 1; height: 6px; border-radius: 99px; background: var(--borda-forte, var(--borda)); }
+.forca-senha i.f1 { background: #ef4444; } .forca-senha i.f2 { background: var(--ouro); } .forca-senha i.f3 { background: #22c55e; }
+.forca-senha small { color: var(--texto-3); font-size: 12px; min-width: 40px; text-align: right; }

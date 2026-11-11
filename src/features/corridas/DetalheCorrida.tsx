@@ -5,6 +5,7 @@ import { ChamadosDaCorrida } from "@/features/penalidades/Chamados";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FlaskConical, Landmark, MapPinned, Route, Trash2, XCircle } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
+import { PassarCorrida } from "./PassarCorrida";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { supabase } from "@/lib/supabase/client";
 import { decodificarPolyline } from "@/lib/geo/polyline";
@@ -162,7 +163,10 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const pacotesDe = (p: (typeof corrida.paradas)[number]) => {
     if (!p.pedido_ponto_id || !p.pedido_id) return [];
     const doTipo = corrida.paradas.filter((y) => y.tipo === p.tipo && y.pedido_id === p.pedido_id).map((y) => y.pedido_ponto_id!).filter(Boolean);
-    return pacotesDoPonto(pacotes.filter((i) => i.pedido_id === p.pedido_id), { id: p.pedido_ponto_id, tipo: p.tipo }, doTipo);
+    // na coleta: só o que vai para uma entrega desta rota
+    const entregasDaRota = corrida.paradas.filter((y) => y.tipo === "entrega" && y.pedido_id === p.pedido_id).map((y) => y.pedido_ponto_id).filter(Boolean);
+    const doPedido = pacotes.filter((i) => i.pedido_id === p.pedido_id && (p.tipo !== "coleta" || !i.entrega_id || entregasDaRota.includes(i.entrega_id)));
+    return pacotesDoPonto(doPedido, { id: p.pedido_ponto_id, tipo: p.tipo }, doTipo);
   };
 
   const pinos = useMemo(
@@ -223,6 +227,8 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
             </p>
           )}
           <ChamadosDaCorrida corridaId={corrida.id} comMotoboy={Boolean(corrida.motoboy_id) && ["aceita", "em_andamento", "reservada"].includes(corrida.status)} />
+          {corrida.motoboy_id && ["aceita", "em_andamento"].includes(corrida.status) && !corrida.paradas.some((x) => x.tipo === "coleta" && x.status === "concluida")
+            && cfg.passar_corrida_ligado !== false && <PassarCorrida corrida={corrida} equipe={equipe} />}
           <div className="numeros">
             <div><span className="rotulo">Valor</span><strong>{moeda(corrida.valor)}</strong></div>
             <div><span className="rotulo">Planejado</span><strong>{formatarKm(corrida.distancia_planejada_m)}</strong><small>{formatarDuracao(corrida.duracao_planejada_s)}</small></div>

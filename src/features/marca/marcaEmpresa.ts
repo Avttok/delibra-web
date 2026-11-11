@@ -8,12 +8,16 @@ import { useSyncExternalStore } from "react";
  * Fica guardada no navegador para a próxima visita já abrir com ela.
  */
 /** `nomeApp`: nome que aparece no lugar de "Delibra" (vazio = Delibra). */
-export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null; nomeApp?: string | null; nomeTopo?: string | null; escala?: number | null; brilhoCor?: string | null; brilho?: number | null; fonte?: string | null };
+export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null; nomeApp?: string | null; nomeTopo?: string | null; escala?: number | null; brilhoCor?: string | null; brilho?: number | null; fonte?: string | null;
+  /** Nome em cada lugar (entrada, notificacoes, cliente, documentos, atalho, chat); vazio = o nome do app. */
+  nomes?: Record<string, string> | null };
 
 /** Nome do app para esta conta: o escolhido pela empresa, ou o da empresa quando ela tem ícone, ou Delibra. */
 export const nomeDoApp = (m: MarcaEmpresa | null) => m?.nomeApp || (m?.logo ? m.nome : "Delibra");
 /** O texto ao lado da logo no topo (ex.: logo "PW" + "Express"); vazio = o nome do app. */
 export const textoDoTopo = (m: MarcaEmpresa | null) => m?.nomeTopo || nomeDoApp(m);
+/** O nome que a empresa escolheu para aquele lugar (ou o nome do app). */
+export const nomePara = (m: MarcaEmpresa | null, lugar: string) => m?.nomes?.[lugar]?.trim() || nomeDoApp(m);
 
 const CHAVE = "delibra_marca";
 let atual: MarcaEmpresa | null = null;
@@ -36,7 +40,8 @@ let observador: MutationObserver | null = null;
 /** Troca "Delibra" pelo nome do app no título da aba (e continua trocando quando a página muda). */
 function aplicarTitulo(m: MarcaEmpresa | null) {
   if (typeof document === "undefined") return;
-  const nome = nomeDoApp(m);
+  // no site do cliente vale o nome escolhido para ele
+  const nome = typeof window !== "undefined" && window.location.pathname.startsWith("/cliente") ? nomePara(m, "cliente") : nomeDoApp(m);
   const trocar = () => { if (nome !== "Delibra" && document.title.includes("Delibra")) document.title = document.title.replace(/Delibra/g, nome); };
   trocar();
   observador?.disconnect();

@@ -7,7 +7,9 @@ import { ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Camera, CodeXml, FlaskConical, Heart, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type } from "lucide-react";
+import { Camera, CodeXml, FlaskConical, Heart, KeyRound, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type } from "lucide-react";
+import { TrocarSenhaModal } from "@/features/conta/TrocarSenha";
+import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { supabase } from "@/lib/supabase/client";
 import { ESTILOS, useTema } from "@/features/tema/tema";
 import { abrirTour } from "@/features/ui/Tour";
@@ -35,6 +37,8 @@ function Avatar({ nome, foto, classe = "" }: { nome: string; foto: string | null
 
 /** Foto do usuário no topo: abre o menu com perfil, tema, modo teste e sair. */
 export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Props) {
+  const cfgM = useConfiguracoes();
+  const [senha, setSenha] = useState(false);
   const marca = useMarcaEmpresa();
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -136,6 +140,11 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
             </Link>
           )}
 
+          {cfgM.usuario_troca_senha !== false && (
+            <button type="button" role="menuitem" className="menu-item" onClick={() => { setAberto(false); setSenha(true); }}>
+              <KeyRound size={17} aria-hidden /> Trocar minha senha
+            </button>
+          )}
           <a href="/ajuda?p=gestor" target="_blank" rel="noopener" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
             <LifeBuoy size={17} aria-hidden /> Central de ajuda
           </a>
@@ -153,6 +162,7 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
         <EditarPerfil id={id} nome={nome} foto={foto} onFechar={() => setEditando(false)}
           onSalvo={(n, f) => { onPerfilSalvo(n, f); setEditando(false); }} />
       )}
+      {senha && <TrocarSenhaModal email={email} onFechar={() => setSenha(false)} />}
     </div>
   );
 }

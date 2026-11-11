@@ -11,7 +11,10 @@ import { toast } from "@/features/ui/toast";
 import { traduzir } from "./tipos";
 
 /** Regras que fazem sentido num pedido só (preço, junção em rotas, despacho, revisão). */
-const DO_PEDIDO = PARAMETROS.filter((p) => (p.escopos?.includes("cliente") || p.escopos?.includes("tipo")) && !["pagamento", "faturas"].includes(p.grupo) && !p.soDev);
+/** "Juntar rotas" tem painel próprio na revisão (não repete aqui). */
+export const CHAVES_JUNTAR = ["roteirizar_agrupar", "rota_raio_coleta_km", "rota_raio_entrega_km", "rota_max_entregas", "rota_max_coletas", "rota_max_km", "rota_exclusiva_cliente", "rota_revisao_gestor"];
+const DO_PEDIDO = PARAMETROS.filter((p) => (p.escopos?.includes("cliente") || p.escopos?.includes("tipo")) && !["pagamento", "faturas"].includes(p.grupo) && !p.soDev
+  && !CHAVES_JUNTAR.includes(p.chave));
 
 /**
  * A peça mais alta do lego: regras só deste pedido (vencem cliente, tipo e padrão).

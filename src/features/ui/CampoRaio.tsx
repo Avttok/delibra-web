@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CaixaMapa } from "@/features/ui/CaixaMapa";
 import type { GeoJSONSource } from "maplibre-gl";
-import { Check, Map as IconeMapa, X } from "lucide-react";
+import { Check, Map as IconeMapa, Minus, Pencil, Plus, SlidersHorizontal, X } from "lucide-react";
+import { useModoNumero } from "@/features/ui/CampoNumero";
 import { useMapa } from "@/lib/mapa/useMapa";
 import { corOuro } from "@/lib/mapa/cores";
 
@@ -51,15 +52,22 @@ export function CampoRaio({ valor, unidade, min, max, passo, onMudar, desabilita
   function confirmar() { onMudar(limitar(v)); setTxt(null); }
   function desfazer() { setV(valor); setTxt(null); }
   const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
+  // barra ou número: a pessoa escolhe no ícone (vale no site todo)
+  const [barra, setBarra] = useModoNumero();
   const controles = (
     <div className="campo-raio-linha">
-      <input type="range" className="barra-raio" min={min} max={max} step={passo} value={v} disabled={desabilitado}
-        style={{ ["--pct" as string]: `${pct}%` }} onChange={(e) => mudar(Number(e.target.value))} aria-label="Tamanho do raio" />
+      {barra && <input type="range" className="barra-raio" min={min} max={max} step={passo} value={v} disabled={desabilitado}
+        style={{ ["--pct" as string]: `${pct}%` }} onChange={(e) => mudar(Number(e.target.value))} aria-label="Tamanho do raio" />}
+      {!barra && <button type="button" className="icone" disabled={desabilitado || v <= min} onClick={() => mudar(limitar(Math.round((v - passo) * 1000) / 1000))} aria-label="Diminuir"><Minus size={15} /></button>}
       <span className="passo-campo campo-raio-num">
         <input inputMode="decimal" disabled={desabilitado} value={txt ?? String(v).replace(".", ",")} onChange={(e) => digitar(e.target.value)} aria-label="Raio (número)"
           onKeyDown={(e) => { if (e.key === "Enter" && mudou) confirmar(); if (e.key === "Escape") desfazer(); }} />
         <span className="unidade">{unidade}</span>
       </span>
+      {!barra && <button type="button" className="icone" disabled={desabilitado || v >= max} onClick={() => mudar(limitar(Math.round((v + passo) * 1000) / 1000))} aria-label="Aumentar"><Plus size={15} /></button>}
+      <button type="button" className="icone" onClick={() => setBarra(!barra)} title={barra ? "Digitar o número" : "Usar a barra"} aria-label={barra ? "Digitar o número" : "Usar a barra"}>
+        {barra ? <Pencil size={14} aria-hidden /> : <SlidersHorizontal size={14} aria-hidden />}
+      </button>
       {mudou ? <>
         <button type="button" className="passo-ok" onClick={confirmar} aria-label="Salvar o raio" title="Salvar (Enter)"><Check size={16} /></button>
         <button type="button" className="passo-desfazer" onClick={desfazer} aria-label="Desfazer" title="Desfazer (Esc)"><X size={15} /></button>

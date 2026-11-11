@@ -113,8 +113,15 @@ export function traduzirErro(msg: string | undefined): string {
     datas_demais: "No máximo 60 corridas por repetição.",
     corrida_nao_esta_planejada: "Essa corrida não está mais planejada (já começou, foi despachada ou cancelada).",
     acao_invalida: "Ação inválida.",
+    ja_coletou: "O motoboy já coletou: não dá mais para passar a rota.",
+    corrida_sem_motoboy: "Essa rota não está com nenhum motoboy agora.",
+    mesmo_motoboy: "A rota já está com esse motoboy.",
+    passar_desligado: "Passar rota está desligado em Ajustes → Despacho.",
+    motoboy_suspenso: "Esse motoboy está suspenso por penalidades.",
+    sem_permissao: "Você não tem acesso a isso.",
   };
-  return (msg && mapa[msg]) || msg || "Erro desconhecido.";
+  const chave = msg?.match(/^[a-z_]+$/) ? msg : Object.keys(mapa).find((k) => msg?.includes(k));
+  return (chave && mapa[chave]) || msg || "Erro desconhecido.";
 }
 
 /** Nome do cliente da corrida: empresa cadastrada, nome do avulso ou "Avulso". */

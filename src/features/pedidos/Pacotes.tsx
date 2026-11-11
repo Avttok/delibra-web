@@ -21,11 +21,25 @@ export function pacotesDoPonto<T extends Pacote>(itens: T[], ponto: { id: string
     .map((i) => ({ ...i, todas: i[campo] !== ponto.id }));
 }
 
+function agrupar(lista: Pacote[]): Pacote[] {
+  const mapa = new Map<string, Pacote>();
+  for (const i of lista) {
+    const k = JSON.stringify([i.descricao || i.categoria || "Pacote", i.categoria, i.icone, i.perigoso, i.fragil, i.todas, i.peso_kg, i.comprimento_cm, i.largura_cm, i.altura_cm, i.observacoes]);
+    const ja = mapa.get(k);
+    if (ja) mapa.set(k, { ...ja, quantidade: Number(ja.quantidade || 1) + Number(i.quantidade || 1),
+      valor_declarado: ja.valor_declarado != null || i.valor_declarado != null ? Number(ja.valor_declarado ?? 0) + Number(i.valor_declarado ?? 0) : null });
+    else mapa.set(k, { ...i, quantidade: Number(i.quantidade || 1) });
+  }
+  return [...mapa.values()];
+}
+
 const br = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
 /** Ícones dos pacotes de um ponto; toque num deles para ver o detalhe. */
-export function PacotesPonto({ itens, vazio }: { itens: Pacote[]; vazio?: string }) {
+export function PacotesPonto({ itens: lista, vazio }: { itens: Pacote[]; vazio?: string }) {
   const [aberto, setAberto] = useState<number | null>(null);
+  // pacotes iguais viram um só, com a quantidade somada (ex.: 7× Documentos)
+  const itens = agrupar(lista);
   if (itens.length === 0) return vazio ? <span className="dica">{vazio}</span> : null;
   const it = aberto != null ? itens[aberto] : null;
   return (

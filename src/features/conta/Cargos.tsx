@@ -5,7 +5,7 @@ import type { Papel } from "./conta";
 export const CARGO: Record<Papel, { rotulo: string; icone: typeof Bike; cor: string }> = {
   dev: { rotulo: "Dev", icone: CodeXml, cor: "var(--cor-dev)" },
   gestor: { rotulo: "Gestor", icone: ShieldCheck, cor: "var(--ouro)" },
-  supervisor: { rotulo: "Supervisor", icone: UserCog, cor: "#34d399" },
+  supervisor: { rotulo: "Supervisor", icone: UserCog, cor: "#60a5fa" },
   motoboy: { rotulo: "Motoboy", icone: Bike, cor: "var(--texto-2)" },
   cliente: { rotulo: "Cliente", icone: UserRound, cor: "var(--texto-2)" },
 };

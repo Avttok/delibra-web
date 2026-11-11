@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, CalendarClock, Check, Eye, Landmark, Palette, Receipt, Type } from "lucide-react";
+import { BadgeCheck, CalendarClock, Check, Eye, Landmark, Layers, Palette, Receipt, Type } from "lucide-react";
 import { Logo } from "@/features/marca/Logo";
 import { RecebimentosEmpresa } from "@/features/pagamentos/Recebimentos";
 import { supabase } from "@/lib/supabase/client";
@@ -11,7 +11,7 @@ import { IconeEmpresa } from "./IconeEmpresa";
 import { FONTES, cssFonte } from "@/features/marca/fontes";
 import { toast } from "@/features/ui/toast";
 
-type Org = { id: string; nome: string; nome_app: string | null; nome_topo: string | null; logo_escala: number | null; logo_original_url: string | null; logo_brilho_cor: string | null; logo_brilho: number | null; fonte_nome: string | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
+type Org = { id: string; nome: string; nome_app: string | null; nome_topo: string | null; logo_escala: number | null; logo_original_url: string | null; logo_brilho_cor: string | null; logo_brilho: number | null; fonte_nome: string | null; nomes?: Record<string, string> | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
 type Plano = {
   empresa: string; status: string; modelo: "percentual" | "licenca" | "isento"; pct: number; mensalidade: number;
   vencimento_dia: number; proximo_vencimento: string; de: string; ate: string; faturamento: number; rotas: number; devido: number;
@@ -33,6 +33,8 @@ export function PainelEmpresa() {
   const [cor, setCor] = useState("#d4af37");
   const [nomeApp, setNomeApp] = useState("");
   const [nomeTopo, setNomeTopo] = useState("");
+  // nome em cada lugar (vazio = o nome do app)
+  const [nomes, setNomes] = useState<Record<string, string>>({});
   const [fonte, setFonte] = useState("ARCHIVO");
   const [salvando, setSalvando] = useState(false);
 
@@ -41,7 +43,7 @@ export function PainelEmpresa() {
     const [{ data: o }, { data: p }] = await Promise.all([sb.rpc("minha_organizacao"), sb.rpc("meu_plano")]);
     const og = (o as Org | null) ?? null;
     setOrg(og); setPlano((p as Plano | null) ?? null);
-    if (og) { setNome(og.nome); setCor(og.cor ?? "#d4af37"); setNomeApp(og.nome_app ?? ""); setNomeTopo(og.nome_topo ?? ""); setFonte(og.fonte_nome ?? "ARCHIVO"); }
+    if (og) { setNome(og.nome); setCor(og.cor ?? "#d4af37"); setNomeApp(og.nome_app ?? ""); setNomeTopo(og.nome_topo ?? ""); setNomes(og.nomes ?? {}); setFonte(og.fonte_nome ?? "ARCHIVO"); }
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -64,11 +66,13 @@ export function PainelEmpresa() {
     const app = nomeApp.trim();
     if (app && (app.length < 2 || app.length > 30)) { setSalvando(false); return toast("O nome do app precisa ter de 2 a 30 letras.", "erro"); }
     if (nomeTopo.trim().length > 30) { setSalvando(false); return toast("O texto do topo pode ter até 30 letras.", "erro"); }
-    const erro = await salvar({ nome, cor, nome_app: app || "", nome_topo: nomeTopo.trim(), fonte: fonte === "ARCHIVO" ? "" : fonte });
+    const limpos = Object.fromEntries(Object.entries(nomes).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
+    const erro = await salvar({ nome, cor, nome_app: app || "", nome_topo: nomeTopo.trim(), nomes: limpos, fonte: fonte === "ARCHIVO" ? "" : fonte });
     if (erro) toast(erro, "erro"); else toast("Salvo. O app e o site já mostram o nome novo.", "ok");
     setSalvando(false);
   }
 
+  const nomeEm = (k: string) => nomes[k]?.trim() || nomeApp.trim() || nome || "Delibra";
   if (org === undefined) return <main className="conteudo"><p className="dica">Carregando…</p></main>;
   if (!org) return (
     <main className="conteudo"><div className="bloco"><p className="vazio">Esta conta não está em nenhuma empresa. O Dev escolhe uma em Dev → Empresas (Entrar como).</p></div></main>
@@ -87,6 +91,17 @@ export function PainelEmpresa() {
             <span><small>No topo, ao lado da logo</small><strong style={{ fontFamily: cssFonte(fonte) }}>{nomeTopo.trim() || nomeApp.trim() || nome || "Delibra"}</strong></span>
             <span><small>Onde a logo não aparece (atalho, avisos, títulos)</small><strong>{nomeApp.trim() || nome || "Delibra"}</strong></span>
           </div>
+          {/* os outros lugares onde a marca aparece */}
+          <div className="empresa-previas">
+            <div className="previa-notif"><small>Notificação</small><span className="previa-logo" style={{ backgroundImage: org.logo_url ? `url("${org.logo_url}")` : undefined }} />
+              <span><strong>{nomeEm("notificacoes")}</strong><em>Corrida nova! 3 entregas · R$ 24,00</em></span></div>
+            <div className="previa-entrada"><small>Entrada</small><span className="previa-logo grande" style={{ backgroundImage: org.logo_url ? `url("${org.logo_url}")` : undefined }} />
+              <em>{nomeEm("entrada").toUpperCase()}</em></div>
+            <div className="previa-atalho"><small>Tela inicial</small><span className="previa-logo" style={{ backgroundImage: org.logo_url ? `url("${org.logo_url}")` : undefined }} />
+              <em>{nomeEm("atalho").slice(0, 14)}</em></div>
+            <div className="previa-site"><small>Site do cliente</small><span className="linha"><span className="previa-logo" style={{ backgroundImage: org.logo_url ? `url("${org.logo_url}")` : undefined }} />
+              <strong style={{ fontFamily: cssFonte(fonte) }}>{nomeEm("cliente")}</strong></span><em>Fazer pedido · Acompanhar</em></div>
+          </div>
         </section>
 
         <section className="bloco">
@@ -102,6 +117,16 @@ export function PainelEmpresa() {
             <small className="dica">Onde a logo não aparece: atalho no celular, avisos, telas de entrar. Em branco = Delibra.</small></label>
           <label className="campo"><span>Texto ao lado da logo (topo)</span><input value={nomeTopo} maxLength={30} placeholder={nomeApp.trim() || "Ex.: Express"} onChange={(e) => setNomeTopo(e.target.value)} />
             <small className="dica">Se a logo já tem parte do nome (ex.: “PW”), escreva só o resto (“Express”). Em branco = o nome do app.</small></label>
+          <details className="nomes-lugares" open={Object.keys(nomes).length > 0}>
+            <summary><Layers size={14} aria-hidden /> Nome diferente em cada lugar <span className="dica">(vazio = o nome do app)</span></summary>
+            <div className="grade-2">
+              {LUGARES.map(([k, r]) => (
+                <label key={k} className="campo"><span>{r}</span>
+                  <input value={nomes[k] ?? ""} maxLength={40} placeholder={nomeApp.trim() || nome || "Delibra"}
+                    onChange={(e) => setNomes((n) => { const x = { ...n }; if (e.target.value) x[k] = e.target.value; else delete x[k]; return x; })} /></label>
+              ))}
+            </div>
+          </details>
           <div className="grade-2">
             <label className="campo"><span>Nome da empresa</span><input value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} /></label>
             <label className="campo curto"><span>Cor da marca</span><span className="linha-cor"><input type="color" value={cor} onChange={(e) => setCor(e.target.value)} /><code>{cor}</code></span></label>
@@ -117,7 +142,8 @@ export function PainelEmpresa() {
             </div>
           </div>
           <div className="linha-botoes">
-            <button type="button" className="botao-ouro" disabled={salvando || (nome.trim() === org.nome && cor === (org.cor ?? "#d4af37") && nomeApp.trim() === (org.nome_app ?? "") && nomeTopo.trim() === (org.nome_topo ?? "") && fonte === (org.fonte_nome ?? "ARCHIVO"))} onClick={salvarNomeCor}>
+            <button type="button" className="botao-ouro" disabled={salvando || (nome.trim() === org.nome && cor === (org.cor ?? "#d4af37") && nomeApp.trim() === (org.nome_app ?? "") && nomeTopo.trim() === (org.nome_topo ?? "") && fonte === (org.fonte_nome ?? "ARCHIVO")
+              && JSON.stringify(Object.fromEntries(Object.entries(nomes).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v))) === JSON.stringify(org.nomes ?? {}))} onClick={salvarNomeCor}>
               <Check size={15} aria-hidden /> {salvando ? "Salvando…" : "Salvar"}
             </button>
           </div>
@@ -174,3 +200,9 @@ export function PainelEmpresa() {
     </>
   );
 }
+
+/** Lugares onde a empresa pode ter um nome próprio. */
+const LUGARES: [string, string][] = [
+  ["entrada", "Tela de entrada e abertura"], ["notificacoes", "Notificações e avisos"], ["atalho", "Atalho na tela inicial"],
+  ["cliente", "Site do cliente"], ["documentos", "Acessos, extratos e documentos"], ["chat", "Chat"],
+];

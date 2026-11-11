@@ -49,7 +49,7 @@ export type GrupoParametro =
   | "precocliente" | "preco" | "distancia"
   | "pedidos" | "aprender" | "rotas" | "despacho" | "extensao" | "quadro" | "planejadas"
   | "pagamento" | "pag_combinar" | "pag_zonas" | "pag_km" | "pag_entrega" | "pag_fixo" | "pag_periodo" | "mb_ve" | "local" | "comprovantes" | "veiculo"
-  | "penalidades" | "chamados"
+  | "penalidades" | "chamados" | "perfil" | "app_motoboy" | "regiao"
   | "rastreamento" | "percurso" | "navegacao" | "mapa"
   | "chat" | "teste";
 
@@ -74,6 +74,9 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   pag_fixo: { area: "motoboys", titulo: "Pagamento fixo", descricao: "Um valor por rota, por entrega e por coleta." },
   penalidades: { area: "motoboys", titulo: "Penalidades", descricao: "Pontos por oferta ignorada, desistência, abandono e atraso; limite e suspensão. Também para clientes." },
   chamados: { area: "motoboys", titulo: "Pedido de cancelamento", descricao: "O motoboy em corrida pede para cancelar; você aprova ou nega." },
+  perfil: { area: "motoboys", titulo: "Perfil e conta", descricao: "O que aparece no perfil de cada pessoa (chat, equipe) e se cada um troca a própria senha." },
+  app_motoboy: { area: "motoboys", titulo: "App do motoboy", descricao: "Joguinho enquanto espera corrida e voltar para a última tela aberta." },
+  regiao: { area: "operacao", titulo: "Quem conhece a região", descricao: "O sistema aprende onde cada motoboy entrega e passa tempo; no despacho, quem conhece a área sai na frente." },
   pag_periodo: { area: "motoboys", titulo: "Salário, diária e hora", descricao: "Para quem trabalha para a empresa: salário fixo no mês, diária, hora em corrida e um mínimo garantido no holerite." },
   pag_zonas: { area: "motoboys", titulo: "Pagamento por zonas", descricao: "Raio das entregas e o que paga quando estão juntas ou espalhadas." },
   pag_km: { area: "motoboys", titulo: "Pagamento por km", descricao: "Valores do modelo \u201cPor km\u201d." },
@@ -116,7 +119,7 @@ export const PARAMETROS: DefParametro[] = [
   // ---------------------------------------------------------------- mapa, veículo e simulador
   { chave: "mapa_offline_some_h", grupo: "mapa", rotulo: "Offline some do mapa após", descricao: "Motoboy offline há mais tempo que isso sai do mapa (continua na lista). 0 = nunca some.", tipo: "numero", padrao: 24, unidade: "h", min: 0, max: 720, passo: 1 },
   { chave: "mapa_offline_esmaecer", grupo: "mapa", rotulo: "Offline vai apagando", descricao: "Ligado: quanto mais tempo sem sinal, mais transparente ele fica no mapa.", tipo: "booleano", padrao: true },
-  { chave: "motoboy_edita_veiculo", grupo: "veiculo", rotulo: "Motoboy edita o próprio veículo", descricao: "Ligado: placa, cor e CNH no perfil do app.", descricaoDesligado: "Desligado: só você muda (Equipe → motoboy).", tipo: "booleano", padrao: false },
+  { chave: "motoboy_edita_veiculo", grupo: "veiculo", rotulo: "Motoboy edita o próprio veículo", descricao: "Ligado: o motoboy cadastra e muda placa, modelo, cor e CNH no perfil do app.", descricaoDesligado: "Desligado: só você muda (Equipe → motoboy).", tipo: "booleano", padrao: false, escopos: ["motoboy"] },
   { chave: "veiculo_obrigatorio", grupo: "veiculo", rotulo: "Só pega rota com placa cadastrada", descricao: "Vale para pegar rota no quadro (corridas de teste não contam).", tipo: "booleano", padrao: false },
   { chave: "quadro_mostra_enderecos", grupo: "quadro", rotulo: "Quadro mostra os endereços", descricao: "Ligado: o motoboy vê bairro e endereço de cada parada antes de pegar a rota.", descricaoDesligado: "Desligado: vê só a distância e a quantidade de paradas.", tipo: "booleano", padrao: true },
   { chave: "quadro_mostra_itens", grupo: "quadro", rotulo: "Quadro mostra os itens", descricao: "O que vai em cada entrega, antes de pegar.", tipo: "booleano", padrao: true },
@@ -282,6 +285,14 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "pag_volta_teto", grupo: "pagamento", rotulo: "Volta respeita o valor da rota", descricao: "Ligado: com a volta, o motoboy ainda não passa do valor da rota.", descricaoDesligado: "Desligado: a volta é paga mesmo passando do valor da rota.", tipo: "booleano", padrao: true, escopos: ["tipo", "cliente", "motoboy"] },
   { chave: "repasse_motoboy_pct", grupo: "pagamento", rotulo: "Parte do motoboy na rota", descricao: "No modelo \u201cPercentual\u201d: ex. 65 = o motoboy leva 65% da rota e o gestor o resto. Ajustável por motoboy (Regras dele), por cliente e por corrida.", tipo: "numero", padrao: 65, unidade: "%", min: 0, max: 100, escopos: ["motoboy"] },
   { chave: "pagamento_na_plataforma", grupo: "mb_ve", rotulo: "Pagar os motoboys pela plataforma", descricao: "Ligado: chaves PIX, marcar como pago e a Carteira aparecem para acertar os pagamentos por aqui.", descricaoDesligado: "Desligado: a plataforma mostra só o holerite (o que cada um tem a receber); o pagamento é feito por fora.", tipo: "booleano", padrao: false },
+  { chave: "passar_corrida_ligado", grupo: "despacho", rotulo: "Passar rota aceita para outro motoboy", descricao: "Ligado: na rota, você tira de um motoboy e passa para outro (ou para o sistema) enquanto nada foi coletado.", descricaoDesligado: "Desligado: só cancelando a rota.", tipo: "booleano", padrao: true },
+  { chave: "passar_avisa_motoboy", grupo: "despacho", rotulo: "Avisar quem perdeu a rota", descricao: "O motoboy recebe um aviso (com o motivo, se você escrever) quando a rota sai dele.", tipo: "booleano", padrao: true },
+  { chave: "saas_gestor_compartilha_motoboys", grupo: "despacho", rotulo: "Gestores compartilham motoboys", descricao: "Ligado: cada empresa escolhe com quem compartilha os motoboys (todas, algumas ou nenhuma) e cada motoboy pode ter a escolha dele. Desligado: vale só o que você define em Dev → Empresas.", tipo: "booleano", padrao: false, soDev: true },
+  { chave: "regiao_ligado", grupo: "regiao", rotulo: "Dar vantagem a quem conhece a região", descricao: "Ligado: entre motoboys parecidos, a rota vai primeiro para quem mais entrega e circula naquela área.", tipo: "booleano", padrao: true, escopos: ["tipo", "cliente"] },
+  { chave: "regiao_bonus_m", grupo: "regiao", rotulo: "Quanto vale conhecer a área", descricao: "Quem conhece bem a área conta como se estivesse até essa distância mais perto da coleta. 0 = só a distância.", tipo: "numero", padrao: 1500, unidade: "m", min: 0, max: 20000, passo: 100, escopos: ["tipo", "cliente"] },
+  { chave: "regiao_referencia", grupo: "regiao", rotulo: "Entregas para “conhecer bem”", descricao: "Com esse número de entregas num lugar (ou o tempo equivalente lá), o motoboy ganha a vantagem inteira.", tipo: "numero", padrao: 10, unidade: "entregas", min: 1, max: 200, passo: 1 },
+  { chave: "regiao_min_por_entrega", grupo: "regiao", rotulo: "Tempo que vale uma entrega", descricao: "Minutos circulando numa área contam como uma entrega lá.", tipo: "numero", padrao: 20, unidade: "min", min: 1, max: 240, passo: 1 },
+  { chave: "regiao_meia_vida_dias", grupo: "regiao", rotulo: "Esquecer devagar", descricao: "O que o motoboy fazia há tanto tempo pesa a metade. Mantém o sistema atualizado com quem anda por onde agora.", tipo: "numero", padrao: 90, unidade: "dias", min: 7, max: 730, passo: 1, soDev: true },
   { chave: "saas_compartilhar_corridas", grupo: "despacho", rotulo: "Rotas entre empresas", descricao: "Ligado: vale o que cada empresa tem em Dev → Empresas (rotas chegando a motoboys de outras). Desligado: nenhuma rota sai da própria empresa.", tipo: "booleano", padrao: true, soDev: true },
   { chave: "dev_pct", grupo: "pagamento", rotulo: "Parte da plataforma", descricao: "Percentual da plataforma sobre o faturamento da empresa (vem do plano em Dev → Empresas). Não muda o que o motoboy recebe. Só o Dev vê e altera.", tipo: "numero", padrao: 5, unidade: "%", min: 0, max: 100, passo: 0.5, escopos: ["cliente"], soDev: true, escondido: true },
   { chave: "valor_km_padrao", grupo: "preco", rotulo: "Valor do km (avulso)", descricao: "Usado para clientes avulsos e empresas sem valor próprio.", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 100, passo: 0.1 },
@@ -363,6 +374,11 @@ export const PARAMETROS: DefParametro[] = [
   // ---------------------------------------------------------------- GPS, percurso e navegação
   { chave: "ping_distancia_m", grupo: "rastreamento", rotulo: "…ou a cada distância (em corrida)", descricao: "Manda a posição antes do tempo se andar isso. 0 = só pelo tempo.", tipo: "numero", padrao: 20, unidade: "m", min: 0, max: 500, passo: 5, escopos: ["motoboy"] },
   { chave: "ping_precisao_max_m", grupo: "rastreamento", rotulo: "Ignorar leitura imprecisa", descricao: "Em corrida, leituras com erro maior que isso são descartadas.", tipo: "numero", padrao: 60, unidade: "m", min: 10, max: 300, passo: 5, escopos: ["motoboy"] },
+  { chave: "ping_inteligente", grupo: "rastreamento", rotulo: "Ping inteligente", descricao: "Ligado: em linha reta o app manda menos pontos e, nas curvas, manda na hora. O traçado fica igual, com menos bateria, internet e espaço.", descricaoDesligado: "Desligado: manda a cada distância fixa.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "ping_curva_graus", grupo: "rastreamento", rotulo: "O que conta como curva", descricao: "Mudou de direção mais que isso: manda o ponto na hora.", tipo: "numero", padrao: 25, unidade: "°", min: 5, max: 90, passo: 5, escopos: ["motoboy"] },
+  { chave: "ping_reta_max_m", grupo: "rastreamento", rotulo: "Em reta, no máximo a cada", descricao: "Mesmo sem curva, manda um ponto depois dessa distância.", tipo: "numero", padrao: 200, unidade: "m", min: 20, max: 2000, passo: 10, escopos: ["motoboy"] },
+  { chave: "ping_afinar_dias", grupo: "rastreamento", rotulo: "Afinar pontos de rotas antigas", descricao: "Rotas encerradas há mais desse tempo perdem os pontos repetidos e colados (o traçado e os km ficam). 0 = guarda tudo.", tipo: "numero", padrao: 30, unidade: "dias", min: 0, max: 365, passo: 1, soDev: true },
+  { chave: "ping_afinar_m", grupo: "rastreamento", rotulo: "Distância mínima ao afinar", descricao: "Ao afinar, pontos mais perto que isso do anterior saem (curvas e paradas longas ficam).", tipo: "numero", padrao: 15, unidade: "m", min: 5, max: 200, passo: 5, soDev: true },
   { chave: "ping_envio_s", grupo: "rastreamento", rotulo: "Enviar em lotes a cada", descricao: "As posições são guardadas e enviadas juntas (economiza bateria e internet).", tipo: "numero", padrao: 12, unidade: "s", min: 3, max: 120, passo: 1 },
   { chave: "percurso_provedor", grupo: "percurso", rotulo: "Mapa que traça o percurso", descricao: "", tipo: "escolha", padrao: "valhalla",
     opcoes: [{ valor: "valhalla", rotulo: "Valhalla", dica: "Perfil de moto; evita voltas e curvas sem sentido. Se não responder, usa o OSRM." }, { valor: "osrm", rotulo: "OSRM", dica: "Perfil de carro. Se não responder, usa o Valhalla." }] },
@@ -393,6 +409,19 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "chat_grupos_equipe", grupo: "chat", rotulo: "Motoboys criam grupos", descricao: "Ligado: motoboys também criam grupos. Desligado: só gestores e supervisores.", tipo: "booleano", padrao: false },
   { chave: "dev_escreve_em_conversas", grupo: "chat", rotulo: "Dev escreve em conversas de outros", descricao: "Ligado: o Dev pode mandar mensagem em conversas de que não participa. Desligado: ele só lê.", tipo: "booleano", padrao: false, soDev: true },
   { chave: "chat_apagar_min", grupo: "chat", rotulo: "Apagar a própria mensagem até", descricao: "Depois disso só o gestor apaga.", tipo: "numero", padrao: 30, unidade: "min", min: 0, max: 10080, passo: 5 },
+  // ---------------------------------------------------------------- perfil, conta e app do motoboy
+  { chave: "usuario_troca_senha", grupo: "perfil", rotulo: "Cada um troca a própria senha", descricao: "Ligado: gestores, supervisores e motoboys trocam a senha no perfil (app e site), sem depender de você.", descricaoDesligado: "Desligado: só você define senhas (Equipe).", tipo: "booleano", padrao: true },
+  { chave: "perfil_publico_ligado", grupo: "perfil", rotulo: "Perfis abertos para a equipe", descricao: "Ligado: tocar na foto ou no nome (no chat, por exemplo) abre o perfil da pessoa. Desligado: só nome e foto.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "perfil_mostra_numeros", grupo: "perfil", rotulo: "Perfil mostra os números", descricao: "Rotas, entregas, km e horas online.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "perfil_mostra_conquistas", grupo: "perfil", rotulo: "Perfil mostra as conquistas", descricao: "As medalhas que o motoboy ganhou.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "perfil_mostra_veiculo", grupo: "perfil", rotulo: "Perfil mostra o veículo", descricao: "Modelo e cor (a placa só você vê).", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "perfil_mostra_regioes", grupo: "perfil", rotulo: "Perfil mostra onde mais entrega", descricao: "Os bairros com mais entregas nos últimos 6 meses.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "jogo_ligado", grupo: "app_motoboy", rotulo: "Joguinho enquanto espera", descricao: "Ligado: tocando várias vezes no anel (sem segurar), o app pergunta se quer jogar. Chegou corrida, o jogo fecha e a oferta aparece.", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "jogo_toques", grupo: "app_motoboy", rotulo: "Toques para abrir o jogo", descricao: "Quantos toques seguidos no anel.", tipo: "numero", padrao: 5, unidade: "toques", min: 2, max: 15, passo: 1, escopos: ["motoboy"] },
+  { chave: "lembrar_pagina", grupo: "app_motoboy", rotulo: "Voltar para a última tela", descricao: "Ligado: o app e o site abrem na aba em que a pessoa estava.", descricaoDesligado: "Desligado: sempre começa no início.", tipo: "booleano", padrao: true },
+  { chave: "chat_motoboy_abre_rota", grupo: "chat", rotulo: "Motoboy abre rota mandada no chat", descricao: "Ligado: rota ou pedido compartilhado (mesmo em revisão) abre como no quadro: paradas, km e quanto ele recebe.", descricaoDesligado: "Desligado: ele vê só o resumo do cartão.", tipo: "booleano", padrao: true },
+  { chave: "chat_rota_respostas", grupo: "chat", rotulo: "Respostas rápidas na rota do chat", descricao: "Botões “Posso fazer” e “Agora não” que respondem na conversa.", tipo: "booleano", padrao: true },
+  { chave: "pedido_confirmar_revisao", grupo: "pedidos", rotulo: "Confirmar antes de voltar à revisão", descricao: "Ligado: pergunta antes de desfazer as rotas do pedido.", tipo: "booleano", padrao: true },
 ];
 
 export type ValorParametro = number | boolean | string | string[];

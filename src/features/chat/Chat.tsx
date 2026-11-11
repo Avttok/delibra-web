@@ -1,5 +1,7 @@
 "use client";
 
+import { PerfilPublico } from "@/features/conta/PerfilPublico";
+
 import { CartaoChatRico } from "./CartaoChat";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -68,6 +70,7 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
   const [grupoNome, setGrupoNome] = useState("");
   const [grupoSel, setGrupoSel] = useState<Set<string>>(new Set());
   const [erro, setErro] = useState<string | null>(null);
+  const [perfil, setPerfil] = useState<string | null>(null);
   const fim = useRef<HTMLDivElement>(null);
   const arquivo = useRef<HTMLInputElement>(null);
 
@@ -237,7 +240,9 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
           <>
             <header className="chat-cabeca">
               <button type="button" className="icone chat-voltar" aria-label="Voltar" onClick={() => setAberta(null)}><ArrowLeft size={18} /></button>
-              <Avatar nome={nomeConversa(atual)} foto={atual.foto} grupo={atual.tipo !== "direta"} oculto={atual.oculto} />
+              {atual.tipo === "direta" && atual.outro
+                ? <button type="button" className="botao-limpo" onClick={() => setPerfil(atual.outro)} title="Ver perfil"><Avatar nome={nomeConversa(atual)} foto={atual.foto} oculto={atual.oculto} /></button>
+                : <Avatar nome={nomeConversa(atual)} foto={atual.foto} grupo={atual.tipo !== "direta"} oculto={atual.oculto} />}
               <span><strong>{nomeConversa(atual)}</strong><small>{atual.tipo === "geral" ? "Toda a equipe" : atual.tipo === "grupo" ? `${atual.membros} pessoas` : "Mensagem direta"}{atual.tipo === "direta" && atual.outro && <SelosCargo papeis={nomes[atual.outro]?.papeis} empresa={nomes[atual.outro]?.empresa} />}</small></span>
               <span className="espaco" />
               <button type="button" className="icone" onClick={() => silenciar(atual)} aria-label={atual.silenciada ? "Ligar avisos" : "Silenciar"}>
@@ -252,9 +257,10 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
                 const mostrarAutor = emGrupo && mensagens[i - 1]?.autor_id !== m.autor_id;
                 return (
                   <div key={m.id} className={`chat-msg ${minha ? "minha" : ""} ${emGrupo ? "com-avatar" : ""}`}>
-                    {mostrarAutor && <span className="chat-autor">{autor?.nome ?? "Alguém"}<SelosCargo papeis={autor?.papeis} empresa={autor?.empresa} /></span>}
+                    {mostrarAutor && <button type="button" className="chat-autor botao-limpo" onClick={() => m.autor_id && setPerfil(m.autor_id)} title="Ver perfil">{autor?.nome ?? "Alguém"}<SelosCargo papeis={autor?.papeis} empresa={autor?.empresa} /></button>}
                     <div className="chat-linha-msg">
-                    {emGrupo && (mostrarAutor ? <Avatar nome={autor?.nome ?? "?"} foto={autor?.foto} tamanho={28} oculto={autor?.oculto} /> : <span className="chat-avatar-vazio" />)}
+                    {emGrupo && (mostrarAutor ? <button type="button" className="botao-limpo" onClick={() => m.autor_id && setPerfil(m.autor_id)} aria-label={`Perfil de ${autor?.nome ?? "alguém"}`}>
+                      <Avatar nome={autor?.nome ?? "?"} foto={autor?.foto} tamanho={28} oculto={autor?.oculto} /></button> : <span className="chat-avatar-vazio" />)}
                     <div className="chat-balao">
                       {m.apagada_em ? <em className="dica">Mensagem apagada</em> : <>
                         {m.anexo && cartao(m.anexo)}
@@ -281,6 +287,7 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
           </>
         )}
       </section>
+      {perfil && <PerfilPublico id={perfil} onFechar={() => setPerfil(null)} />}
     </div>
   );
 }
