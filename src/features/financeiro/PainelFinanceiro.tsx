@@ -129,7 +129,7 @@ export function PainelFinanceiro() {
             <span style={{ flex: Math.max(gestor, 0) || 0.0001, background: "var(--ouro)" }} />
           </div>
           <div className="carteira-parte"><i style={{ background: "var(--texto-2)" }} /><Bike size={14} aria-hidden /><span>Motoboys</span><strong>{moeda(motoboys)}</strong><small>{pct(motoboys)}</small></div>
-          <div className="carteira-parte"><i style={{ background: "var(--ouro)" }} /><Landmark size={14} aria-hidden /><span>Fica com o gestor</span><strong>{moeda(gestor)}</strong><small>{pct(gestor)}</small></div>
+          <div className="carteira-parte"><i style={{ background: "var(--ouro)" }} /><Landmark size={14} aria-hidden /><span>Gestor</span><strong>{moeda(gestor)}</strong><small>{pct(gestor)}</small></div>
           <p className="dica" style={{ margin: 0 }}>As duas partes somam o valor das rotas. A divisão de cada rota segue Configurações → Motoboys.</p>
         </div>
         <div className="grade-2 grade-igual">
