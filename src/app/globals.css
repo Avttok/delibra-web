@@ -1821,3 +1821,36 @@ body.com-mapa-cheio { overflow: hidden; }
 .chat-autor.botao-limpo { background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
 .chat-autor.botao-limpo:hover { text-decoration: underline; }
 .selo-pago { color: #22c55e; background: color-mix(in srgb, #22c55e 12%, transparent); border-color: color-mix(in srgb, #22c55e 45%, transparent); font-weight: 800; letter-spacing: .4px; }
+
+/* ---------- emergência (faixa no topo do painel) ---------- */
+.emergencias { display: grid; gap: 8px; margin: 0 0 12px; }
+.emergencia { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 18px;
+  background: color-mix(in srgb, var(--vermelho, #ef4444) 16%, transparent); border: 1.5px solid var(--vermelho, #ef4444);
+  animation: emergencia-pulso 1.4s ease-in-out infinite; }
+.emergencia-icone { color: var(--vermelho, #ef4444); flex: none; }
+.emergencia-texto { display: grid; flex: 1; min-width: 180px; }
+.emergencia-texto strong { color: var(--vermelho, #ef4444); font-weight: 900; }
+.emergencia-texto span { font-size: 12.5px; opacity: .8; }
+@keyframes emergencia-pulso { 50% { border-color: color-mix(in srgb, var(--vermelho, #ef4444) 45%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .emergencia { animation: none; } }
+
+/* ---------- selos de parada ---------- */
+.selo-liberada { background: color-mix(in srgb, #22c55e 16%, transparent); color: #22c55e; }
+.selo-offline { background: color-mix(in srgb, var(--ouro, #d4af37) 16%, transparent); color: var(--ouro, #d4af37); }
+.selos-linha { display: flex; flex-wrap: wrap; gap: 6px; }
+.aviso-bloco { border-color: color-mix(in srgb, var(--ouro) 55%, transparent); background: color-mix(in srgb, var(--ouro) 8%, transparent); }
+
+/* ---------- avaliações e rastreio ---------- */
+.estrelas { display: inline-flex; gap: 4px; }
+.estrela { background: none; border: 0; padding: 2px; cursor: pointer; color: color-mix(in srgb, currentColor 30%, transparent); transition: transform .15s ease, color .15s ease; }
+.estrela:disabled { cursor: default; }
+.estrela.acesa { color: var(--ouro); }
+.estrela.acesa svg { fill: var(--ouro); }
+.estrela:not(:disabled):hover { transform: scale(1.12); }
+.estrela:focus-visible { outline: 2px solid var(--ouro); border-radius: 8px; }
+.avaliacao { display: grid; gap: 8px; padding: 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--ouro) 35%, transparent); background: color-mix(in srgb, var(--ouro) 6%, transparent); }
+.avaliacao textarea { width: 100%; }
+.rastreio-botao { display: grid; gap: 6px; justify-items: start; }
+.rastreio-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.rastreio-link code { font-size: 12px; overflow-wrap: anywhere; padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, currentColor 8%, transparent); }
+@media (prefers-reduced-motion: reduce) { .estrela { transition: none; } }

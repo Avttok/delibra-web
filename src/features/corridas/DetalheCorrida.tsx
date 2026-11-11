@@ -3,7 +3,7 @@
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { ChamadosDaCorrida } from "@/features/penalidades/Chamados";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CheckCircle2, FlaskConical, Landmark, MapPinned, Route, Trash2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, CloudOff, FlaskConical, Landmark, LockOpen, MapPinned, Route, Trash2, XCircle } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
 import { PassarCorrida } from "./PassarCorrida";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -27,6 +27,11 @@ import {
 } from "./tipos";
 
 const ROTULO_EVENTO: Record<string, string> = {
+  parada_liberada: "Parada liberada pelo gestor",
+  pediu_pular: "Motoboy pediu para liberar uma parada",
+  emergencia: "Botão de emergência",
+  fechada_sem_noticia: "Fechou sozinha (motoboy sem sinal)",
+  confirmada_offline: "Etapas sem internet chegaram",
   criada: "Corrida criada",
   oferta_enviada: "Corrida enviada ao motoboy",
   oferta_recusada: "Motoboy recusou",
@@ -145,6 +150,9 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const equipe = useEquipe();
   const { empresas } = useEmpresas();
   const cfg = useConfiguracoes();
+  const [liberar, setLiberar] = useState<Corrida["paradas"][number] | null>(null);
+  const [liberarPenalizar, setLiberarPenalizar] = useState(false);
+  const [liberarMotivo, setLiberarMotivo] = useState("");
   const eventos = useEventos(corrida.id);
   const [agora, setAgora] = useState(() => Date.now());
   const [erro, setErro] = useState<string | null>(null);
@@ -283,6 +291,12 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           </section>
         )}
 
+        {corrida.aguardando_confirmacao && (
+          <section className="bloco aviso-bloco">
+            <span className="rotulo"><CloudOff size={13} aria-hidden /> Aguardando confirmação</span>
+            <p className="dica">O motoboy ficou sem sinal e a rota fechou sozinha pela previsão. Quando o app dele voltar, as etapas chegam com a hora certa.</p>
+          </section>
+        )}
         <section className="bloco">
           <span className="rotulo">Paradas · clique para ver no mapa</span>
           {corrida.paradas.map((p) => (
@@ -312,6 +326,17 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
                   <span className="dica">Marcado a {p.distancia_chegada_m} m do endereço{p.local_ignorado ? " · localização ignorada (teste)" : ""}</span>
                 )}
                 {p.recebedor_nome && <span>Recebido por <strong>{p.recebedor_nome}</strong></span>}
+                {(p.liberada_local || p.feita_offline || p.confirmacao_pendente) && (
+                  <span className="selos-linha">
+                    {p.liberada_local && <span className="selo selo-liberada"><LockOpen size={11} aria-hidden /> LIBERADA</span>}
+                    {p.feita_offline && <span className="selo selo-offline"><CloudOff size={11} aria-hidden /> SEM INTERNET</span>}
+                    {p.confirmacao_pendente && <span className="selo selo-offline"><Clock size={11} aria-hidden /> AGUARDANDO</span>}
+                  </span>
+                )}
+                {(corrida.status === "aceita" || corrida.status === "em_andamento") && corrida.exigir_no_local && p.status !== "concluida" && !p.liberada_local
+                  && cfg.saas_pular_parada !== false && cfg.pular_parada_ligado !== false && (
+                  <button type="button" className="botao-texto" onClick={(e) => { e.stopPropagation(); setLiberar(p); }}><LockOpen size={14} aria-hidden /> Liberar parada</button>
+                )}
                 <div className="comprovantes">
                   {p.foto_path && <Comprovante caminho={p.foto_path} rotulo="Foto" />}
                   {p.assinatura_path && <Comprovante caminho={p.assinatura_path} rotulo="Assinatura" />}
@@ -320,6 +345,25 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
             </div>
           ))}
         </section>
+
+        {liberar && (
+          <section className="bloco passar-corrida">
+            <span className="rotulo"><LockOpen size={12} aria-hidden /> Liberar a parada {liberar.ordem + 1}</span>
+            <p className="dica" style={{ margin: 0 }}>O motoboy confirma esta etapa de onde estiver, sem precisar estar no raio. Fica marcado na rota.</p>
+            <p style={{ margin: 0 }}>{liberar.endereco}</p>
+            <input value={liberarMotivo} onChange={(e) => setLiberarMotivo(e.target.value)} placeholder="Motivo · opcional (fica na linha do tempo)" maxLength={200} />
+            <label className="opcao"><span>Penalizar (conta como pulo)</span><input type="checkbox" role="switch" checked={liberarPenalizar} onChange={(e) => setLiberarPenalizar(e.target.checked)} /></label>
+            <div className="linha-botoes">
+              <button type="button" className="botao-texto" onClick={() => setLiberar(null)}>Voltar</button>
+              <button type="button" className="botao-ouro" onClick={async () => {
+                const { error } = await supabase().rpc("liberar_parada", { p_parada: liberar.id, p_penalizar: liberarPenalizar, p_motivo: liberarMotivo.trim() || null });
+                if (error) return toast(traduzirErro(error.message), "erro");
+                toast("Parada liberada: o motoboy já pode confirmar.", "ok");
+                setLiberar(null); setLiberarMotivo(""); setLiberarPenalizar(false);
+              }}><LockOpen size={15} aria-hidden /> Liberar</button>
+            </div>
+          </section>
+        )}
 
         {corrida.observacoes && (
           <section className="bloco"><span className="rotulo">Observações</span><p>{corrida.observacoes}</p></section>

@@ -99,10 +99,111 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   where p.id = auth.uid();
 $$;
 
+create or replace function public.minha_conta_cliente()
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare v_cli uuid := privado.minha_empresa(); e public.empresas%rowtype;
+begin
+  if v_cli is null then return null; end if;
+  select * into e from public.empresas where id = v_cli;
+  return jsonb_build_object(
+    'id', e.id, 'nome', e.nome, 'tipo', e.tipo, 'documento', coalesce(e.cnpj, e.cpf), 'telefone', e.telefone, 'email', e.email,
+    'endereco', e.endereco, 'lat', e.lat, 'lng', e.lng, 'instrucoes_coleta', e.instrucoes_coleta,
+    'pode_express', e.pode_express and privado.pol_bool('cliente_pode_express', true, v_cli), 've_ao_vivo', e.cliente_ve_ao_vivo,
+    'cobranca', privado.pol_txt('cobranca_modo', 'credito', v_cli), 'fatura_ciclo', privado.pol_txt('fatura_ciclo', 'semanal', v_cli),
+    'metodos', to_jsonb(e.pagamento_metodos), 'antecedencia_min', privado.pol_num('agendada_antecedencia_cliente_min', 60, v_cli),
+    'tipos_pedido', (select coalesce(jsonb_agg(jsonb_build_object('chave', t.chave, 'nome', t.nome, 'descricao', t.descricao, 'icone', t.icone) order by t.ordem), '[]')
+                       from public.tipos_pedido t where t.ativo and (t.organizacao_id is null or t.organizacao_id = privado.org_contexto(v_cli))),
+    'categorias', (select coalesce(jsonb_agg(jsonb_build_object('id', k.id, 'nome', k.nome, 'descricao', k.descricao, 'perigoso', k.perigoso,
+                                                               'classe_risco', k.classe_risco, 'fragil', k.fragil, 'icone', k.icone,
+                                                               'campo_descricao', k.campo_descricao, 'campo_peso', k.campo_peso, 'campo_medidas', k.campo_medidas,
+                                                               'campo_valor', k.campo_valor, 'campo_quantidade', k.campo_quantidade) order by k.ordem), '[]')
+                     from public.categorias_produto k where k.ativa and (k.organizacao_id is null or k.organizacao_id = privado.org_contexto(v_cli))),
+    'icone', e.icone, 'teste', privado.cliente_teste(), 've_preco_na_hora', privado.cliente_ve_preco(v_cli),
+    'pode_modelos', privado.pol_bool('cliente_pode_modelos', true, v_cli), 'pode_cancelar', privado.pol_bool('cliente_pode_cancelar', true, v_cli),
+    'troca_senha', privado.pol_bool('cliente_troca_senha', true, v_cli),
+    'pode_avaliar', privado.cfg_bool('saas_avaliacoes', true) and privado.pol_bool('avaliacao_ligada', true, v_cli) and privado.pol_txt('avaliacao_quem', 'cliente', v_cli) in ('cliente', 'ambos'),
+    'pode_rastreio', privado.cfg_bool('saas_rastreio', true) and privado.pol_bool('rastreio_ligado', true, v_cli),
+    've_nota_motoboy', privado.cfg_bool('saas_cliente_ve_nota_motoboy', true) and privado.pol_bool('cliente_ve_nota_motoboy', false, v_cli),
+    'confirmacoes', jsonb_build_object('foto', privado.pol_bool('cliente_confirma_foto', true, v_cli), 'nome', privado.pol_bool('cliente_confirma_nome', true, v_cli),
+                                       'assinatura', privado.pol_bool('cliente_confirma_assinatura', true, v_cli), 'codigo', privado.pol_bool('cliente_confirma_codigo', true, v_cli)),
+    'padrao_confirmacoes', jsonb_build_object('foto', privado.cfg_bool('padrao_exige_foto', false), 'nome', privado.cfg_bool('padrao_exige_nome', true),
+                                              'assinatura', privado.cfg_bool('padrao_exige_assinatura', false), 'codigo', privado.cfg_bool('padrao_exige_codigo', false)),
+    'pode_janela', privado.pol_bool('cliente_pode_janela', true, v_cli), 'pode_objetos', privado.pol_bool('cliente_pode_objetos', true, v_cli),
+    'modelo_horario', privado.pol_bool('cliente_modelo_horario', true, v_cli),
+    'pode_agendar', privado.pol_bool('cliente_pode_agendar', true, v_cli), 'pode_urgente', privado.pol_bool('cliente_pode_urgente', true, v_cli),
+    'max_entregas', privado.pol_num('cliente_max_entregas', 0, v_cli), 'max_coletas', privado.pol_num('cliente_max_coletas', 0, v_cli),
+    'agendar_max_dias', privado.pol_num('cliente_agendar_max_dias', 60, v_cli), 'pode_ida_volta', privado.pol_bool('cliente_pode_ida_volta', true, v_cli),
+    'coleta_fixa', privado.pol_bool('cliente_coleta_fixa', false, v_cli), 'pode_observacoes', privado.pol_bool('cliente_pode_observacoes', true, v_cli),
+    've_faturas', privado.pol_bool('cliente_ve_faturas', true, v_cli), 'pode_chat', privado.pol_bool('cliente_pode_chat', true, v_cli),
+    've_rota', coalesce(privado.pol('cliente_ve_rota', v_cli), '["feito", "motoboy"]'::jsonb),
+    'pedido_de', privado.pol_txt('cliente_pedido_de', '', v_cli), 'pedido_ate', privado.pol_txt('cliente_pedido_ate', '', v_cli),
+    'modo_distancia', privado.pol_txt('preco_distancia_modo', 'soma_entregas', v_cli), 'categoria_obrigatoria', privado.cfg_bool('item_categoria_obrigatoria', false),
+    'em_aberto', (select coalesce(sum(valor), 0) from public.pedidos where empresa_id = v_cli and teste = privado.cliente_teste() and cobranca = 'credito' and fatura_id is null and status = 'concluido'));
+end;
+$$;
+
+-- avaliação do cliente em um pedido (para mostrar o que ele deu)
+create or replace function public.minha_avaliacao(p_pedido uuid)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object('nota', a.nota, 'comentario', a.comentario, 'criado_em', a.criado_em)
+    from public.avaliacoes a where a.pedido_id = p_pedido and a.autor = 'cliente' and a.empresa_id = privado.minha_empresa() limit 1;
+$$;
+revoke execute on function public.minha_avaliacao(uuid) from public, anon;
+grant execute on function public.minha_avaliacao(uuid) to authenticated;
+
 alter table public.paradas add column if not exists liberada_local boolean not null default false;
 alter table public.paradas add column if not exists feita_offline boolean not null default false;
 alter table public.paradas add column if not exists confirmacao_pendente boolean not null default false;
 alter table public.corridas add column if not exists aguardando_confirmacao boolean not null default false;
+
+create or replace function privado.corrida_json_completo(p_corrida uuid)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'id', c.id, 'numero', c.numero, 'status', c.status, 'origem', c.origem,
+    'agendada_para', c.agendada_para, 'reservada_em', c.reservada_em,
+    'cancelar_reserva_ate', case when c.agendada_para is not null
+      then c.agendada_para - make_interval(mins => privado.cfg_num('agendada_cancelar_ate_min', 60)::int) end,
+    'iniciar_a_partir_de', case when c.agendada_para is not null
+      then c.agendada_para - make_interval(mins => privado.cfg_num('agendada_iniciar_antes_min', 60)::int) end,
+    'teste', c.teste, 'urgente', c.urgente, 'perigoso', c.tem_perigoso,
+    'valor_motoboy', coalesce(c.valor_motoboy, (privado.calcular_pagamento(c.id, auth.uid()) ->> 'total')::numeric),
+    'distancia_planejada_m', c.distancia_planejada_m, 'duracao_planejada_s', c.duracao_planejada_s,
+    'observacoes', c.observacoes, 'exige_foto', c.exige_foto, 'exige_assinatura', c.exige_assinatura,
+    'exige_nome', c.exige_nome, 'exige_codigo', c.exige_codigo, 'exigir_no_local', c.exigir_no_local,
+    'raio_chegada_m', c.raio_chegada_m, 'rota_planejada', c.rota_planejada, 'aguardando_confirmacao', c.aguardando_confirmacao,
+    'empresa_nome', coalesce(e.nome, c.cliente_nome),
+    'entregas', (select count(*) from public.paradas p where p.corrida_id = c.id and p.tipo = 'entrega'),
+    'coletas', (select count(*) from public.paradas p where p.corrida_id = c.id and p.tipo = 'coleta'),
+    'paradas', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', p.id, 'ordem', p.ordem, 'tipo', p.tipo, 'endereco', p.endereco,
+        'lat', p.lat, 'lng', p.lng, 'contato_nome', p.contato_nome,
+        'contato_telefone', p.contato_telefone, 'instrucoes', p.instrucoes, 'status', p.status,
+        'referencias', p.referencias, 'liberada_local', p.liberada_local, 'confirmacao_pendente', p.confirmacao_pendente,
+        'exige', privado.exige_parada(p, c), 'janela_de', to_char(p.janela_de, 'HH24:MI'), 'janela_ate', to_char(p.janela_ate, 'HH24:MI'),
+        'cliente', (select coalesce(em.nome, pd.cliente_nome) from public.pedidos pd left join public.empresas em on em.id = pd.empresa_id where pd.id = p.pedido_id),
+        'pedido_numero', (select pd.numero from public.pedidos pd where pd.id = p.pedido_id),
+        'itens', (select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'descricao', i.descricao, 'quantidade', i.quantidade,
+                    'categoria', k.nome, 'icone', k.icone, 'perigoso', coalesce(k.perigoso, false), 'fragil', coalesce(k.fragil, false),
+                    'peso_kg', i.peso_kg, 'comprimento_cm', i.comprimento_cm, 'largura_cm', i.largura_cm, 'altura_cm', i.altura_cm,
+                    'valor_declarado', i.valor_declarado, 'observacoes', i.observacoes,
+                    -- true = não está preso a este ponto (vai para todas as entregas / sai de qualquer coleta)
+                    'todas', case when p.tipo = 'entrega' then i.entrega_id is null else i.coleta_id is null end)), '[]')
+                    from public.pedido_itens i left join public.categorias_produto k on k.id = i.categoria_id
+                   where p.pedido_ponto_id is not null and i.pedido_id = p.pedido_id
+                     and (case when p.tipo = 'entrega' then i.entrega_id = p.pedido_ponto_id or i.entrega_id is null
+                               else (i.coleta_id = p.pedido_ponto_id or i.coleta_id is null)
+                                    -- só o que vai para uma entrega desta rota
+                                    and (i.entrega_id is null or exists (select 1 from public.paradas p2 where p2.corrida_id = c.id
+                                         and p2.tipo = 'entrega' and p2.pedido_ponto_id = i.entrega_id)) end))
+      ) order by p.ordem)
+      from public.paradas p where p.corrida_id = c.id
+    ), '[]'::jsonb)
+  )
+  from public.corridas c
+  left join public.empresas e on e.id = c.empresa_id
+  where c.id = p_corrida;
+$$;
 
 create or replace function public.avancar_parada(p_parada uuid, p_acao text, p_dados jsonb default '{}')
 returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -206,6 +307,8 @@ begin
          foto_path = nullif(v_dados ->> 'foto_path', ''),
          assinatura_path = nullif(v_dados ->> 'assinatura_path', '')
    where id = p.id;
+  -- pedido de pular esta parada que ficou aberto: não precisa mais
+  update public.chamados_corrida set status = 'retirado', respondido_em = now() where corrida_id = c.id and tipo = 'pular' and parada_id = p.id and status = 'pendente';
   perform privado.evento(c.id, 'parada_concluida', jsonb_build_object(
     'parada', p.ordem, 'tipo', p.tipo, 'distancia_m', round(v_dist), 'local_ignorado', v_ignorar));
 
@@ -384,6 +487,22 @@ begin
     'titulo', case when p_aprovar then 'Cancelamento aprovado' else 'Cancelamento negado' end,
     'texto', coalesce(nullif(trim(p_resposta), ''), case when p_aprovar then 'A rota saiu de você. Pode parar.' else 'Siga com a rota como combinado.' end)));
   return privado.chamado_json(p_chamado);
+end;
+$$;
+
+create or replace function privado.processar_chamados()
+returns void language plpgsql security definer set search_path = '' as $$
+declare h record;
+begin
+  for h in select * from public.chamados_corrida where status = 'pendente' and tipo = 'cancelar' loop
+    if privado.cfg_org_txt(h.organizacao_id, 'chamado_sem_resposta', 'nada') = 'aprovar'
+       and h.criado_em < now() - make_interval(mins => privado.cfg_org_num(h.organizacao_id, 'chamado_prazo_min', 10)::int) then
+      update public.chamados_corrida set status = 'expirado', resposta = 'Aprovado sozinho: sem resposta no prazo', respondido_em = now() where id = h.id;
+      perform privado.devolver_rota(h.corrida_id, 'cancelamento_automatico');
+      perform privado.enviar_push(h.motoboy_id, jsonb_build_object('tipo', 'chamado_respondido', 'chamado_id', h.id::text, 'corrida_id', h.corrida_id::text,
+        'aprovado', 'true', 'titulo', 'Cancelamento aprovado', 'texto', 'Ninguém respondeu no prazo: a rota saiu de você.'));
+    end if;
+  end loop;
 end;
 $$;
 

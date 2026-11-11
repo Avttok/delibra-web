@@ -37,6 +37,12 @@ export interface Parada {
   assinatura_path: string | null;
   distancia_chegada_m: number | null;
   local_ignorado: boolean;
+  /** O gestor liberou: o motoboy confirma de onde estiver. */
+  liberada_local?: boolean;
+  /** Feita sem internet (chegou depois, com a hora certa). */
+  feita_offline?: boolean;
+  /** A rota fechou sozinha e esta etapa espera o app mandar os dados. */
+  confirmacao_pendente?: boolean;
   pedido_id?: string | null;
   pedido_ponto_id?: string | null;
   dist_rua_m?: number | null;
@@ -88,6 +94,8 @@ export interface Corrida {
   valor_dev?: number | null;
   dev_pct?: number | null;
   pagamento_status?: string;
+  /** Fechou sozinha (motoboy sem sinal): espera o app mandar as etapas. */
+  aguardando_confirmacao?: boolean;
   pagamento_metodo?: string | null;
   por_cliente?: boolean;
   distancia_real_m: number | null;

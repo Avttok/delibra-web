@@ -205,3 +205,47 @@
 .lp-rodape nav a { text-decoration: none; color: var(--texto-2); }
 .lp-rodape nav a:hover { color: var(--ouro); }
 .lp-rodape p { margin: 0 0 0 auto; }
+
+/* ---------- página pública de rastreio (/r/…) ---------- */
+.rastreio { --marca: #d4af37; min-height: 100dvh; max-width: 560px; margin: 0 auto; padding: 18px 16px 32px; display: grid; gap: 14px; align-content: start;
+  color: #f5f5f4; background: radial-gradient(120% 60% at 50% -10%, color-mix(in srgb, var(--marca) 22%, transparent), transparent 60%), #0a0a0a; }
+.rastreio-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
+.rastreio-logo { height: 34px; width: auto; max-width: 160px; object-fit: contain; }
+.rastreio-nome { font-size: 18px; letter-spacing: .2px; }
+.rastreio-pedido { font-size: 13px; opacity: .7; }
+.rastreio-cartao { padding: 18px; border-radius: 22px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.rastreio-estado h1 { margin: 0; font-size: clamp(34px, 9vw, 46px); line-height: 1.02; letter-spacing: -.5px; color: var(--marca); }
+.rastreio-estado p { margin: 6px 0 0; opacity: .85; line-height: 1.45; }
+.rastreio-passos { list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.rastreio-passos::before { content: ""; position: absolute; top: 14px; left: 12.5%; right: 12.5%; height: 2px; background: rgba(255,255,255,.12); }
+.rastreio-passo { display: grid; justify-items: center; gap: 6px; font-size: 12px; text-align: center; position: relative; opacity: .55; }
+.rastreio-passo.feito, .rastreio-passo.agora { opacity: 1; }
+.rastreio-bolinha { width: 30px; height: 30px; border-radius: 99px; display: grid; place-items: center; background: #171717; border: 2px solid rgba(255,255,255,.18); position: relative; z-index: 1; }
+.rastreio-passo.feito .rastreio-bolinha { background: var(--marca); border-color: var(--marca); color: #0a0a0a; }
+.rastreio-passo.agora .rastreio-bolinha { border-color: var(--marca); color: var(--marca); box-shadow: 0 0 0 6px color-mix(in srgb, var(--marca) 18%, transparent); animation: rastreio-pulso 1.8s ease-in-out infinite; }
+@keyframes rastreio-pulso { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--marca) 6%, transparent); } }
+.rastreio-mapa { position: relative; height: 300px; border-radius: 22px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); }
+.rastreio-mapa > :first-child { height: 100%; }
+.rastreio-atualizado { position: absolute; left: 10px; bottom: 10px; z-index: 2; display: inline-flex; gap: 5px; align-items: center; font-size: 12px; padding: 5px 9px; border-radius: 99px; background: rgba(0,0,0,.65); }
+.rastreio-pontos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rastreio-pontos li { display: flex; gap: 10px; align-items: flex-start; }
+.rastreio-pontos li > svg { margin-top: 2px; color: var(--marca); flex: none; }
+.rastreio-pontos li div { display: grid; gap: 2px; min-width: 0; }
+.rastreio-pontos li span { overflow-wrap: anywhere; opacity: .85; font-size: 14px; }
+.rastreio-pontos li.feito strong::after { content: " ✓"; color: #22c55e; }
+.rastreio-dica { display: inline-flex; gap: 4px; align-items: center; font-size: 12px !important; opacity: .65 !important; }
+.rastreio-avaliar { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.rastreio-avaliar h2 { margin: 0; font-size: 20px; }
+.rastreio-avaliar textarea { width: 100%; border-radius: 14px; padding: 10px 12px; background: rgba(255,255,255,.05); color: inherit; border: 1px solid rgba(255,255,255,.12); font: inherit; }
+.rastreio-botao { appearance: none; border: 0; cursor: pointer; padding: 12px 20px; border-radius: 14px; background: var(--marca); color: #0a0a0a; font-weight: 800; font-size: 15px; }
+.rastreio-botao:disabled { opacity: .6; cursor: default; }
+.rastreio-botao:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.rastreio .estrela { color: rgba(255,255,255,.25); }
+.rastreio .estrela.acesa { color: var(--marca); }
+.rastreio .estrela.acesa svg { fill: var(--marca); }
+.rastreio-fim { text-align: center; display: grid; gap: 8px; justify-items: center; margin-top: 18vh; }
+.rastreio-fim h1 { margin: 0; font-size: 26px; }
+.rastreio-fim p { margin: 0; opacity: .8; }
+.rastreio-carregando { margin-top: 30vh; text-align: center; opacity: .6; }
+.rastreio-rodape { text-align: center; font-size: 12px; opacity: .45; padding-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .rastreio-passo.agora .rastreio-bolinha { animation: none; } }

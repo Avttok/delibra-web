@@ -51,7 +51,8 @@ export type GrupoParametro =
   | "pagamento" | "pag_combinar" | "pag_zonas" | "pag_km" | "pag_entrega" | "pag_fixo" | "pag_periodo" | "mb_ve" | "local" | "comprovantes" | "veiculo"
   | "penalidades" | "chamados" | "perfil" | "app_motoboy" | "regiao"
   | "rastreamento" | "percurso" | "navegacao" | "mapa"
-  | "chat" | "teste";
+  | "chat" | "teste"
+  | "pular" | "offline" | "emergencia" | "avaliacoes" | "rastreio" | "jogo" | "auditoria" | "plataforma";
 
 export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string; area: AreaParametro }> = {
   cli_cadastro: { area: "clientes", titulo: "Cadastro pelo site", descricao: "Como empresas e pessoas criam conta no site do cliente." },
@@ -90,6 +91,14 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   mapa: { area: "mapa", titulo: "Mapa ao vivo", descricao: "Motoboys offline no mapa." },
   chat: { area: "comunicacao", titulo: "Chat", descricao: "Conversa geral, mensagens diretas e fotos." },
   teste: { area: "sistema", titulo: "Modo teste e simulador", descricao: "Ferramentas para treinar e testar sem mexer no que é real." },
+  pular: { area: "motoboys", titulo: "Pular parada (fora do raio)", descricao: "Quando o motoboy não consegue chegar no endereço: ele pede, você libera, ou ele já tem liberdade." },
+  offline: { area: "motoboys", titulo: "Sem internet", descricao: "O app guarda as etapas sem sinal e manda depois; a rota pode fechar sozinha pela previsão." },
+  emergencia: { area: "motoboys", titulo: "Botão de emergência", descricao: "Segurar e confirmar no app avisa na hora quem você escolher, com a localização." },
+  avaliacoes: { area: "clientes", titulo: "Avaliações", descricao: "Quem avalia a entrega, o que acontece com nota ruim e quem vê as notas." },
+  rastreio: { area: "clientes", titulo: "Link de rastreio", descricao: "Uma página para quem recebe acompanhar a entrega, sem precisar de conta." },
+  jogo: { area: "motoboys", titulo: "Moedas do jogo", descricao: "Quanto cada coisa rende de moedas no joguinho e o limite de velocidade para jogar." },
+  auditoria: { area: "sistema", titulo: "Histórico de mudanças", descricao: "Quem mudou o quê: pedidos, rotas, regras, clientes e zonas." },
+  plataforma: { area: "sistema", titulo: "Plataforma", descricao: "Endereço do site, verificação em dois passos e cadastro de empresas novas." },
 };
 
 export const PARAMETROS: DefParametro[] = [
@@ -422,6 +431,47 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "chat_motoboy_abre_rota", grupo: "chat", rotulo: "Motoboy abre rota mandada no chat", descricao: "Ligado: rota ou pedido compartilhado (mesmo em revisão) abre como no quadro: paradas, km e quanto ele recebe.", descricaoDesligado: "Desligado: ele vê só o resumo do cartão.", tipo: "booleano", padrao: true },
   { chave: "chat_rota_respostas", grupo: "chat", rotulo: "Respostas rápidas na rota do chat", descricao: "Botões “Posso fazer” e “Agora não” que respondem na conversa.", tipo: "booleano", padrao: true },
   { chave: "pedido_confirmar_revisao", grupo: "pedidos", rotulo: "Confirmar antes de voltar à revisão", descricao: "Ligado: pergunta antes de desfazer as rotas do pedido.", tipo: "booleano", padrao: true },
+  // ---------------------------------------------------------------- lote 41
+  { chave: "saas_pular_parada", grupo: "pular", rotulo: "Pular parada existe", descricao: "Ligado: as empresas podem usar o pular parada (pedido do motoboy e liberação do gestor).", descricaoDesligado: "Desligado: ninguém pula o raio do endereço.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "pular_parada_ligado", grupo: "pular", rotulo: "Gestor libera parada", descricao: "Ligado: na rota aparece \u201cLiberar parada\u201d para o motoboy confirmar de onde está.", tipo: "booleano", padrao: true },
+  { chave: "motoboy_pede_pular", grupo: "pular", rotulo: "Motoboy pede para pular", descricao: "Ligado: longe do endereço, o app mostra \u201cPedir para liberar\u201d, com o motivo. Você aprova ou nega.", tipo: "booleano", padrao: true, escopos: ["tipo", "cliente", "motoboy"] },
+  { chave: "motoboy_pode_pular", grupo: "pular", rotulo: "Motoboy pula sem pedir", descricao: "Ligado: o motoboy confirma a parada de onde estiver (fica marcado na rota). Bom para quem é de confiança.", descricaoDesligado: "Desligado: precisa estar no raio ou ter a parada liberada.", tipo: "booleano", padrao: false, escopos: ["tipo", "cliente", "motoboy"] },
+  { chave: "pen_pts_pulo", grupo: "pular", rotulo: "Pontos ao liberar com penalidade", descricao: "Quando você aprova e marca \u201cpenalizar\u201d. Sem marcar, não conta nada.", tipo: "numero", padrao: 0, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "offline_finalizar_ligado", grupo: "offline", rotulo: "Concluir etapas sem internet", descricao: "Ligado: sem sinal, o motoboy conclui a etapa e o app manda quando a internet voltar (com a hora certa).", descricaoDesligado: "Desligado: a etapa só conclui com internet.", tipo: "booleano", padrao: true },
+  { chave: "auto_fechar_ligado", grupo: "offline", rotulo: "Fechar rota sem notícia", descricao: "Ligado: se o motoboy some e já passou da hora prevista de terminar, a rota conclui como \u201cAguardando confirmação\u201d até o app mandar as etapas.", tipo: "booleano", padrao: true },
+  { chave: "auto_fechar_folga_min", grupo: "offline", rotulo: "Folga antes de fechar", descricao: "Somada à previsão (velocidade média e distância que faltava).", tipo: "numero", padrao: 5, unidade: "min", min: 1, max: 240, passo: 1 },
+  { chave: "auto_fechar_vel_kmh", grupo: "offline", rotulo: "Velocidade para a previsão", descricao: "Usada quando a rota ainda não tem velocidade média.", tipo: "numero", padrao: 25, unidade: "km/h", min: 5, max: 80, passo: 1 },
+  { chave: "emergencia_ligada", grupo: "emergencia", rotulo: "Botão de emergência no app", descricao: "Ligado: o motoboy segura o botão e confirma; o aviso sai na hora com a localização. Também tem atalho para 190 e 192.", tipo: "booleano", padrao: true },
+  { chave: "emergencia_avisa_gestor", grupo: "emergencia", rotulo: "Avisa os gestores", descricao: "Todos os gestores da empresa recebem.", tipo: "booleano", padrao: true },
+  { chave: "emergencia_avisa_supervisor", grupo: "emergencia", rotulo: "Avisa os supervisores", descricao: "Todos os supervisores da empresa recebem.", tipo: "booleano", padrao: true },
+  { chave: "dev_emergencia_receber", grupo: "emergencia", rotulo: "O Dev recebe todas", descricao: "Ligado: você recebe a emergência de qualquer empresa.", tipo: "booleano", padrao: false, soDev: true, escondido: true },
+  { chave: "saas_avaliacoes", grupo: "avaliacoes", rotulo: "Avaliações existem", descricao: "Ligado: as empresas podem pedir avaliação das entregas.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "avaliacao_ligada", grupo: "avaliacoes", rotulo: "Pedir avaliação", descricao: "Ligado: depois da entrega aparece \u201cAvaliar\u201d (1 a 5 estrelas e comentário).", tipo: "booleano", padrao: true, escopos: ["cliente"] },
+  { chave: "avaliacao_quem", grupo: "avaliacoes", rotulo: "Quem avalia", descricao: "", tipo: "escolha", padrao: "cliente", escopos: ["cliente"],
+    opcoes: [{ valor: "cliente", rotulo: "O cliente", dica: "No site, no pedido entregue." }, { valor: "recebedor", rotulo: "Quem recebe", dica: "No link de rastreio." }, { valor: "ambos", rotulo: "Os dois" }] },
+  { chave: "avaliacao_ruim_ate", grupo: "avaliacoes", rotulo: "Nota ruim é até", descricao: "Notas iguais ou menores contam como ruins.", tipo: "numero", padrao: 2, unidade: "estrelas", min: 1, max: 4, passo: 1 },
+  { chave: "pen_pts_avaliacao_ruim", grupo: "avaliacoes", rotulo: "Pontos por nota ruim", descricao: "Penalidade para o motoboy. 0 = não penaliza.", tipo: "numero", padrao: 1, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "avaliacao_avisa_gestor", grupo: "avaliacoes", rotulo: "Avisar no celular: nota ruim", descricao: "Gestores recebem o aviso com o comentário.", tipo: "booleano", padrao: true },
+  { chave: "saas_cliente_ve_nota_motoboy", grupo: "avaliacoes", rotulo: "Clientes podem ver a nota do motoboy", descricao: "Ligado: cada empresa decide se mostra.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "cliente_ve_nota_motoboy", grupo: "avaliacoes", rotulo: "Cliente vê a nota do motoboy", descricao: "Média e quantidade de avaliações, junto do nome.", tipo: "booleano", padrao: false },
+  { chave: "saas_rastreio", grupo: "rastreio", rotulo: "Link de rastreio existe", descricao: "Ligado: clientes e gestores geram o link.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "rastreio_ligado", grupo: "rastreio", rotulo: "Gerar link de rastreio", descricao: "Ligado: no pedido aparece \u201cLink de rastreio\u201d para mandar a quem recebe.", tipo: "booleano", padrao: true, escopos: ["cliente"] },
+  { chave: "rastreio_validade_h", grupo: "rastreio", rotulo: "Link vale até", descricao: "Horas depois da entrega.", tipo: "numero", padrao: 24, unidade: "h", min: 1, max: 720, passo: 1, soDev: true },
+  { chave: "rastreio_mostra_motoboy", grupo: "rastreio", rotulo: "Mostra o nome do motoboy", descricao: "Só o primeiro nome.", tipo: "booleano", padrao: true, escopos: ["cliente"] },
+  { chave: "rastreio_envio", grupo: "rastreio", rotulo: "Como o link chega", descricao: "", tipo: "escolha", padrao: "copiar", soDev: true,
+    opcoes: [{ valor: "copiar", rotulo: "Copiar e mandar", dica: "Quem gera copia e manda por onde quiser." }, { valor: "email", rotulo: "E-mail", dica: "Quando o módulo de e-mail estiver conectado." }, { valor: "whatsapp", rotulo: "WhatsApp", dica: "Quando o módulo de WhatsApp estiver conectado." }] },
+  { chave: "dev_jogo_moedas_corrida", grupo: "jogo", rotulo: "Moedas por rota concluída", descricao: "Só o Dev vê. Os motoboys nunca veem de onde vêm as moedas.", tipo: "numero", padrao: 10, unidade: "moedas", min: 0, max: 1000, passo: 1, soDev: true, escondido: true },
+  { chave: "dev_jogo_moedas_entrega", grupo: "jogo", rotulo: "Moedas por entrega", descricao: "Cada entrega da rota.", tipo: "numero", padrao: 3, unidade: "moedas", min: 0, max: 1000, passo: 1, soDev: true, escondido: true },
+  { chave: "dev_jogo_moedas_km", grupo: "jogo", rotulo: "Moedas por km", descricao: "Km rodados na rota.", tipo: "numero", padrao: 1, unidade: "moedas", min: 0, max: 100, passo: 1, soDev: true, escondido: true },
+  { chave: "dev_jogo_moedas_avaliacao5", grupo: "jogo", rotulo: "Moedas por nota 5", descricao: "Quando a entrega recebe 5 estrelas.", tipo: "numero", padrao: 5, unidade: "moedas", min: 0, max: 1000, passo: 1, soDev: true, escondido: true },
+  { chave: "dev_jogo_moedas_pacote", grupo: "jogo", rotulo: "Moedas por pacote pego no jogo", descricao: "Multiplica as moedas pegas durante a partida.", tipo: "numero", padrao: 1, unidade: "×", min: 0, max: 20, passo: 1, soDev: true, escondido: true },
+  { chave: "dev_jogo_vel_max_kmh", grupo: "jogo", rotulo: "Só joga parado", descricao: "Acima desta velocidade o jogo não abre (segurança).", tipo: "numero", padrao: 8, unidade: "km/h", min: 0, max: 40, passo: 1, soDev: true },
+  { chave: "dev_jogo_ranking", grupo: "jogo", rotulo: "Ranking no jogo", descricao: "Ligado: placar da empresa e geral, do mês e de sempre.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "auditoria_ligada", grupo: "auditoria", rotulo: "Guardar histórico de mudanças", descricao: "Ligado: cada mudança de gestor ou supervisor fica registrada (quem, quando, antes e depois).", tipo: "booleano", padrao: true },
+  { chave: "dev_site_url", grupo: "plataforma", rotulo: "Endereço do site", descricao: "Usado nos links (rastreio, pagamentos, app). Vazio = o endereço atual. Comece com https://.", tipo: "texto", padrao: "", exemplo: "https://delibra.digital", soDev: true },
+  { chave: "saas_dois_passos", grupo: "plataforma", rotulo: "Verificação em dois passos", descricao: "Ligado: gestores podem exigir um código do app autenticador ao entrar.", tipo: "booleano", padrao: false, soDev: true },
+  { chave: "saas_cadastro_empresas", grupo: "plataforma", rotulo: "Empresas novas se cadastram sozinhas", descricao: "Ligado: a página de vendas mostra \u201cComeçar teste grátis\u201d.", descricaoDesligado: "Desligado: só você cadastra empresas (Dev → Empresas).", tipo: "booleano", padrao: false, soDev: true },
+  { chave: "saas_teste_dias", grupo: "plataforma", rotulo: "Dias de teste grátis", descricao: "Para empresas que se cadastram sozinhas.", tipo: "numero", padrao: 14, unidade: "dias", min: 0, max: 90, passo: 1, soDev: true },
 ];
 
 export type ValorParametro = number | boolean | string | string[];

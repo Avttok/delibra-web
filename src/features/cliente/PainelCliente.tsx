@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pagar } from "@/features/pagamentos/Pagar";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
 import {
-  ArrowLeft, Bookmark, BookmarkPlus, Boxes, Building2, CalendarClock, CheckCircle2, Clock, CreditCard, FileText, FlaskConical, KeyRound, Lock, MapPinned, Package,
+  ArrowLeft, BadgeCheck, Bookmark, BookmarkPlus, Boxes, Building2, CalendarClock, CheckCircle2, Clock, CreditCard, FileText, FlaskConical, KeyRound, Lock, MapPinned, Package,
   PackagePlus, Plus, QrCode, Receipt, Truck, Undo2, UserRound, Wallet, X, Zap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
@@ -26,6 +26,7 @@ import { OpcoesPonto, SelosPonto, type Confirmacao, type OpcoesDoPonto } from "@
 import { PacotesPonto, pacotesDoPonto } from "@/features/pedidos/Pacotes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
 import { Icone } from "@/features/ui/icones";
+import { AvaliarPedido, BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 
 // ------------------------------------------------------------------ dados
 
@@ -36,7 +37,7 @@ interface Conta {
   tipos_pedido: { chave: string; nome: string; descricao: string | null; icone?: string | null }[];
   categorias: Categoria[];
   em_aberto: number; icone?: string | null; teste?: boolean;
-  pode_modelos?: boolean; pode_cancelar?: boolean; troca_senha?: boolean; categoria_obrigatoria?: boolean;
+  pode_modelos?: boolean; pode_cancelar?: boolean; pode_avaliar?: boolean; pode_rastreio?: boolean; ve_nota_motoboy?: boolean; troca_senha?: boolean; categoria_obrigatoria?: boolean;
   /** Peças do lego do pedido sob medida (o gestor liga/desliga no geral e por cliente). */
   confirmacoes?: Partial<Record<Confirmacao, boolean>>; padrao_confirmacoes?: Partial<Record<Confirmacao, boolean>>;
   pode_janela?: boolean; pode_objetos?: boolean; modelo_horario?: boolean;
@@ -149,6 +150,11 @@ export function PainelCliente() {
   );
 }
 
+/** Pagamento confirmado (pelo site ou pelo gestor). */
+function SeloPago() {
+  return <span className="selo selo-pago"><BadgeCheck size={11} aria-hidden /> PAGO</span>;
+}
+
 function Selo({ s }: { s: StatusP }) {
   return <span className="selo" style={{ color: STATUS[s].cor }}>{STATUS[s].rotulo}</span>;
 }
@@ -172,7 +178,7 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
     return (
       <button key={p.id} className="cliente-pedido vidro" onClick={() => onAbrir(p.id)}>
         <div className="cliente-pedido-topo">
-          <strong>#{p.numero}</strong><Selo s={p.status} />
+          <strong>#{p.numero}</strong><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}
           {p.tipo === "planejado" ? <CalendarClock size={13} aria-label="Agendado" /> : <Zap size={13} aria-label="Express" />}
           <span className="espaco" /><strong>{p.valor == null && (p as { preco_oculto?: boolean }).preco_oculto ? "Revisando" : moedaBr(p.valor)}</strong>
         </div>
@@ -244,7 +250,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
       <button className="botao-texto" onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Pedidos</button>
       <div className="cliente-cartao vidro">
         <div className="cliente-pedido-topo">
-          <h2 className="display" style={{ margin: 0 }}>Pedido #{p.numero}</h2><Selo s={p.status} /><span className="espaco" />
+          <h2 className="display" style={{ margin: 0 }}>Pedido #{p.numero}</h2><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}<span className="espaco" />
           <strong className="figura" style={{ fontSize: 24 }}>{p.valor == null && (p as { preco_oculto?: boolean }).preco_oculto ? "Revisando" : moedaBr(p.valor)}</strong>
         </div>
         <p className="dica" style={{ margin: 0 }}>{STATUS[p.status].dica}{p.recusa_motivo ? ` Motivo: ${p.recusa_motivo}` : ""}</p>
@@ -289,6 +295,8 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
           {p.motoboys.length ? ` · ${p.motoboys.map((n) => n.split(" ")[0]).join(", ")}` : ""}
           {p.cobranca === "pre_pago" && p.pagamento_status === "pago" ? " · pago" : ""}
         </p>
+        {conta.pode_rastreio && !["cancelado", "recusado"].includes(p.status) && <BotaoRastreio pedidoId={p.id} />}
+        {conta.pode_avaliar && p.status === "concluido" && <AvaliarPedido pedidoId={p.id} />}
         {podeCancelar && <button className="botao-perigo" onClick={cancelar}><X size={15} aria-hidden /> Cancelar pedido</button>}
       </div>
     </div>
