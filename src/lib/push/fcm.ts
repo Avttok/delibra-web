@@ -9,12 +9,46 @@ interface ContaServico {
 let conta: ContaServico | null = null;
 let tokenCache: { valor: string; expira: number } | null = null;
 
+/** Aceita o JSON colado direto, entre aspas (texto com JSON dentro) ou em base64. */
+function interpretar(bruto: string): unknown {
+  let v: unknown = bruto.trim();
+  for (let i = 0; i < 3 && typeof v === "string"; i++) {
+    const t = (v as string).trim();
+    if (t.startsWith("{") || t.startsWith("\"")) v = JSON.parse(t);
+    else v = Buffer.from(t, "base64").toString("utf8");
+  }
+  return v;
+}
+
+/** Explica, sem revelar valores, o que tem na variável. */
+export function estadoConta(): { ok: boolean; motivo?: string; project_id?: string } {
+  try {
+    const c = lerConta();
+    return { ok: true, project_id: c.project_id };
+  } catch (e) {
+    return { ok: false, motivo: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 function lerConta(): ContaServico {
   if (conta) return conta;
   const bruto = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!bruto) throw new Error("FIREBASE_SERVICE_ACCOUNT não configurada na Vercel");
-  const json = JSON.parse(bruto) as ContaServico;
-  json.private_key = json.private_key.replace(/\\n/g, "\n");
+  let v: unknown;
+  try {
+    v = interpretar(bruto);
+  } catch {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT não é um JSON válido");
+  }
+  if (!v || typeof v !== "object") throw new Error("FIREBASE_SERVICE_ACCOUNT não é um JSON de objeto");
+  const o = v as Record<string, unknown>;
+  if ("project_info" in o || "client" in o)
+    throw new Error("FIREBASE_SERVICE_ACCOUNT tem o google-services.json do app; precisa da chave da conta de serviço (Firebase → Configurações do projeto → Contas de serviço → Gerar nova chave privada)");
+  if (o.type && o.type !== "service_account")
+    throw new Error(`FIREBASE_SERVICE_ACCOUNT é do tipo "${String(o.type)}"; precisa ser "service_account"`);
+  const faltam = ["project_id", "client_email", "private_key"].filter((k) => typeof o[k] !== "string" || !o[k]);
+  if (faltam.length) throw new Error(`FIREBASE_SERVICE_ACCOUNT sem os campos: ${faltam.join(", ")}`);
+  const json = { project_id: o.project_id as string, client_email: o.client_email as string, private_key: (o.private_key as string).replace(/\\n/g, "\n") };
   conta = json;
   return json;
 }

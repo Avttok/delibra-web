@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { enviarFcm } from "@/lib/push/fcm";
+import { enviarFcm, estadoConta } from "@/lib/push/fcm";
 import { adminConfigurado, supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: r.ok, status: r.status }, { status: r.ok ? 200 : 502 });
   } catch (e) {
     console.error("Falha no push", e);
-    return Response.json({ erro: String(e) }, { status: 500 });
+    return Response.json({ erro: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
 
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
 export async function GET() {
   return Response.json({
     FIREBASE_SERVICE_ACCOUNT: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+    conta_firebase: estadoConta(),
     PUSH_SECRET: Boolean(process.env.PUSH_SECRET),
     SUPABASE_SECRET_KEY: adminConfigurado(),
   });
