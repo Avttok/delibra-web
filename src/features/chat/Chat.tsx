@@ -6,21 +6,27 @@ import { CartaoChatRico } from "./CartaoChat";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CodeXml, ArrowLeft, Bell, BellOff, Building2, ClipboardList, ImagePlus, MapPin, MessageCircle, MessagesSquare, Plus, Route, Search, Send, Trash2, UserRound, Users, X,
+  CodeXml, ArrowLeft, Archive, Bell, BellOff, Building2, CheckCheck, ClipboardList, Download, ImagePlus, MapPin, MessageCircle, MessagesSquare, Mic, Pencil, Plus, Reply,
+  Route, Search, Send, Shield, Square, Trash2, UserMinus, UserPlus, UserRound, Users, X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
 
 /** Anexo de uma mensagem: foto ou um cartão de algo do sistema. */
 export interface Anexo {
-  tipo: "foto" | "pedido" | "rota" | "cliente" | "pessoa" | "local";
-  id?: string; titulo?: string; sub?: string; caminho?: string; lat?: number; lng?: number;
+  tipo: "foto" | "pedido" | "rota" | "cliente" | "pessoa" | "local" | "audio";
+  id?: string; titulo?: string; sub?: string; caminho?: string; lat?: number; lng?: number; path?: string; duracao?: number; expirado?: boolean;
 }
 interface Conversa {
-  id: string; tipo: "geral" | "direta" | "grupo"; nome: string | null; foto: string | null; outro: string | null; membros: number; oculto?: boolean;
+  id: string; tipo: "geral" | "direta" | "grupo" | "corrida" | "empresa"; nome: string | null; arquivada?: boolean; corrida_id?: string | null; foto: string | null; outro: string | null; membros: number; oculto?: boolean;
   ultima_em: string; ultima_previa: string | null; ultima_minha: boolean; nao_lidas: number; silenciada: boolean;
 }
-interface Mensagem { id: string; conversa_id: string; autor_id: string | null; texto: string | null; anexo: Anexo | null; criada_em: string; apagada_em: string | null }
+interface Mensagem {
+  id: string; conversa_id: string; autor_id: string | null; texto: string | null; anexo: Anexo | null; criada_em: string; apagada_em: string | null;
+  resposta_a?: string | null; editada_em?: string | null; reacoes?: Record<string, string[]>; automatica?: boolean;
+}
+interface Membro { id: string; nome: string; foto: string | null; admin: boolean; papeis: string[]; lida_em: string }
+const EMOJIS = ["👍", "❤️", "😂", "😮", "🙏", "✅"];
 interface Contato { id: string; nome: string; foto: string | null; papeis: string[]; status: string | null; empresa: string | null }
 
 const hora = (iso: string) => {
@@ -28,7 +34,18 @@ const hora = (iso: string) => {
   return d.toDateString() === hoje.toDateString() ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 };
-const ICONE_ANEXO = { pedido: ClipboardList, rota: Route, cliente: Building2, pessoa: UserRound, local: MapPin, foto: ImagePlus } as const;
+const ICONE_ANEXO = { pedido: ClipboardList, rota: Route, cliente: Building2, pessoa: UserRound, local: MapPin, foto: ImagePlus, audio: Mic } as const;
+
+/** Áudio do chat: toca do Storage (link assinado). */
+function AudioChat({ a }: { a: Anexo }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!a.path || a.expirado) return;
+    void supabase().storage.from("chat").createSignedUrl(a.path, 3600).then(({ data }) => setUrl(data?.signedUrl ?? null));
+  }, [a.path, a.expirado]);
+  if (a.expirado) return <span className="dica"><Mic size={12} aria-hidden /> Áudio que já não fica guardado</span>;
+  return <span className="chat-audio"><Mic size={14} aria-hidden />{url ? <audio controls preload="none" src={url} /> : <span className="dica">Carregando…</span>}{a.duracao ? <small>{Math.round(a.duracao)}s</small> : null}</span>;
+}
 
 /** Foto, ou a inicial; grupo = ícone de pessoas; Dev oculto = o ícone </>. */
 function Avatar({ nome, foto, tamanho = 36, grupo, oculto }: { nome: string; foto?: string | null; tamanho?: number; grupo?: boolean; oculto?: boolean }) {
@@ -73,6 +90,21 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
   const [perfil, setPerfil] = useState<string | null>(null);
   const fim = useRef<HTMLDivElement>(null);
   const arquivo = useRef<HTMLInputElement>(null);
+  const [respondendo, setRespondendo] = useState<Mensagem | null>(null);
+  const [editando, setEditando] = useState<Mensagem | null>(null);
+  const [menuMsg, setMenuMsg] = useState<string | null>(null);
+  const [membros, setMembros] = useState<Membro[]>([]);
+  const [verMembros, setVerMembros] = useState(false);
+  const [buscaMsg, setBuscaMsg] = useState<string | null>(null);
+  const [gravando, setGravando] = useState<{ rec: MediaRecorder; inicio: number } | null>(null);
+  const [agoraG, setAgoraG] = useState(0);
+  const [cfgChat, setCfgChat] = useState<{ audio: boolean; max: number; editarMin: number }>({ audio: true, max: 60, editarMin: 15 });
+  useEffect(() => {
+    void supabase().rpc("ajustes").then(({ data }) => {
+      const a = (data ?? {}) as Record<string, unknown>;
+      setCfgChat({ audio: a.chat_audio_ligado !== false, max: Number(a.dev_chat_audio_max_s ?? 60) || 60, editarMin: Number(a.chat_editar_min ?? 15) });
+    });
+  }, []);
 
   const carregarConversas = useCallback(async () => {
     const { data, error } = await supabase().rpc("chat_conversas");
@@ -93,6 +125,7 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
     setMensagens(((data ?? []) as Mensagem[]).reverse());
     void supabase().rpc("chat_marcar_lida", { p_conversa: id }).then(() => carregarConversas());
     // nome, foto e cargos de quem escreveu (os selos ao lado do nome)
+    void supabase().rpc("chat_membros_de", { p_conversa: id }).then(({ data: mb }) => setMembros((mb ?? []) as Membro[]));
     const { data: au } = await supabase().rpc("chat_autores", { p_conversa: id });
     if (Array.isArray(au)) setNomes((n) => ({ ...n, ...Object.fromEntries((au as { id: string; nome: string; foto: string | null; papeis: string[]; empresa: string | null; oculto?: boolean }[]).map((p) => [p.id, { nome: p.nome, foto: p.foto, papeis: p.papeis, empresa: p.empresa, oculto: p.oculto }])) }));
   }, [carregarConversas]);
@@ -122,10 +155,16 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
     const t = texto.trim();
     if (!t && !anexo) return;
     setEnviando(true);
-    const { error } = await supabase().rpc("chat_enviar", { p_conversa: conversa, p_texto: anexo ? (t || null) : t, p_anexo: anexo ?? null });
+    if (editando && !anexo) {
+      const { error } = await supabase().rpc("chat_editar", { p_mensagem: editando.id, p_texto: t });
+      setEnviando(false);
+      if (error) return toast(error.message.includes("tempo_de_editar") ? "O tempo para editar essa mensagem passou." : error.message, "erro");
+      setEditando(null); setTexto(""); void carregarMensagens(conversa); return;
+    }
+    const { error } = await supabase().rpc("chat_enviar", { p_conversa: conversa, p_texto: anexo ? (t || null) : t, p_anexo: anexo ?? null, p_resposta_a: respondendo?.id ?? null });
     setEnviando(false);
-    if (error) return toast(error.message, "erro");
-    setTexto("");
+    if (error) return toast(error.message.includes("conversa_arquivada") ? "Esta conversa terminou com a corrida: fica só para ler." : error.message.includes("audio") ? "Áudio desligado ou longo demais." : error.message, "erro");
+    setTexto(""); setRespondendo(null);
     if (conversa === aberta) void carregarMensagens(conversa);
     void carregarConversas();
   }
@@ -140,6 +179,66 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
     setEnviando(false);
     if (error) return toast(error.message, "erro");
     await enviar({ tipo: "foto", caminho });
+  }
+
+  async function reagir(m: Mensagem, e: string) {
+    setMenuMsg(null);
+    const { data, error } = await supabase().rpc("chat_reagir", { p_mensagem: m.id, p_emoji: e });
+    if (error) return toast("Não deu para reagir agora.", "erro");
+    setMensagens((l) => l.map((x) => (x.id === m.id ? { ...x, reacoes: (data ?? {}) as Record<string, string[]> } : x)));
+  }
+  async function gravar() {
+    if (gravando) {
+      gravando.rec.stop(); return;
+    }
+    if (!aberta || typeof MediaRecorder === "undefined") return toast("Este navegador não grava áudio.", "aviso");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const partes: Blob[] = [];
+      const inicio = Date.now();
+      const conversa = aberta;
+      rec.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setGravando(null);
+        const duracao = (Date.now() - inicio) / 1000;
+        if (duracao < 1) return;
+        const blob = new Blob(partes, { type: rec.mimeType || "audio/webm" });
+        const path = `${conversa}/${crypto.randomUUID()}.${(rec.mimeType || "audio/webm").includes("mp4") ? "m4a" : "webm"}`;
+        setEnviando(true);
+        const { error } = await supabase().storage.from("chat").upload(path, blob, { contentType: blob.type });
+        setEnviando(false);
+        if (error) return toast("Não deu para mandar o áudio.", "erro");
+        await enviar({ tipo: "audio", path, duracao: Math.min(duracao, cfgChat.max) }, conversa);
+      };
+      rec.start();
+      setGravando({ rec, inicio });
+      // para sozinho no tempo máximo do Dev
+      setTimeout(() => { if (rec.state === "recording") rec.stop(); }, cfgChat.max * 1000);
+    } catch { toast("Libere o microfone para gravar.", "aviso"); }
+  }
+  useEffect(() => { if (!gravando) return; const t = setInterval(() => setAgoraG(Date.now()), 250); return () => clearInterval(t); }, [gravando]);
+  async function grupo(acao: string, usuario?: string, nome?: string) {
+    if (!aberta) return;
+    const { data, error } = await supabase().rpc("chat_grupo", { p_conversa: aberta, p_acao: acao, p_usuario: usuario ?? null, p_nome: nome ?? null });
+    if (error) return toast(error.message.includes("sem_permissao") ? "Só quem administra o grupo faz isso." : error.message, "erro");
+    if (acao === "sair" || acao === "apagar") { setAberta(null); setVerMembros(false); void carregarConversas(); return; }
+    setMembros((data ?? []) as Membro[]); void carregarConversas();
+  }
+  async function exportar() {
+    if (!aberta) return;
+    const { data, error } = await supabase().rpc("chat_exportar", { p_conversa: aberta });
+    if (error) return toast("Só gestores exportam conversas.", "erro");
+    const d = data as { conversa: string; mensagens: { quando: string; autor: string; texto: string | null; anexo: string | null; apagada: boolean }[] };
+    const linhas = d.mensagens.map((m) => `[${new Date(m.quando).toLocaleString("pt-BR")}] ${m.autor}: ${m.apagada ? "(apagada)" : m.texto ?? `(${m.anexo ?? "anexo"})`}`);
+    const url = URL.createObjectURL(new Blob([`Conversa: ${d.conversa}\n\n${linhas.join("\n")}\n`], { type: "text/plain;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = `conversa-${d.conversa.replace(/[^\w-]+/g, "-")}.txt`; a.click(); URL.revokeObjectURL(url);
+  }
+  async function abrirCaixa() {
+    const { data, error } = await supabase().rpc("chat_caixa_empresa", { p_empresa: null });
+    if (error) return toast("A conversa com a empresa está desligada.", "aviso");
+    await carregarConversas(); setAberta(data as string);
   }
 
   async function abrirDireta(id: string) {
@@ -176,6 +275,7 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
 
   const cartao = (a: Anexo) => {
     if (a.tipo === "foto" && a.caminho) return <FotoChat caminho={a.caminho} />;
+    if (a.tipo === "audio") return <AudioChat a={a} />;
     const I = ICONE_ANEXO[a.tipo] ?? ClipboardList;
     const href = a.tipo === "local" && a.lat != null ? `https://www.openstreetmap.org/?mlat=${a.lat}&mlon=${a.lng}#map=17/${a.lat}/${a.lng}` : linkDe?.(a) ?? null;
     const corpo = <><span className="chat-cartao-icone"><I size={16} aria-hidden /></span><span><strong>{a.titulo ?? a.tipo}</strong>{a.sub && <small>{a.sub}</small>}</span></>;
@@ -191,6 +291,7 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
           <span className="espaco" />
           <button type="button" className="botao-texto" onClick={() => setNovo(novo === "direta" ? null : "direta")}><Plus size={15} aria-hidden /> Conversa</button>
           {gestor && <button type="button" className="botao-texto" onClick={() => setNovo(novo === "grupo" ? null : "grupo")}><Users size={15} aria-hidden /> Grupo</button>}
+          {!gestor && <button type="button" className="botao-texto" onClick={abrirCaixa}><Building2 size={15} aria-hidden /> Falar com a empresa</button>}
         </div>
         {anexoPendente && (
           <div className="chat-pendente">
@@ -223,7 +324,9 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
                 onClick={() => { if (anexoPendente) { void enviar(anexoPendente, c.id).then(() => { onAnexoEnviado?.(); setAberta(c.id); }); } else setAberta(c.id); }}>
                 <Avatar nome={nomeConversa(c)} foto={c.foto} grupo={c.tipo !== "direta"} oculto={c.oculto} />
                 <span className="chat-conversa-texto">
-                  <strong>{nomeConversa(c)}{c.silenciada && <BellOff size={12} aria-label="Silenciada" />}</strong>
+                  <strong>{nomeConversa(c)}{c.silenciada && <BellOff size={12} aria-label="Silenciada" />}
+                    {c.tipo === "corrida" && <span className="selo chat-selo">{c.arquivada ? <><Archive size={10} aria-hidden /> HISTÓRICO</> : <><Route size={10} aria-hidden /> CORRIDA</>}</span>}
+                    {c.tipo === "empresa" && <span className="selo chat-selo"><Building2 size={10} aria-hidden /> EMPRESA</span>}</strong>
                   <small>{c.ultima_minha ? "Você: " : ""}{c.ultima_previa ?? (c.tipo === "geral" ? "Conversa com toda a equipe" : "Sem mensagens")}</small>
                 </span>
                 <span className="chat-conversa-lado"><small>{hora(c.ultima_em)}</small>{c.nao_lidas > 0 && <b>{c.nao_lidas}</b>}</span>
@@ -243,32 +346,83 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
               {atual.tipo === "direta" && atual.outro
                 ? <button type="button" className="botao-limpo" onClick={() => setPerfil(atual.outro)} title="Ver perfil"><Avatar nome={nomeConversa(atual)} foto={atual.foto} oculto={atual.oculto} /></button>
                 : <Avatar nome={nomeConversa(atual)} foto={atual.foto} grupo={atual.tipo !== "direta"} oculto={atual.oculto} />}
-              <span><strong>{nomeConversa(atual)}</strong><small>{atual.tipo === "geral" ? "Toda a equipe" : atual.tipo === "grupo" ? `${atual.membros} pessoas` : "Mensagem direta"}{atual.tipo === "direta" && atual.outro && <SelosCargo papeis={nomes[atual.outro]?.papeis} empresa={nomes[atual.outro]?.empresa} />}</small></span>
+              <span><strong>{nomeConversa(atual)}</strong><small>{atual.tipo === "geral" ? "Toda a equipe" : atual.tipo === "grupo" || atual.tipo === "corrida" ? `${atual.membros} pessoas` : atual.tipo === "empresa" ? "Atendimento da empresa" : "Mensagem direta"}{atual.tipo === "direta" && atual.outro && <SelosCargo papeis={nomes[atual.outro]?.papeis} empresa={nomes[atual.outro]?.empresa} />}</small></span>
               <span className="espaco" />
+              <button type="button" className="icone" onClick={() => setBuscaMsg(buscaMsg == null ? "" : null)} aria-label="Buscar na conversa"><Search size={17} /></button>
+              {atual.tipo !== "geral" && <button type="button" className="icone" onClick={() => setVerMembros(!verMembros)} aria-label="Membros"><Users size={17} /></button>}
+              {gestor && <button type="button" className="icone" onClick={exportar} aria-label="Exportar conversa"><Download size={17} /></button>}
               <button type="button" className="icone" onClick={() => silenciar(atual)} aria-label={atual.silenciada ? "Ligar avisos" : "Silenciar"}>
                 {atual.silenciada ? <BellOff size={17} /> : <Bell size={17} />}
               </button>
             </header>
+            {buscaMsg != null && (
+              <label className="config-busca chat-busca"><Search size={15} aria-hidden /><input autoFocus placeholder="Buscar nesta conversa…" value={buscaMsg} onChange={(e) => setBuscaMsg(e.target.value)} /></label>
+            )}
+            {verMembros && (
+              <div className="chat-membros">
+                <div className="chat-membros-topo"><strong><Users size={14} aria-hidden /> {membros.length} pessoas</strong><span className="espaco" />
+                  {(atual.tipo === "grupo" || atual.tipo === "corrida") && gestor && <button type="button" className="botao-texto" onClick={() => { const n = prompt("Novo nome do grupo", atual.nome ?? ""); if (n != null) void grupo("renomear", undefined, n); }}><Pencil size={13} aria-hidden /> Renomear</button>}
+                  {atual.tipo === "grupo" && <button type="button" className="botao-texto" onClick={() => { if (confirm("Sair deste grupo?")) void grupo("sair"); }}><UserMinus size={13} aria-hidden /> Sair</button>}
+                </div>
+                {membros.map((mb) => (
+                  <div key={mb.id} className="chat-membro">
+                    <Avatar nome={mb.nome} foto={mb.foto} tamanho={28} />
+                    <span><strong>{mb.nome}</strong>{mb.admin && <span className="selo chat-selo"><Shield size={10} aria-hidden /> ADMIN</span>}<SelosCargo papeis={mb.papeis} /></span>
+                    <span className="espaco" />
+                    {gestor && (atual.tipo === "grupo" || atual.tipo === "corrida") && mb.id !== meuId && <>
+                      <button type="button" className="icone" aria-label={mb.admin ? "Tirar admin" : "Fazer admin"} onClick={() => grupo("admin", mb.id)}><Shield size={14} /></button>
+                      <button type="button" className="icone" aria-label="Tirar do grupo" onClick={() => { if (confirm(`Tirar ${mb.nome} do grupo?`)) void grupo("remover", mb.id); }}><UserMinus size={14} /></button>
+                    </>}
+                  </div>
+                ))}
+                {gestor && (atual.tipo === "grupo" || atual.tipo === "corrida") && (
+                  <select className="chat-add" value="" onChange={(e) => { if (e.target.value) void grupo("adicionar", e.target.value); }} aria-label="Adicionar pessoa">
+                    <option value="">+ Adicionar pessoa…</option>
+                    {contatos.filter((c) => !membros.some((m) => m.id === c.id)).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                )}
+              </div>
+            )}
             <div className="chat-mensagens">
-              {mensagens.map((m, i) => {
+              {mensagens.filter((m) => !buscaMsg?.trim() || (m.texto ?? "").toLowerCase().includes(buscaMsg.trim().toLowerCase())).map((m, i, lista) => {
                 const minha = m.autor_id === meuId;
                 const autor = m.autor_id ? nomes[m.autor_id] : null;
                 const emGrupo = !minha && atual.tipo !== "direta";
-                const mostrarAutor = emGrupo && mensagens[i - 1]?.autor_id !== m.autor_id;
+                const mostrarAutor = emGrupo && lista[i - 1]?.autor_id !== m.autor_id;
+                const citada = m.resposta_a ? mensagens.find((x) => x.id === m.resposta_a) : null;
+                // visto: todos os outros abriram a conversa depois desta mensagem
+                const outros = membros.filter((mb) => mb.id !== meuId);
+                const vista = minha && outros.length > 0 && outros.every((mb) => new Date(mb.lida_em) >= new Date(m.criada_em));
+                const podeEditar = minha && !m.apagada_em && !m.anexo && Date.now() - new Date(m.criada_em).getTime() < cfgChat.editarMin * 60_000 && !atual.arquivada;
                 return (
                   <div key={m.id} className={`chat-msg ${minha ? "minha" : ""} ${emGrupo ? "com-avatar" : ""}`}>
                     {mostrarAutor && <button type="button" className="chat-autor botao-limpo" onClick={() => m.autor_id && setPerfil(m.autor_id)} title="Ver perfil">{autor?.nome ?? "Alguém"}<SelosCargo papeis={autor?.papeis} empresa={autor?.empresa} /></button>}
                     <div className="chat-linha-msg">
                     {emGrupo && (mostrarAutor ? <button type="button" className="botao-limpo" onClick={() => m.autor_id && setPerfil(m.autor_id)} aria-label={`Perfil de ${autor?.nome ?? "alguém"}`}>
                       <Avatar nome={autor?.nome ?? "?"} foto={autor?.foto} tamanho={28} oculto={autor?.oculto} /></button> : <span className="chat-avatar-vazio" />)}
-                    <div className="chat-balao">
+                    <div className={`chat-balao${m.automatica ? " automatica" : ""}`} onClick={() => !m.apagada_em && setMenuMsg(menuMsg === m.id ? null : m.id)}>
+                      {m.automatica && <span className="chat-auto">Resposta automática</span>}
+                      {citada && <span className="chat-citacao"><Reply size={11} aria-hidden /> <strong>{citada.autor_id ? nomes[citada.autor_id]?.nome ?? "Alguém" : "Empresa"}</strong> {citada.apagada_em ? "Mensagem apagada" : citada.texto ?? "Anexo"}</span>}
                       {m.apagada_em ? <em className="dica">Mensagem apagada</em> : <>
                         {m.anexo && cartao(m.anexo)}
                         {m.texto && <p>{m.texto}</p>}
                       </>}
-                      <span className="chat-hora">{hora(m.criada_em)}
-                        {!m.apagada_em && (minha || gestor) && <button type="button" className="chat-apagar" aria-label="Apagar" onClick={() => apagar(m)}><Trash2 size={11} /></button>}
+                      <span className="chat-hora">{m.editada_em && !m.apagada_em ? "editada · " : ""}{hora(m.criada_em)}
+                        {minha && !m.apagada_em && <CheckCheck size={13} className={vista ? "chat-visto" : "chat-nao-visto"} aria-label={vista ? "Vista" : "Enviada"} />}
                       </span>
+                      {m.reacoes && Object.keys(m.reacoes).length > 0 && (
+                        <span className="chat-reacoes">{Object.entries(m.reacoes).map(([e, q]) => (
+                          <button key={e} type="button" className={`chat-reacao${q.includes(meuId) ? " minha" : ""}`} onClick={(ev) => { ev.stopPropagation(); void reagir(m, e); }}>{e} {q.length}</button>
+                        ))}</span>
+                      )}
+                      {menuMsg === m.id && (
+                        <span className="chat-acoes" onClick={(ev) => ev.stopPropagation()}>
+                          {!atual.arquivada && EMOJIS.map((e) => <button key={e} type="button" className="chat-emoji" onClick={() => reagir(m, e)} aria-label={`Reagir ${e}`}>{e}</button>)}
+                          {!atual.arquivada && <button type="button" className="icone" aria-label="Responder" onClick={() => { setRespondendo(m); setEditando(null); setMenuMsg(null); }}><Reply size={14} /></button>}
+                          {podeEditar && <button type="button" className="icone" aria-label="Editar" onClick={() => { setEditando(m); setRespondendo(null); setTexto(m.texto ?? ""); setMenuMsg(null); }}><Pencil size={14} /></button>}
+                          {(minha || gestor) && <button type="button" className="icone" aria-label="Apagar" onClick={() => { setMenuMsg(null); void apagar(m); }}><Trash2 size={14} /></button>}
+                        </span>
+                      )}
                     </div>
                     </div>
                   </div>
@@ -277,13 +431,27 @@ export function Chat({ meuId, gestor, linkDe, anexoPendente, onAnexoEnviado }: {
               {mensagens.length === 0 && <p className="dica" style={{ textAlign: "center" }}>Nenhuma mensagem ainda.</p>}
               <div ref={fim} />
             </div>
+            {atual.arquivada ? (
+              <p className="chat-arquivada"><Archive size={14} aria-hidden /> A corrida terminou: esta conversa fica no histórico, só para ler.</p>
+            ) : <>
+            {(respondendo || editando) && (
+              <div className="chat-respondendo">
+                {respondendo ? <Reply size={14} aria-hidden /> : <Pencil size={14} aria-hidden />}
+                <span>{respondendo ? <>Respondendo <strong>{respondendo.autor_id ? nomes[respondendo.autor_id]?.nome ?? "" : ""}</strong>: {respondendo.texto ?? "anexo"}</> : "Editando a mensagem"}</span>
+                <button type="button" className="icone" aria-label="Cancelar" onClick={() => { setRespondendo(null); if (editando) { setEditando(null); setTexto(""); } }}><X size={14} /></button>
+              </div>
+            )}
             <form className="chat-escrever" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
               <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void mandarFoto(f); e.target.value = ""; }} />
               <button type="button" className="icone" aria-label="Mandar foto" onClick={() => arquivo.current?.click()} disabled={enviando}><ImagePlus size={18} /></button>
               <textarea rows={1} placeholder="Escreva uma mensagem…" value={texto} maxLength={4000} onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }} />
-              <button type="submit" className="botao-ouro chat-enviar" disabled={enviando || !texto.trim()} aria-label="Enviar"><Send size={17} /></button>
+              {cfgChat.audio && !texto.trim() && !editando
+                ? <button type="button" className={`botao-ouro chat-enviar${gravando ? " gravando" : ""}`} onClick={gravar} disabled={enviando} aria-label={gravando ? "Parar e mandar o áudio" : "Gravar áudio"}>
+                    {gravando ? <><Square size={15} /> {Math.floor((agoraG - gravando.inicio) / 1000)}s</> : <Mic size={17} />}</button>
+                : <button type="submit" className="botao-ouro chat-enviar" disabled={enviando || !texto.trim()} aria-label="Enviar"><Send size={17} /></button>}
             </form>
+            </>}
           </>
         )}
       </section>
