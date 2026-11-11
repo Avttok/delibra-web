@@ -1629,3 +1629,14 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .editor-icone-topo-botoes { margin-left: auto; display: flex; gap: 8px; }
 .editor-icone-topo-botoes i { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
 .acesso-criado { margin: 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil); font-size: 14px; white-space: pre-wrap; }
+.editar-percurso { display: grid; gap: 10px; border-color: color-mix(in srgb, var(--ouro) 50%, transparent); }
+.editar-percurso strong { display: inline-flex; gap: 6px; align-items: center; }
+.lista-vias { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lista-vias li { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.lista-vias small { color: var(--texto-3); }
+.lista-vias button { margin-left: auto; width: 30px; height: 30px; }
+.raio-rapido { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil); }
+.raio-rapido span { display: grid; margin-right: auto; }
+.raio-rapido small { color: var(--texto-3); font-size: 11.5px; }
+.raio-rapido b { min-width: 64px; text-align: center; }
+.raio-rapido .botao-icone { width: 34px; height: 34px; font-size: 18px; }

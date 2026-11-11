@@ -135,6 +135,9 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
 
   const pinos: PinoParada[] = paradas.map((x, i) => ({ chave: x.id, lat: x.lat, lng: x.lng, tipo: x.tipo, rotulo: String(i + 1) }));
   const pag = previaPag ?? r.pagamento;
+  const zonaPag = (pag as { zona?: { raio_m?: number } } | null)?.zona;
+  const raioZona = zonaPag?.raio_m != null ? Number(zonaPag.raio_m) : null;
+  const raioAtual = Math.round(Number(regras.zona_entrega_raio_m ?? raioZona ?? 1500));
   const entregas = paradas.filter((x) => x.tipo === "entrega").length;
   function mover(i: number, d: number) {
     const l = [...paradas]; const j = i + d; if (j < 0 || j >= l.length) return;
@@ -211,6 +214,16 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
           <span className="rotulo">O motoboy que pegar recebe{previaPag ? " (prévia com as mudanças)" : ""}</span>
           {pag ? <ContaMotoboy calc={pag} /> : <p className="dica">Sem cálculo ainda.</p>}
           {pag && r.valor != null && <p className="dica" style={{ margin: 0 }}>Gestor: {moeda(Math.max(0, Number(r.valor) - Number(pag.total)))}</p>}
+          {editavel && raioZona != null && (
+            // raio da mesma zona direto aqui, só nesta rota (igual ao app)
+            <div className="raio-rapido">
+              <span><strong>Raio da mesma zona</strong><small>Só nesta rota</small></span>
+              <button type="button" className="botao-icone" aria-label="Diminuir o raio" onClick={() => setRegras((o) => ({ ...o, zona_entrega_raio_m: Math.max(100, raioAtual - 100) }))}>−</button>
+              <b>{raioAtual} m</b>
+              <button type="button" className="botao-icone" aria-label="Aumentar o raio" onClick={() => setRegras((o) => ({ ...o, zona_entrega_raio_m: Math.min(20000, raioAtual + 100) }))}>+</button>
+              {mudouRegras && <button className="botao-ouro" disabled={ocupado} onClick={() => rodar(() => sb.rpc("definir_regras_rota", { p_corrida: r.id, p_regras: regras, p_motivo: null }), "Raio salvo nesta rota.")}>Salvar</button>}
+            </div>
+          )}
         </div>
       </div>
 

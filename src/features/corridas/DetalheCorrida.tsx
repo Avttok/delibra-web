@@ -12,6 +12,7 @@ import { SelosPonto, type OpcoesDoPonto } from "@/features/pedidos/OpcoesPonto";
 import { PacotesPonto, pacotesDoPonto, type Pacote } from "@/features/pedidos/Pacotes";
 import { moeda } from "@/features/precos/estrategias";
 import { MapaCorridas } from "./MapaCorridas";
+import { EditarPercurso, encaixarVia, type ViaPercurso } from "./EditarPercurso";
 import { nomeCliente, traduzirErro, useEmpresas, useEquipe } from "./dados";
 import { GestaoPlanejada } from "./GestaoPlanejada";
 import { BlocoRota } from "./BlocoRota";
@@ -130,6 +131,9 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const [foco, setFoco] = useState<{ lat: number; lng: number; vez: number } | null>(null);
   const conta = useConta();
   const [excluindo, setExcluindo] = useState(false);
+  const [editandoPercurso, setEditandoPercurso] = useState(false);
+  const [vias, setVias] = useState<ViaPercurso[]>([]);
+  const [percursoNovo, setPercursoNovo] = useState<string | null>(null);
   const equipe = useEquipe();
   const { empresas } = useEmpresas();
   const cfg = useConfiguracoes();
@@ -189,6 +193,12 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
         </div>
         <CabecaPagina icone={Route} titulo={`${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`} subtitulo={`${nomeCliente(corrida, empresas)} · criada às ${hora(corrida.criada_em)}`} />
         <BotaoCompartilhar anexo={{ tipo: "rota", id: corrida.id, titulo: `${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`, sub: `${nomeCliente(corrida, empresas)} · ${corrida.paradas.filter((p) => p.tipo === "entrega").length} entrega(s)` }} />
+
+        {!["concluida", "cancelada"].includes(corrida.status) && corrida.paradas.length >= 2 && (editandoPercurso
+          ? <EditarPercurso corridaId={corrida.id} paradas={[...corrida.paradas].sort((a, b) => a.ordem - b.ordem).map((p) => ({ lat: p.lat, lng: p.lng }))}
+              vias={vias} setVias={setVias} onPolyline={setPercursoNovo} distanciaAntes={corrida.distancia_planejada_m}
+              onFechar={() => { setEditandoPercurso(false); setVias([]); setPercursoNovo(null); }} />
+          : <button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>)}
 
         <section className="bloco">
           <div className="status-grande display" style={{ color: COR_CORRIDA[corrida.status] }}>{ROTULO_CORRIDA[corrida.status]}</div>
@@ -339,7 +349,8 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
 
       <MapaCorridas
         paradas={pinos}
-        rotaPlanejada={corrida.rota_planejada}
+        rotaPlanejada={editandoPercurso && percursoNovo ? percursoNovo : corrida.rota_planejada}
+        aoClicar={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem))]) : undefined}
         trilha={trilha}
         motoboys={ativa && motoboy?.lat != null && motoboy.lng != null
           ? [{ id: motoboy.id, nome: motoboy.nome, lat: motoboy.lat, lng: motoboy.lng, status: motoboy.status, foto: motoboy.foto }] : []}
