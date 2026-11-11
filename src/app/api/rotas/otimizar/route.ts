@@ -18,7 +18,14 @@ function segredoValido(recebido: string | null): boolean {
  * Corpo opcional: { corrida_id } para otimizar só uma.
  */
 export async function POST(req: Request) {
-  if (!segredoValido(req.headers.get("x-pwex-secret")) && !(await gestorDaRequisicao(req))) {
+  const segredo = req.headers.get("x-pwex-secret");
+  const doBanco = async () => {
+    if (!segredo || !adminConfigurado()) return false;
+    const { data, error } = await supabaseAdmin().rpc("push_secret_confere", { p: segredo });
+    return !error && data === true;
+  };
+  // o banco chama com o segredo dele (não precisa bater com o PUSH_SECRET da Vercel)
+  if (!segredoValido(segredo) && !(await doBanco()) && !(await gestorDaRequisicao(req))) {
     return Response.json({ erro: "nao_autorizado" }, { status: 401 });
   }
   if (!adminConfigurado()) return Response.json({ erro: "sem_chave_secreta" }, { status: 500 });

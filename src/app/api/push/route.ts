@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { enviarFcm } from "@/lib/push/fcm";
+import { adminConfigurado, supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,8 +14,16 @@ function segredoValido(recebido: string | null): boolean {
 }
 
 /** Chamado pelo banco (pg_net) para avisar o celular do motoboy. */
+/** O segredo do banco (privado.config.push_secret) também vale: não precisa ser igual ao da Vercel. */
+async function segredoDoBanco(recebido: string | null): Promise<boolean> {
+  if (!recebido || !adminConfigurado()) return false;
+  const { data, error } = await supabaseAdmin().rpc("push_secret_confere", { p: recebido });
+  return !error && data === true;
+}
+
 export async function POST(req: Request) {
-  if (!segredoValido(req.headers.get("x-pwex-secret"))) {
+  const segredo = req.headers.get("x-pwex-secret");
+  if (!segredoValido(segredo) && !(await segredoDoBanco(segredo))) {
     return Response.json({ erro: "nao_autorizado" }, { status: 401 });
   }
   let corpo: { token?: string; data?: Record<string, unknown> };
@@ -42,5 +51,6 @@ export async function GET() {
   return Response.json({
     FIREBASE_SERVICE_ACCOUNT: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
     PUSH_SECRET: Boolean(process.env.PUSH_SECRET),
+    SUPABASE_SECRET_KEY: adminConfigurado(),
   });
 }
