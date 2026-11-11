@@ -101,7 +101,7 @@ export function EditarOrcamento({ pedidoId, orc, bloqueado, onSalvo }: { pedidoI
         <button type="button" className="botao-texto" onClick={original}><RotateCcw size={14} aria-hidden /> Cálculo original</button>
         <span className="espaco" />
         <button type="button" className="botao-texto" onClick={() => setEditando(false)}><X size={14} aria-hidden /> Cancelar</button>
-        <button type="button" className="botao-ouro" disabled={salvando} onClick={salvar}><Save size={15} aria-hidden /> {salvando ? "Salvando…" : "Salvar cálculo"}</button>
+        <button type="button" className="botao-ouro" disabled={salvando} onClick={salvar}><Save size={15} aria-hidden /> {salvando ? "Salvando…" : "Salvar"}</button>
       </div>
     </div>
   );

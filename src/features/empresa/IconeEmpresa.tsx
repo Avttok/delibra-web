@@ -5,20 +5,8 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
 import { MarcaDelibra } from "@/features/marca/Logo";
-
-/** Recorta o centro da imagem num quadrado de 512 px (PNG), o formato dos ícones de celular. */
-async function quadrado(arquivo: File, lado = 512): Promise<Blob> {
-  const url = URL.createObjectURL(arquivo);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = url; });
-    const m = Math.min(img.naturalWidth, img.naturalHeight);
-    const c = document.createElement("canvas"); c.width = lado; c.height = lado;
-    const g = c.getContext("2d")!;
-    g.imageSmoothingQuality = "high";
-    g.drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, lado, lado);
-    return await new Promise<Blob>((ok, erro) => c.toBlob((b) => (b ? ok(b) : erro(new Error("imagem"))), "image/png"));
-  } finally { URL.revokeObjectURL(url); }
-}
+import { EditorIcone } from "./EditorIcone";
+import { carregarImagem } from "./editorIcone";
 
 /**
  * Ícone da empresa: substitui o Delibra no app do motoboy, no site e no atalho do celular.
@@ -31,13 +19,19 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
   const entrada = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
   const [atual, setAtual] = useState(logo);
+  const [editando, setEditando] = useState<HTMLImageElement | null>(null);
 
   async function escolher(f: File | undefined) {
     if (!f) return;
     if (!f.type.startsWith("image/")) return toast("Escolha uma imagem (PNG, JPG ou WEBP).", "erro");
+    try { setEditando(await carregarImagem(f)); } catch { toast("Não deu para abrir esta imagem.", "erro"); }
+    if (entrada.current) entrada.current.value = "";
+  }
+
+  async function enviar(png: Blob) {
+    setEditando(null);
     setEnviando(true);
     try {
-      const png = await quadrado(f);
       const caminho = `${orgId}/icone-${Date.now()}.png`;
       const sb = supabase();
       const { error } = await sb.storage.from("marcas").upload(caminho, png, { contentType: "image/png", upsert: false });
@@ -51,7 +45,6 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
       toast(`Não deu para salvar o ícone: ${(e as Error).message}`, "erro");
     }
     setEnviando(false);
-    if (entrada.current) entrada.current.value = "";
   }
 
   async function remover() {
@@ -63,7 +56,7 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
 
   const icone = atual
     // eslint-disable-next-line @next/next/no-img-element
-    ? <img src={atual} alt="" />
+    ? <span className="icone-marca" style={{ ["--brilho" as string]: cor ?? "#d4af37" }}><img src={atual} alt="" /></span>
     : <span className="icone-padrao"><MarcaDelibra tamanho={40} /></span>;
 
   return (
@@ -88,7 +81,8 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
         </button>
         {atual && <button type="button" className="botao-icone perigo" disabled={enviando} onClick={remover} aria-label="Voltar ao ícone do Delibra" title="Voltar ao ícone do Delibra"><Trash2 size={16} /></button>}
       </div>
-      <p className="dica" style={{ margin: 0 }}>Use uma imagem quadrada, de preferência 512 × 512. Se não for quadrada, o centro é recortado. No celular, o motoboy coloca o atalho com este ícone em Ajustes → Ícone na tela inicial.</p>
+      <p className="dica" style={{ margin: 0 }}>PNG com fundo transparente fica melhor; se a imagem tiver fundo, o editor tira. Dá para ajustar zoom, posição e margem antes de salvar. No celular, o motoboy coloca o atalho com este ícone em Ajustes → Ícone na tela inicial.</p>
+      {editando && <EditorIcone img={editando} cor={cor} onCancelar={() => setEditando(null)} onPronto={(b) => void enviar(b)} />}
       <input ref={entrada} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => escolher(e.target.files?.[0])} />
     </div>
   );

@@ -197,13 +197,13 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
         <div className="rota-previa-valor">
           <span className="rotulo">Valor da rota</span>
           <strong className="figura">{moeda(r.valor)}</strong>
-          {r.valor_manual != null && <span className="dica">escolhido à mão</span>}
+          {r.valor_manual != null && <span className="dica">valor fixo</span>}
           {editavel && (
             <div className="linha-botoes">
-              <span className="passo-campo"><span className="unidade">R$</span><input inputMode="decimal" placeholder="soma dos pedidos" value={valor} onChange={(e) => setValor(e.target.value)} aria-label="Valor da rota" /></span>
+              <span className="passo-campo"><span className="unidade">R$</span><input inputMode="decimal" placeholder="Fixo (vazio = soma)" value={valor} onChange={(e) => setValor(e.target.value)} aria-label="Valor fixo da rota" /></span>
               <button className="botao-texto" disabled={ocupado || (valorNum != null && !Number.isFinite(valorNum))}
                 onClick={() => rodar(() => sb.rpc("definir_valor_rota", { p_corrida: r.id, p_valor: valorNum, p_motivo: null }), valorNum == null ? "Valor volta a ser a soma dos pedidos." : "Valor da rota salvo.")}>
-                <Pencil size={14} aria-hidden /> {valorNum == null ? "Usar a soma" : "Salvar valor"}</button>
+                <Pencil size={14} aria-hidden /> {valorNum == null ? "Usar a soma" : "Salvar"}</button>
             </div>
           )}
         </div>
