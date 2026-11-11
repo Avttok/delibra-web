@@ -433,6 +433,48 @@ $$;
 revoke execute on function public.painel_do_dia() from public, anon;
 grant execute on function public.painel_do_dia() to authenticated;
 
+-- ===================================================================== empresa nova se cadastra sozinha (o Dev abre; padrão fechado)
+alter table public.organizacoes add column if not exists teste_ate date;
+
+create or replace function public.cadastro_empresas_aberto()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object('aberto', privado.cfg_bool('saas_cadastro_empresas', false), 'dias', privado.cfg_num('saas_teste_dias', 14));
+$$;
+grant execute on function public.cadastro_empresas_aberto() to anon, authenticated;
+
+-- chamado pelo servidor do site (chave secreta) depois de criar o login do dono
+create or replace function public.criar_empresa_teste(p jsonb, p_dono uuid)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare v_id uuid; v_dias int := privado.cfg_num('saas_teste_dias', 14)::int; r record;
+begin
+  if not coalesce(privado.eh_servico(), false) then raise exception 'apenas_servidor' using errcode = '42501'; end if;
+  if not privado.cfg_bool('saas_cadastro_empresas', false) then raise exception 'cadastro_fechado' using errcode = '42501'; end if;
+  if coalesce(trim(p ->> 'nome'), '') = '' then raise exception 'nome_obrigatorio' using errcode = '22023'; end if;
+  -- conta nova (sem papel de equipe nem de cliente)
+  if exists (select 1 from public.perfis where id = p_dono and (papeis && array['gestor', 'supervisor', 'motoboy', 'dev']::public.papel_usuario[] or empresa_id is not null)) then
+    raise exception 'ja_tem_empresa' using errcode = '22023';
+  end if;
+  insert into public.organizacoes (nome, documento, status, teste_ate, dono_id)
+  values (left(trim(p ->> 'nome'), 80), nullif(regexp_replace(coalesce(p ->> 'documento', ''), '\D', '', 'g'), ''), 'teste',
+          case when v_dias > 0 then current_date + v_dias end, p_dono)
+  returning id into v_id;
+  update public.perfis set organizacao_id = v_id, nome = coalesce(nullif(trim(p ->> 'responsavel'), ''), nome),
+         papeis = (select array_agg(distinct x) from unnest(papeis || array['gestor']::public.papel_usuario[]) x)
+   where id = p_dono;
+  insert into public.licencas (organizacao_id, modelo, valor, pct, periodo, observacoes)
+  select v_id, o.cobranca_modelo, o.mensalidade, o.cobranca_pct, o.cobranca_periodo, 'Teste grátis pelo site' from public.organizacoes o where o.id = v_id;
+  begin perform privado.chat_geral_da_org(v_id); exception when others then null; end;
+  -- o Dev fica sabendo
+  for r in select id from public.perfis where 'dev' = any (papeis) loop
+    begin perform privado.enviar_push(r.id, jsonb_build_object('tipo', 'empresa_nova', 'titulo', 'Empresa nova: ' || left(trim(p ->> 'nome'), 60),
+      'texto', 'Começou o teste grátis' || case when v_dias > 0 then ' de ' || v_dias || ' dias' else '' end || '.')); exception when others then null; end;
+  end loop;
+  return v_id;
+end;
+$$;
+revoke execute on function public.criar_empresa_teste(jsonb, uuid) from public, anon, authenticated;
+grant execute on function public.criar_empresa_teste(jsonb, uuid) to service_role;
+
 create or replace function public.chat_participo(p_conversa uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.chat_membros m where m.conversa_id = p_conversa and m.usuario_id = auth.uid())
