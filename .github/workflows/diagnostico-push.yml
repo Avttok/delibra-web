@@ -31,7 +31,7 @@ jobs:
               when content ilike '%SENDER_ID_MISMATCH%' then 'Firebase de outro projeto'
               when content ilike '%PERMISSION_DENIED%' then 'conta de servico sem permissao no FCM'
               when content ilike '%"ok":true%' then 'ok'
-              else regexp_replace(left(content, 120), '"[^"]{16,}"', '"…"', 'g')
+              else regexp_replace(left(content, 220), '[A-Za-z0-9+/=_-]{24,}', '[…]', 'g')
             end as categoria
           from net._http_response order by id desc limit 15;
           SQL
