@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pagar } from "@/features/pagamentos/Pagar";
+import { comSessao } from "@/features/pagamentos/Recebimentos";
 import {
   ArrowLeft, Bookmark, BookmarkPlus, Boxes, Building2, CalendarClock, CheckCircle2, Clock, CreditCard, FileText, FlaskConical, KeyRound, Lock, MapPinned, Package,
   PackagePlus, Plus, QrCode, Receipt, Truck, Undo2, UserRound, Wallet, X, Zap,
@@ -97,6 +99,18 @@ export function PainelCliente() {
     setFaturas((f.data as FaturaC[] | null) ?? []);
   }, []);
   useEffect(() => { void carregar(); const t = setInterval(carregar, 15_000); return () => clearInterval(t); }, [carregar]);
+  // voltou da página de cartão do Mercado Pago: confere o pagamento
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("pagamento");
+    if (!ref) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    void comSessao("/api/pagamentos/verificar", { id: ref }).then((r) => {
+      if (r.status === "aprovado") toast("Pagamento confirmado. Seu pedido já segue.", "ok", { titulo: "Pago" });
+      else if (r.status === "recusado") toast("O pagamento foi recusado. Tente outro cartão ou PIX.", "erro");
+      else toast("Pagamento em análise. Avisamos assim que confirmar.", "aviso");
+      void carregar();
+    });
+  }, [carregar]);
 
   if (conta === undefined || pedidos === null) return <p className="subtitulo" style={{ padding: 24 }}>Carregando…</p>;
   if (!conta) return <div className="cliente-cartao vidro"><p className="erro">Sua conta ainda não está ligada a um cadastro de cliente. Fale com a empresa.</p></div>;
@@ -179,6 +193,9 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
 // ------------------------------------------------------------------ detalhe
 
 function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: PedidoC; conta: Conta; onVoltar: () => void; onMudou: () => void }) {
+  // pedido pré-pago que acabou de ser feito: já abre o pagamento
+  const [pagando, setPagando] = useState(() => p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && Number(p.valor) > 0
+    && !["cancelado", "recusado"].includes(p.status) && Date.now() - new Date(p.criado_em).getTime() < 120_000);
   const [motoboys, setMotoboys] = useState<{ lat: number; lng: number; nome: string; foto: string | null }[]>([]);
   const [planejada, setPlanejada] = useState<string | null>(null);
   const [outras, setOutras] = useState<{ lat: number; lng: number; tipo: "coleta" | "entrega"; feita: boolean }[]>([]);
@@ -240,10 +257,12 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
         {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !["cancelado", "recusado"].includes(p.status) && (
           <div className="cliente-pagar">
             <Lock size={18} aria-hidden />
-            <div><strong>Aguardando pagamento{p.pagamento_metodo ? ` (${p.pagamento_metodo === "pix" ? "PIX" : "cartão"})` : ""}</strong>
+            <div style={{ flex: 1 }}><strong>Aguardando pagamento{p.pagamento_metodo ? ` (${p.pagamento_metodo === "pix" ? "PIX" : "cartão"})` : ""}</strong>
               <p className="dica" style={{ margin: 0 }}>O pedido sai assim que o pagamento for confirmado.</p></div>
+            {Number(p.valor) > 0 && <button type="button" className="botao-ouro" onClick={() => setPagando(true)}><CreditCard size={15} aria-hidden /> Pagar agora</button>}
           </div>
         )}
+        {pagando && <Pagar alvo="pedido" id={p.id} valor={Number(p.valor)} onFechar={() => setPagando(false)} onPago={() => { setPagando(false); onMudou(); }} />}
         {p.codigos.length > 0 && <p className="cliente-codigo">Código de entrega: <strong>{p.codigos.join(" · ")}</strong> <span className="dica">passe só para quem vai receber</span></p>}
         <ol className="cliente-paradas">
           {p.pontos.map((x, i) => (
@@ -627,6 +646,7 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
 // ------------------------------------------------------------------ faturas
 
 function Faturas({ conta, faturas, pedidos }: { conta: Conta; faturas: FaturaC[]; pedidos: PedidoC[] }) {
+  const [pagarFatura, setPagarFatura] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
   if (conta.cobranca === "pre_pago") {
     const pagos = pedidos.filter((p) => p.pagamento_status === "pago");
@@ -673,7 +693,9 @@ function Faturas({ conta, faturas, pedidos }: { conta: Conta; faturas: FaturaC[]
             {Number(f.ajuste) !== 0 && <div className="orcamento-linha"><span>Ajuste{f.ajuste_motivo && <small>{f.ajuste_motivo}</small>}</span><strong>{moedaBr(f.ajuste)}</strong></div>}
             <div className="orcamento-linha total"><span>Total</span><strong>{moedaBr(f.total)}</strong></div>
           </div>
-          <p className="dica" style={{ margin: 0 }}>{f.status === "paga" ? `Paga em ${quando(f.paga_em)}.` : `Vence em ${dataBr(f.vencimento)}. Combine o pagamento com a Delibra (PIX ou cartão).`}</p>
+          <p className="dica" style={{ margin: 0 }}>{f.status === "paga" ? `Paga em ${quando(f.paga_em)}.` : `Vence em ${dataBr(f.vencimento)}. Pague por PIX ou cartão.`}</p>
+          {f.status === "emitida" && <div className="linha-botoes"><button type="button" className="botao-ouro" onClick={() => setPagarFatura(f.id)}><CreditCard size={15} aria-hidden /> Pagar agora</button></div>}
+          {pagarFatura === f.id && <Pagar alvo="fatura" id={f.id} valor={Number(f.total)} onFechar={() => setPagarFatura(null)} onPago={() => { setPagarFatura(null); window.location.reload(); }} />}
         </div>
       ))}
     </>

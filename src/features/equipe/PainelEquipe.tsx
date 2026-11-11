@@ -1,6 +1,8 @@
 "use client";
 
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
+import { Penalidades } from "@/features/penalidades/Penalidades";
+import { Gavel } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bike, Building2, FlaskConical, History, Layers, Lock, PencilLine, Route, Save, Search, ShieldCheck, Trophy, UserPlus, UserRound, Users } from "lucide-react";
 import { ConquistasMembro } from "./Conquistas";
@@ -42,7 +44,7 @@ export function PainelEquipe() {
   const [permissoes, setPermissoes] = useState<Record<string, boolean>>({});
   const conta = useConta();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const [aba, setAba] = useState<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "editar">("registro");
+  const [aba, setAba] = useState<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("registro");
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const { empresas } = useEmpresas();
@@ -159,6 +161,7 @@ export function PainelEquipe() {
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "veiculo" ? "ativo" : ""} onClick={() => setAba("veiculo")}><Bike size={15} aria-hidden /> Veículo</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "medalhas" ? "ativo" : ""} onClick={() => setAba("medalhas")}><Trophy size={15} aria-hidden /> Medalhas</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={15} aria-hidden /> Regras</button>}
+                {m.papeis.includes("motoboy") && <button type="button" className={aba === "penalidades" ? "ativo" : ""} onClick={() => setAba("penalidades")}><Gavel size={15} aria-hidden /> Penalidades</button>}
                 <button type="button" className={aba === "editar" ? "ativo" : ""} onClick={() => setAba("editar")}><PencilLine size={15} aria-hidden /> Editar</button>
               </div>
 
@@ -166,6 +169,7 @@ export function PainelEquipe() {
                 : aba === "veiculo" ? <VeiculoMembro key={m.id} id={m.id} />
                 : aba === "medalhas" ? <ConquistasMembro key={m.id} id={m.id} />
                 : aba === "regras" ? <RegrasDoAlvo key={m.id} escopo="motoboy" alvo={m.id} nome={m.nome || m.email} />
+                : aba === "penalidades" ? <Penalidades key={m.id} alvoTipo="motoboy" alvoId={m.id} nome={m.nome || m.email} />
                 : (m.papeis.includes("dev") && !conta.dev) ? (
                 <p className="dica" style={{ margin: 0 }}><CodeXml size={14} style={{ verticalAlign: -2 }} /> Conta Dev: só o Dev altera esta conta.</p>
               ) : (

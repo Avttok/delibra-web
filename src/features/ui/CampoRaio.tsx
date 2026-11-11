@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CaixaMapa } from "@/features/ui/CaixaMapa";
 import type { GeoJSONSource } from "maplibre-gl";
-import { Map as IconeMapa } from "lucide-react";
+import { Check, Map as IconeMapa, X } from "lucide-react";
 import { useMapa } from "@/lib/mapa/useMapa";
 import { corOuro } from "@/lib/mapa/cores";
 
@@ -35,33 +35,49 @@ export function CampoRaio({ valor, unidade, min, max, passo, onMudar, desabilita
   valor: number; unidade: "m" | "km"; min: number; max: number; passo: number; onMudar: (v: number) => void;
   desabilitado?: boolean; exemplo?: "coleta" | "dupla" | "endereco"; rotuloZero?: string;
 }) {
+  // barra e número mudam o rascunho; salva só no ✓ (ou Enter)
   const [v, setV] = useState(valor);
+  const [txt, setTxt] = useState<string | null>(null);
   const [mapaAberto, setMapaAberto] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => setV(valor), [valor]);
-  function mudar(n: number) {
-    setV(n);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => onMudar(n), 450);
+  useEffect(() => { setV(valor); setTxt(null); }, [valor]);
+  const limitar = (n: number) => Math.min(max, Math.max(min, n));
+  function mudar(n: number) { setV(n); setTxt(null); }
+  function digitar(t: string) {
+    setTxt(t);
+    const n = Number(t.replace(",", "."));
+    if (t.trim() !== "" && !Number.isNaN(n)) setV(limitar(n));
   }
+  const mudou = v !== valor;
+  function confirmar() { onMudar(limitar(v)); setTxt(null); }
+  function desfazer() { setV(valor); setTxt(null); }
   const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
-  const texto = v === 0 && rotuloZero ? rotuloZero : unidade === "km" ? `${v.toLocaleString("pt-BR")} km` : v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR")} km` : `${v} m`;
+  const controles = (
+    <div className="campo-raio-linha">
+      <input type="range" className="barra-raio" min={min} max={max} step={passo} value={v} disabled={desabilitado}
+        style={{ ["--pct" as string]: `${pct}%` }} onChange={(e) => mudar(Number(e.target.value))} aria-label="Tamanho do raio" />
+      <span className="passo-campo campo-raio-num">
+        <input inputMode="decimal" disabled={desabilitado} value={txt ?? String(v).replace(".", ",")} onChange={(e) => digitar(e.target.value)} aria-label="Raio (número)"
+          onKeyDown={(e) => { if (e.key === "Enter" && mudou) confirmar(); if (e.key === "Escape") desfazer(); }} />
+        <span className="unidade">{unidade}</span>
+      </span>
+      {mudou ? <>
+        <button type="button" className="passo-ok" onClick={confirmar} aria-label="Salvar o raio" title="Salvar (Enter)"><Check size={16} /></button>
+        <button type="button" className="passo-desfazer" onClick={desfazer} aria-label="Desfazer" title="Desfazer (Esc)"><X size={15} /></button>
+      </> : v === 0 && <span className="dica">{rotuloZero ?? "sem limite"}</span>}
+      <button type="button" className={`icone${mapaAberto ? " ativo" : ""}`} title={mapaAberto ? "Esconder o mapa" : "Ver no mapa"} onClick={() => setMapaAberto((x) => !x)}>
+        <IconeMapa size={15} aria-hidden />
+      </button>
+    </div>
+  );
   return (
     <div className="campo-raio">
-      <div className="campo-raio-linha">
-        <input type="range" className="barra-raio" min={min} max={max} step={passo} value={v} disabled={desabilitado}
-          style={{ ["--pct" as string]: `${pct}%` }} onChange={(e) => mudar(Number(e.target.value))} aria-label="Tamanho do raio" />
-        <strong className="campo-raio-valor">{v === 0 && !rotuloZero ? "sem limite" : texto}</strong>
-        <button type="button" className={`icone${mapaAberto ? " ativo" : ""}`} title={mapaAberto ? "Esconder o mapa" : "Ver no mapa"} onClick={() => setMapaAberto((x) => !x)}>
-          <IconeMapa size={15} aria-hidden />
-        </button>
-      </div>
-      {mapaAberto && <MapaRaio metros={unidade === "km" ? v * 1000 : v} exemplo={exemplo} />}
+      {controles}
+      {mapaAberto && <MapaRaio metros={unidade === "km" ? v * 1000 : v} exemplo={exemplo} painel={controles} />}
     </div>
   );
 }
 
-function MapaRaio({ metros, exemplo }: { metros: number; exemplo: "coleta" | "dupla" | "endereco" }) {
+function MapaRaio({ metros, exemplo, painel }: { metros: number; exemplo: "coleta" | "dupla" | "endereco"; painel?: ReactNode }) {
   const caixa = useRef<HTMLDivElement>(null);
   const { mapa, pronto } = useMapa(caixa);
   const [centro, setCentro] = useState<[number, number]>(centroInicial);
@@ -100,7 +116,7 @@ function MapaRaio({ metros, exemplo }: { metros: number; exemplo: "coleta" | "du
   const encostam = exemplo === "dupla" ? dist <= 2 * metros : null;
   return (
     <div className="campo-raio-mapa">
-      <CaixaMapa refMapa={caixa} mapa={mapa} className="campo-raio-mapa-caixa" titulo="Raio" />
+      <CaixaMapa refMapa={caixa} mapa={mapa} className="campo-raio-mapa-caixa" titulo="Raio" painelCheio={painel} />
       <p className="dica" style={{ margin: 0 }}>
         {exemplo === "dupla" ? <>Duas entregas a {(dist / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km: {encostam ? <strong style={{ color: "var(--verde)" }}>os raios se encostam (mesma zona)</strong> : <strong>os raios não se encostam</strong>}. </> : null}
         Toque no mapa para mudar o centro do exemplo.

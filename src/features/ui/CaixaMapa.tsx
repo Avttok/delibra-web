@@ -5,9 +5,11 @@ import { Maximize2, Minus, Plus, X } from "lucide-react";
 import type { maplibregl } from "@/lib/mapa/maplibre";
 
 /** Caixa de mapa com tela cheia, aproximar e afastar. O mesmo mapa (cliques e edição continuam). */
-export function CaixaMapa({ refMapa, mapa, className, style, titulo, children }: {
+export function CaixaMapa({ refMapa, mapa, className, style, titulo, children, painelCheio }: {
   refMapa: RefObject<HTMLDivElement | null>; mapa: RefObject<maplibregl.Map | null>;
   className?: string; style?: CSSProperties; titulo?: string; children?: ReactNode;
+  /** As ferramentas da tela (ex.: raio, centro) também na tela cheia, embaixo. */
+  painelCheio?: ReactNode;
 }) {
   const [cheio, setCheio] = useState(false);
   useEffect(() => {
@@ -33,6 +35,7 @@ export function CaixaMapa({ refMapa, mapa, className, style, titulo, children }:
           <button type="button" className="mapa-botao" aria-label="Afastar" onClick={() => mapa.current?.zoomOut()}><Minus size={18} aria-hidden /></button>
         </div>
       )}
+      {cheio && painelCheio && <div className="mapa-cheia-painel vidro">{painelCheio}</div>}
       {children}
     </div>
   );

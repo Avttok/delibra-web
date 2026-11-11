@@ -54,6 +54,12 @@ interface Props {
   painelCheio?: ReactNode;
   /** Avisa quando entra/sai da tela cheia. */
   onCheio?: (cheio: boolean) => void;
+  /** Pontos de passagem do percurso (editar percurso): aparecem e dá para arrastar. */
+  vias?: { lat: number; lng: number }[];
+  onMoverVia?: (i: number, lat: number, lng: number) => void;
+  onTirarVia?: (i: number) => void;
+  /** Puxar a linha do caminho: solta onde quiser e vira um ponto de passagem. */
+  onArrastarLinha?: (lat: number, lng: number) => void;
 }
 
 const VAZIO = { type: "FeatureCollection" as const, features: [] };
@@ -67,7 +73,7 @@ function linha(coords: [number, number][]) {
 }
 
 /** Mapa genérico das telas de corrida: paradas numeradas, rota planejada, trilha real e motoboys. */
-export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio }: Props) {
+export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio, vias, onMoverVia, onTirarVia, onArrastarLinha }: Props) {
   const [cheio, setCheioBase] = useState(false);
   const setCheio = (v: boolean) => { setCheioBase(v); onCheio?.(v); };
   // sem rota pronta: traça o caminho pelas ruas entre as paradas, na ordem
@@ -111,6 +117,7 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboy
   const { mapa, pronto } = useMapa(container);
   const pinos = useRef<Record<string, maplibregl.Marker>>({});
   const cliqueRef = useRef(aoClicar);
+  const arrastouEm = useRef(0);
   cliqueRef.current = aoClicar;
 
   // camadas e clique
@@ -148,7 +155,8 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboy
       layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": corOuro(), "line-width": 4 },
     });
-    const onClick = (e: maplibregl.MapMouseEvent) => cliqueRef.current?.(e.lngLat.lat, e.lngLat.lng);
+    // logo depois de puxar a linha, o clique do mesmo gesto não conta (não cria ponto em dobro)
+    const onClick = (e: maplibregl.MapMouseEvent) => { if (Date.now() - arrastouEm.current > 400) cliqueRef.current?.(e.lngLat.lat, e.lngLat.lng); };
     m.on("click", onClick);
     return () => {
       m.off("click", onClick);
@@ -248,6 +256,66 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboy
     container.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     m.flyTo({ center: [foco.lng, foco.lat], zoom: Math.max(m.getZoom(), 15.5), duration: 700 });
   }, [mapa, pronto, foco]);
+
+  // pontos de passagem arrastáveis (editar percurso)
+  const viasRef = useRef<maplibregl.Marker[]>([]);
+  const moverRef = useRef(onMoverVia); moverRef.current = onMoverVia;
+  const tirarRef = useRef(onTirarVia); tirarRef.current = onTirarVia;
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !pronto) return;
+    viasRef.current.forEach((x) => x.remove());
+    viasRef.current = (vias ?? []).map((v, i) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "via-pino";
+      el.title = "Arraste para mudar · duplo clique tira";
+      el.textContent = String(i + 1);
+      el.addEventListener("dblclick", (e) => { e.stopPropagation(); tirarRef.current?.(i); });
+      const mk = new maplibregl.Marker({ element: el, draggable: Boolean(onMoverVia) }).setLngLat([v.lng, v.lat]).addTo(m);
+      mk.on("dragend", () => { const p = mk.getLngLat(); moverRef.current?.(i, p.lat, p.lng); });
+      return mk;
+    });
+    return () => { viasRef.current.forEach((x) => x.remove()); viasRef.current = []; };
+  }, [mapa, pronto, JSON.stringify(vias ?? [])]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // puxar a linha: segura em cima do caminho, arrasta e solta → ponto de passagem ali
+  const linhaRef = useRef(onArrastarLinha); linhaRef.current = onArrastarLinha;
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !pronto || !onArrastarLinha) return;
+    let fantasma: maplibregl.Marker | null = null;
+    const comecar = (e: maplibregl.MapLayerMouseEvent | maplibregl.MapLayerTouchEvent) => {
+      if ("touches" in e.originalEvent && (e.originalEvent as TouchEvent).touches.length > 1) return;
+      e.preventDefault();
+      m.dragPan.disable();
+      const el = document.createElement("div"); el.className = "via-pino fantasma";
+      fantasma = new maplibregl.Marker({ element: el }).setLngLat(e.lngLat).addTo(m);
+      const mover = (ev: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => fantasma?.setLngLat(ev.lngLat);
+      const soltar = (ev: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => {
+        m.off("mousemove", mover); m.off("touchmove", mover);
+        m.dragPan.enable();
+        fantasma?.remove(); fantasma = null;
+        arrastouEm.current = Date.now();
+        linhaRef.current?.(ev.lngLat.lat, ev.lngLat.lng);
+      };
+      m.on("mousemove", mover); m.on("touchmove", mover);
+      m.once("mouseup", soltar); m.once("touchend", soltar);
+    };
+    const cursor = () => { m.getCanvas().style.cursor = "grab"; };
+    const semCursor = () => { m.getCanvas().style.cursor = ""; };
+    for (const camada of ["rota", "plano"]) {
+      m.on("mousedown", camada, comecar); m.on("touchstart", camada, comecar);
+      m.on("mouseenter", camada, cursor); m.on("mouseleave", camada, semCursor);
+    }
+    return () => {
+      for (const camada of ["rota", "plano"]) {
+        m.off("mousedown", camada, comecar); m.off("touchstart", camada, comecar);
+        m.off("mouseenter", camada, cursor); m.off("mouseleave", camada, semCursor);
+      }
+      m.dragPan.enable(); fantasma?.remove();
+    };
+  }, [mapa, pronto, Boolean(onArrastarLinha)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // tela cheia: o mesmo mapa (cliques, edição e marcadores continuam), por cima de tudo
   useEffect(() => {

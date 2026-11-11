@@ -71,7 +71,7 @@ export function EditarPercurso({ corridaId, paradas, vias, setVias, onPolyline, 
         <strong><Route size={15} aria-hidden /> Editar percurso</strong>
         <button type="button" className="botao-icone" onClick={onFechar} aria-label="Fechar"><X size={16} /></button>
       </div>
-      <p className="dica" style={{ margin: 0 }}>Clique numa rua no mapa para o caminho passar por ela. As paradas ficam na mesma ordem.</p>
+      <p className="dica" style={{ margin: 0 }}>Puxe a linha do caminho até a rua que você quer, ou clique numa rua. Arraste os pontos numerados para ajustar; duplo clique tira. As paradas ficam na mesma ordem.</p>
       {vias.length > 0 && (
         <ul className="lista-vias">
           {vias.map((v, i) => (

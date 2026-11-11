@@ -1,6 +1,8 @@
 "use client";
 
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
+import { Penalidades } from "@/features/penalidades/Penalidades";
+import { Gavel } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Building2, CalendarClock, CheckCircle2, CircleDot, CreditCard, ExternalLink, FlaskConical, Inbox, KeyRound, Layers, MapPin, Plus, Save, Search, Star, Trash2, UserPlus, UserRound, Wallet, X } from "lucide-react";
 import { Icone, SeletorIcone } from "@/features/ui/icones";
@@ -139,7 +141,7 @@ export function PainelEmpresas() {
   const [consultando, setConsultando] = useState(false);
   const [localizando, setLocalizando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
-  const [aba, setAba] = useState<"cadastro" | "regras" | "zonas">("cadastro");
+  const [aba, setAba] = useState<"cadastro" | "regras" | "zonas" | "penalidades">("cadastro");
 
   const [buscaCli, setBuscaCli] = useState("");
   const [filtroCli, setFiltroCli] = useState("todos");
@@ -342,10 +344,12 @@ export function PainelEmpresas() {
                 <button type="button" className={aba === "cadastro" ? "ativo" : ""} onClick={() => setAba("cadastro")}><Building2 size={14} aria-hidden /> Cadastro</button>
                 <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={14} aria-hidden /> Regras</button>
                 <button type="button" className={aba === "zonas" ? "ativo" : ""} onClick={() => setAba("zonas")}><CircleDot size={14} aria-hidden /> Zonas</button>
+                <button type="button" className={aba === "penalidades" ? "ativo" : ""} onClick={() => setAba("penalidades")}><Gavel size={14} aria-hidden /> Penalidades</button>
               </div>
             )}
             {aba === "regras" && selecionada !== "nova" && <RegrasDoAlvo escopo="cliente" alvo={selecionada} nome={form.nome} />}
             {aba === "zonas" && selecionada !== "nova" && <CatalogoZonas clienteId={selecionada} />}
+            {aba === "penalidades" && selecionada !== "nova" && <Penalidades alvoTipo="cliente" alvoId={selecionada} nome={form.nome} />}
             {(aba === "cadastro" || selecionada === "nova") && <>
 
             <section className="secao">

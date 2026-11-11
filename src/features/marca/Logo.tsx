@@ -1,6 +1,6 @@
 "use client";
 
-import { nomeDoApp, useMarcaEmpresa } from "./marcaEmpresa";
+import { nomeDoApp, textoDoTopo, useMarcaEmpresa } from "./marcaEmpresa";
 import { cssFonte } from "./fontes";
 
 /**
@@ -23,15 +23,16 @@ export function MarcaDelibra({ tamanho = 28 }: { tamanho?: number }) {
  * Logo do topo. Se a empresa da conta tem ícone próprio, ele entra no lugar do Delibra
  * (com o nome da empresa); `delibra` força a marca da plataforma.
  */
-export function Logo({ grande = false, delibra = false }: { grande?: boolean; delibra?: boolean }) {
+export function Logo({ grande = false, delibra = false, previa }: { grande?: boolean; delibra?: boolean; previa?: import("./marcaEmpresa").MarcaEmpresa | null }) {
   const t = grande ? 64 : 30;
-  const marca = useMarcaEmpresa();
+  const atual = useMarcaEmpresa();
+  const marca = previa !== undefined ? previa : atual;
   const tl = Math.round(t * (Number(marca?.escala) || 1.9) / 1.4); // tamanho escolhido pelo dono no editor
   if (!delibra && (marca?.logo || marca?.nomeApp)) return (
     <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={nomeDoApp(marca)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {marca.logo ? <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: marca.brilhoCor || marca.cor || "#d4af37", ["--forca" as string]: `${Math.round((marca.brilho ?? 0.55) * 100)}%`, width: tl, height: tl }}><img src={marca.logo} alt="" width={tl} height={tl} className="logo-empresa-icone" /></span> : <MarcaDelibra tamanho={t} />}
-      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20, fontFamily: marca.fonte ? cssFonte(marca.fonte) : undefined, fontStretch: marca.fonte ? "100%" : undefined }}>{nomeDoApp(marca)}</span>
+      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20, fontFamily: marca.fonte ? cssFonte(marca.fonte) : undefined, fontStretch: marca.fonte ? "100%" : undefined }}>{textoDoTopo(marca)}</span>
     </span>
   );
   return (

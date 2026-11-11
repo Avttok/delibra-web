@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { PagamentosDev } from "@/features/pagamentos/PagamentosDev";
 import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound } from "lucide-react";
 import { ApagarTudo } from "./ApagarTudo";
 import { AparelhosDev, ModulosDev, TarefasDev, type Aparelho, type Tarefa } from "./DevExtras";
@@ -40,7 +41,7 @@ function ha(iso: string | null) {
 /** Console do Dev: o sistema inteiro à vista, módulos liga/desliga e quem vê cada um. */
 export function PainelDev() {
   const conta = useConta();
-  const [aba, setAba] = useState<"empresas" | "faturamento" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar">("empresas");
+  const [aba, setAba] = useState<"empresas" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar">("empresas");
   const [oculto, setOculto] = useState(false);
   const lerOculto = useCallback(() => {
     void supabase().auth.getUser().then(({ data: u }) => supabase().from("perfis").select("dev_oculto").eq("id", u.user?.id ?? "").maybeSingle()
@@ -79,6 +80,7 @@ export function PainelDev() {
         <div className="filtro" style={{ alignSelf: "flex-start", flexWrap: "wrap" }}>
           <button className={aba === "empresas" ? "ativo" : ""} onClick={() => setAba("empresas")}><Building2 size={14} aria-hidden /> Empresas</button>
           <button className={aba === "faturamento" ? "ativo" : ""} onClick={() => setAba("faturamento")}><Wallet size={14} aria-hidden /> Faturamento</button>
+          <button className={aba === "pagamentos" ? "ativo" : ""} onClick={() => setAba("pagamentos")}><Wallet size={14} aria-hidden /> Pagamentos</button>
           <button className={aba === "conversas" ? "ativo" : ""} onClick={() => setAba("conversas")}><MessagesSquare size={14} aria-hidden /> Conversas</button>
           <button className={aba === "sistema" ? "ativo" : ""} onClick={() => setAba("sistema")}><LayoutDashboard size={14} aria-hidden /> Visão geral</button>
           <button className={aba === "modulos" ? "ativo" : ""} onClick={() => setAba("modulos")}><ToggleRight size={14} aria-hidden /> Módulos</button>
@@ -96,6 +98,7 @@ export function PainelDev() {
         <div className="formulario vidro entrar">
           {aba === "empresas" && <EmpresasDev />}
           {aba === "faturamento" && <FaturamentoDev />}
+          {aba === "pagamentos" && <PagamentosDev />}
           {aba === "conversas" && <ConversasDev />}
           {aba === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
           {aba === "versao" && <VersaoApp />}
@@ -126,7 +129,7 @@ export function PainelDev() {
               </table>
             )
           )}
-          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "conversas"].includes(aba) && <p className="dica">Carregando…</p>}
+          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas"].includes(aba) && <p className="dica">Carregando…</p>}
         </div>
       </main>
     </>

@@ -49,6 +49,7 @@ export type GrupoParametro =
   | "precocliente" | "preco" | "distancia"
   | "pedidos" | "aprender" | "rotas" | "despacho" | "extensao" | "quadro" | "planejadas"
   | "pagamento" | "pag_combinar" | "pag_zonas" | "pag_km" | "pag_entrega" | "pag_fixo" | "pag_periodo" | "mb_ve" | "local" | "comprovantes" | "veiculo"
+  | "penalidades" | "chamados"
   | "rastreamento" | "percurso" | "navegacao" | "mapa"
   | "chat" | "teste";
 
@@ -71,6 +72,8 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   pag_combinar: { area: "motoboys", titulo: "Vários cálculos juntos", descricao: "Use mais de um modelo ao mesmo tempo (ex.: zonas + por entrega + fixo) e escolha como combinar." },
   pag_entrega: { area: "motoboys", titulo: "Pagamento por entrega", descricao: "Cada entrega paga o km dela (coleta → entrega) mais um fixo." },
   pag_fixo: { area: "motoboys", titulo: "Pagamento fixo", descricao: "Um valor por rota, por entrega e por coleta." },
+  penalidades: { area: "motoboys", titulo: "Penalidades", descricao: "Pontos por oferta ignorada, desistência, abandono e atraso; limite e suspensão. Também para clientes." },
+  chamados: { area: "motoboys", titulo: "Pedido de cancelamento", descricao: "O motoboy em corrida pede para cancelar; você aprova ou nega." },
   pag_periodo: { area: "motoboys", titulo: "Salário, diária e hora", descricao: "Para quem trabalha para a empresa: salário fixo no mês, diária, hora em corrida e um mínimo garantido no holerite." },
   pag_zonas: { area: "motoboys", titulo: "Pagamento por zonas", descricao: "Raio das entregas e o que paga quando estão juntas ou espalhadas." },
   pag_km: { area: "motoboys", titulo: "Pagamento por km", descricao: "Valores do modelo \u201cPor km\u201d." },
@@ -178,7 +181,10 @@ export const PARAMETROS: DefParametro[] = [
   // ---------------------------------------------------------------- revisão e aprendizado
   { chave: "revisao_previa_rotas", grupo: "aprender", rotulo: "Prévia das rotas na revisão", descricao: "Ligado: ao abrir um pedido para revisar, as rotas que ele vai formar (e o que cada motoboy recebe) aparecem antes de aprovar.", tipo: "booleano", padrao: true },
   { chave: "aprender_regras_rota", grupo: "aprender", rotulo: "Repetir o que você sempre faz", descricao: "Ligado: se você põe as mesmas regras de pagamento nas rotas de um cliente várias vezes, as rotas novas dele já nascem com elas.", descricaoDesligado: "Desligado: só sugere na revisão; nada muda sozinho.", tipo: "booleano", padrao: false, escopos: ["tipo", "cliente"] },
-  { chave: "aprender_minimo", grupo: "aprender", rotulo: "Quantas vezes iguais para repetir", descricao: "Nas últimas rotas do cliente.", tipo: "numero", padrao: 3, unidade: "vezes", min: 1, max: 20, passo: 1, escopos: ["tipo", "cliente"] },
+  { chave: "aprender_entre_clientes", grupo: "aprender", rotulo: "Aprender com clientes parecidos", descricao: "Ligado: rotas parecidas (mesmo tipo, entregas, km e horário) de outros clientes também contam. Desligado: só o mesmo cliente.", tipo: "booleano", padrao: false, escopos: ["tipo", "cliente"] },
+  { chave: "aprender_percurso", grupo: "aprender", rotulo: "Repetir o percurso que você editou", descricao: "Ligado: rota nova com as mesmas paradas (perto) de um percurso que você já editou sai com a mesma ordem e o mesmo caminho.", tipo: "booleano", padrao: true, escopos: ["tipo", "cliente"] },
+  { chave: "aprender_percurso_raio_m", grupo: "aprender", rotulo: "O que conta como \u201cmesma parada\u201d", descricao: "Distância máxima entre a parada nova e a de antes.", tipo: "numero", padrao: 250, unidade: "m", min: 30, max: 3000, passo: 10, escopos: ["tipo", "cliente"] },
+  { chave: "aprender_minimo", grupo: "aprender", rotulo: "Quantas vezes parecidas para repetir", descricao: "Quantas decisões parecidas (mesmo cliente ou rotas parecidas) antes de o sistema repetir sozinho.", tipo: "numero", padrao: 3, unidade: "vezes", min: 1, max: 20, passo: 1, escopos: ["tipo", "cliente"] },
   { chave: "pag_valor_km", grupo: "pag_km", rotulo: "Valor do km", descricao: "Multiplica o km da entrega de referência.", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 50, passo: 0.1, escopos: ["tipo", "motoboy"] },
   { chave: "pag_entrega_extra", grupo: "pag_km", rotulo: "Por entrega a mais", descricao: "Somado para cada entrega além da primeira.", tipo: "numero", padrao: 10, unidade: "R$", min: 0, max: 500, passo: 0.5, escopos: ["tipo", "motoboy"] },
   { chave: "pag_coleta_extra", grupo: "pag_km", rotulo: "Por coleta a mais", descricao: "Somado para cada coleta além da primeira.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 500, passo: 0.5, escopos: ["tipo", "motoboy"] },
@@ -250,6 +256,21 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "precisao_max_m", grupo: "local", rotulo: "Tolerância ao erro do GPS", descricao: "Quanto da imprecisão informada pelo celular é descontada da distância.", tipo: "numero", padrao: 80, unidade: "m", min: 0, max: 500, passo: 10 },
   { chave: "posicao_valida_s", grupo: "local", rotulo: "Validade da posição", descricao: "Se o app não mandar a posição na hora, usa a última se for mais recente que isso.", tipo: "numero", padrao: 180, unidade: "s", min: 30, max: 900 },
 
+  { chave: "pen_ligado", grupo: "penalidades", rotulo: "Penalidades automáticas", descricao: "Ligado: o sistema dá pontos sozinho (oferta ignorada, desistência, abandono, atraso). As manuais valem sempre.", tipo: "booleano", padrao: true },
+  { chave: "pen_pts_ignorada", grupo: "penalidades", rotulo: "Oferta ignorada (deixou passar)", descricao: "Pontos quando a oferta expira sem resposta. 0 = não penaliza.", tipo: "numero", padrao: 1, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "pen_pts_recusa", grupo: "penalidades", rotulo: "Oferta recusada", descricao: "Pontos por recusar. 0 = recusar não penaliza.", tipo: "numero", padrao: 0, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "pen_pts_desistencia", grupo: "penalidades", rotulo: "Desistência (cancelamento aprovado)", descricao: "Pontos quando você aprova o pedido de cancelamento. Você pode dispensar na hora.", tipo: "numero", padrao: 2, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "pen_pts_abandono", grupo: "penalidades", rotulo: "Abandono", descricao: "Pontos quando você marca que o motoboy abandonou a rota (por exemplo, depois de negar o cancelamento).", tipo: "numero", padrao: 5, unidade: "pts", min: 0, max: 100, passo: 0.5 },
+  { chave: "pen_pts_atraso", grupo: "penalidades", rotulo: "Atraso em rota planejada", descricao: "Pontos quando a rota com hora marcada passa do horário sem começar.", tipo: "numero", padrao: 1, unidade: "pts", min: 0, max: 50, passo: 0.5 },
+  { chave: "pen_janela_dias", grupo: "penalidades", rotulo: "Os pontos valem por", descricao: "Depois disso, cada ponto deixa de contar.", tipo: "numero", padrao: 30, unidade: "dias", min: 1, max: 365, passo: 1 },
+  { chave: "pen_limite", grupo: "penalidades", rotulo: "Limite do motoboy", descricao: "Ao chegar nesta soma, o motoboy é suspenso (não recebe ofertas nem pega rotas). 0 = nunca suspende.", tipo: "numero", padrao: 10, unidade: "pts", min: 0, max: 500, passo: 1 },
+  { chave: "pen_suspensao_horas", grupo: "penalidades", rotulo: "Duração da suspensão", descricao: "Quanto tempo o motoboy fica sem corridas.", tipo: "numero", padrao: 24, unidade: "h", min: 1, max: 720, passo: 1 },
+  { chave: "pen_cliente_limite", grupo: "penalidades", rotulo: "Limite do cliente", descricao: "Penalidades de clientes são lançadas por você. Ao chegar nesta soma, o cliente fica sem pedidos novos. 0 = nunca bloqueia.", tipo: "numero", padrao: 0, unidade: "pts", min: 0, max: 500, passo: 1 },
+  { chave: "pen_cliente_bloqueio_horas", grupo: "penalidades", rotulo: "Duração do bloqueio do cliente", descricao: "Quanto tempo o cliente fica sem pedidos novos.", tipo: "numero", padrao: 72, unidade: "h", min: 1, max: 2160, passo: 1 },
+  { chave: "chamado_motoboy_pode", grupo: "chamados", rotulo: "Motoboy pode pedir para cancelar", descricao: "Ligado: na corrida aparece \u201cPedir para cancelar\u201d, com o motivo. Você recebe o aviso e responde.", tipo: "booleano", padrao: true },
+  { chave: "chamado_redespachar", grupo: "chamados", rotulo: "Cancelamento aprovado volta para o sistema", descricao: "Ligado: a rota é oferecida de novo na hora. Desligado: fica \u201csem motoboy\u201d para você decidir.", tipo: "booleano", padrao: true },
+  { chave: "chamado_sem_resposta", grupo: "chamados", rotulo: "Sem resposta no prazo", descricao: "", tipo: "escolha", padrao: "nada", opcoes: [{ valor: "nada", rotulo: "Espera você", dica: "O pedido fica aberto até alguém responder." }, { valor: "aprovar", rotulo: "Aprova sozinho", dica: "Passado o prazo, a rota sai do motoboy e volta para o sistema." }] },
+  { chave: "chamado_prazo_min", grupo: "chamados", rotulo: "Prazo para responder", descricao: "Vale quando \u201cAprova sozinho\u201d está escolhido.", tipo: "numero", padrao: 10, unidade: "min", min: 1, max: 240, passo: 1 },
   { chave: "pag_salario_mensal", grupo: "pag_periodo", rotulo: "Salário do mês", descricao: "Entra no holerite. Marque \u201cSalário fixo\u201d no modelo de pagamento (ou nos cálculos juntos) do motoboy.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 50000, passo: 50, escopos: ["motoboy"] },
   { chave: "pag_salario_proporcional", grupo: "pag_periodo", rotulo: "Salário proporcional ao período", descricao: "Ligado: holerite de 15 dias paga metade do mês, e assim por diante.", descricaoDesligado: "Desligado: cada holerite paga o salário cheio (use com holerite mensal).", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
   { chave: "pag_diaria_valor", grupo: "pag_periodo", rotulo: "Valor da diária", descricao: "Por dia em que o motoboy fez pelo menos uma rota. Marque \u201cDiária\u201d no modelo de pagamento.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 2000, passo: 5, escopos: ["motoboy"] },

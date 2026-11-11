@@ -34,8 +34,8 @@ export function AreaCliente({ children }: { children: ReactNode }) {
     // link da empresa (?empresa=slug): a tela de entrar já abre com o ícone e o nome dela
     const slug = q.get("empresa");
     if (slug) void supabase().rpc("marca_publica", { p_slug: slug }).then(({ data }) => {
-      const m = data as { nome: string; nome_app: string | null; logo: string | null; cor: string | null; logo_escala: number | null } | null;
-      if (m) definirMarcaEmpresa({ nome: m.nome, nomeApp: m.nome_app, logo: m.logo, cor: m.cor, escala: m.logo_escala });
+      const m = data as { nome: string; nome_app: string | null; nome_topo?: string | null; logo: string | null; cor: string | null; logo_escala: number | null } | null;
+      if (m) definirMarcaEmpresa({ nome: m.nome, nomeApp: m.nome_app, nomeTopo: m.nome_topo, logo: m.logo, cor: m.cor, escala: m.logo_escala });
     });
   }, []);
   const [modoCadastro, setModoCadastro] = useState<string>("desligado");
@@ -44,8 +44,8 @@ export function AreaCliente({ children }: { children: ReactNode }) {
   const verificar = useCallback(async (s: Session | null) => {
     if (!s) return setEstado({ fase: "anonimo" });
     const [{ data }, perfil] = await Promise.all([supabase().rpc("meu_acesso_cliente"), supabase().rpc("meu_perfil")]);
-    const org = (perfil.data as { organizacao?: { nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null)?.organizacao;
-    if (org) definirMarcaEmpresa({ nome: org.nome, nomeApp: org.nome_app ?? null, logo: org.logo ?? null, cor: org.cor, escala: org.logo_escala, brilhoCor: org.brilho_cor, brilho: org.brilho, fonte: org.fonte });
+    const org = (perfil.data as { organizacao?: { nome: string; nome_app?: string | null; nome_topo?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null)?.organizacao;
+    if (org) definirMarcaEmpresa({ nome: org.nome, nomeApp: org.nome_app ?? null, nomeTopo: org.nome_topo ?? null, logo: org.logo ?? null, cor: org.cor, escala: org.logo_escala, brilhoCor: org.brilho_cor, brilho: org.brilho, fonte: org.fonte });
     setEstado({ fase: "logado", a: (data as Acesso | null) ?? { tipo: "nenhum" } });
   }, []);
 

@@ -9,6 +9,7 @@ import { moeda } from "@/features/precos/estrategias";
 import { formatarKm } from "@/features/corridas/tipos";
 import type { CalculoPagamento } from "@/features/corridas/tipos";
 import { ContaMotoboy } from "@/features/corridas/BlocoRota";
+import { EditarPercurso, encaixarVia, type ViaPercurso } from "@/features/corridas/EditarPercurso";
 import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas";
 import { EditorRegras, fmtRegra } from "@/features/configuracoes/Excecoes";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
@@ -60,6 +61,8 @@ export function RotasDoPedido({ pedidoId, status, chave, onMudou }: { pedidoId: 
   const [aberta, setAberta] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // na prévia, mexer no percurso ou no pagamento monta as rotas (seguras) e já abre a ferramenta
+  const [intencao, setIntencao] = useState<"percurso" | "pagamento" | null>(null);
 
   const carregar = useCallback(async () => {
     const sb = supabase();
@@ -126,14 +129,23 @@ export function RotasDoPedido({ pedidoId, status, chave, onMudou }: { pedidoId: 
         </div>
       )}
 
-      {atual && <CartaoRota key={atual.id} r={atual} previa={dados.previa} outras={editaveis.filter((x) => x.id !== atual.id)} ocupado={ocupado} rodar={rodar} sug={sug} />}
+      {atual && <CartaoRota key={atual.id} r={atual} previa={dados.previa} outras={editaveis.filter((x) => x.id !== atual.id)} ocupado={ocupado} rodar={rodar} sug={sug}
+        intencao={intencao} onIntencaoUsada={() => setIntencao(null)}
+        onMontarPara={dados.previa && status === "recebido" ? (o) => { setIntencao(o); void rodar(() => sb.rpc("aprovar_e_montar", { p_pedido: pedidoId }), "Rotas montadas e seguras: ajuste e solte quando quiser."); } : undefined} />}
     </div>
   );
 }
 
-function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
+const MODALIDADES: { valor: string; rotulo: string }[] = [
+  { valor: "zonas", rotulo: "Por zonas" }, { valor: "rota", rotulo: "Por km" }, { valor: "percentual", rotulo: "Percentual" },
+  { valor: "por_entrega", rotulo: "Por entrega" }, { valor: "fixo", rotulo: "Fixo" },
+];
+
+function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntencaoUsada, onMontarPara }: {
   r: RotaPrevia; previa: boolean; outras: RotaPrevia[]; ocupado: boolean; sug: Sugestoes | null;
   rodar: (f: () => PromiseLike<{ error: { message: string } | null }>, ok: string) => Promise<void>;
+  intencao?: "percurso" | "pagamento" | null; onIntencaoUsada?: () => void;
+  onMontarPara?: (o: "percurso" | "pagamento") => void;
 }) {
   const sb = supabase();
   const cfg = useConfiguracoes();
@@ -142,7 +154,11 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
   const [valor, setValor] = useState(r.valor_manual != null ? String(r.valor_manual).replace(".", ",") : "");
   const [regras, setRegras] = useState<Record<string, ValorParametro>>(r.pag_regras ?? {});
   const [previaPag, setPreviaPag] = useState<CalculoPagamento | null>(null);
-  const [verRegras, setVerRegras] = useState(Object.keys(r.pag_regras ?? {}).length > 0);
+  const [verRegras, setVerRegras] = useState(Object.keys(r.pag_regras ?? {}).length > 0 || intencao === "pagamento");
+  const [editandoPercurso, setEditandoPercurso] = useState(intencao === "percurso");
+  const [vias, setVias] = useState<ViaPercurso[]>([]);
+  const [percursoNovo, setPercursoNovo] = useState<string | null>(null);
+  useEffect(() => { if (intencao) onIntencaoUsada?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const mudouRegras = JSON.stringify(regras) !== JSON.stringify(r.pag_regras ?? {});
   const mudouOrdem = paradas.map((x) => x.id).join() !== r.paradas.map((x) => x.id).join();
 
@@ -164,6 +180,15 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
     [l[i], l[j]] = [l[j], l[i]]; setParadas(l);
   }
   const valorNum = valor.trim() === "" ? null : Number(valor.replace(/\./g, "").replace(",", "."));
+  const painelPercurso = (
+    <EditarPercurso corridaId={r.id} paradas={paradas.map((x) => ({ lat: x.lat, lng: x.lng }))} vias={vias} setVias={setVias} onPolyline={setPercursoNovo}
+      distanciaAntes={r.distancia_m} onFechar={() => { setEditandoPercurso(false); setVias([]); setPercursoNovo(null); }} />
+  );
+  // modalidade desta rota: uma só (dentre as ligadas), com os valores dela logo abaixo
+  const modosRegra = Array.isArray(regras.pag_modos) ? (regras.pag_modos as string[]) : [];
+  const modalidadeAtual = modosRegra.length === 1 ? modosRegra[0] : (typeof regras.pag_modo === "string" && !modosRegra.length ? String(regras.pag_modo) : null)
+    ?? ((pag as { modo?: string } | null)?.modo && (pag as { modo?: string }).modo !== "combinado" ? (pag as { modo?: string }).modo! : null);
+  function escolherModalidade(m: string) { setRegras((o) => ({ ...o, pag_modos: [m], pag_modo: m })); setVerRegras(true); }
 
   return (
     <div className="rota-previa">
@@ -179,7 +204,14 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
       </div>
 
       <div className="rota-previa-grade">
-        <div className="rota-previa-mapa"><MapaCorridas paradas={pinos} rotaPlanejada={mudouOrdem ? null : r.rota_planejada} enquadrar={r.id + paradas.length} legenda={false} /></div>
+        <div className="rota-previa-mapa"><MapaCorridas paradas={pinos} rotaPlanejada={editandoPercurso && percursoNovo ? percursoNovo : mudouOrdem ? null : r.rota_planejada}
+          enquadrar={r.id + paradas.length} legenda={false} titulo={previa ? "Rota nova" : `Rota #${r.numero}`}
+          aoClicar={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, paradas)]) : undefined}
+          vias={editandoPercurso ? vias : undefined}
+          onMoverVia={editandoPercurso ? (i, lat, lng) => setVias((v) => v.map((x, j) => j === i ? encaixarVia(lat, lng, paradas) : x)) : undefined}
+          onTirarVia={editandoPercurso ? (i) => setVias((v) => v.filter((_, j) => j !== i)) : undefined}
+          onArrastarLinha={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, paradas)]) : undefined}
+          painelCheio={editandoPercurso ? painelPercurso : undefined} /></div>
 
         <ol className="rota-previa-paradas">
           {paradas.map((x, i) => (
@@ -246,6 +278,30 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
           )}
         </div>
       </div>
+
+      {previa && onMontarPara && (
+        <div className="linha-botoes">
+          <button type="button" className="botao-texto" disabled={ocupado} onClick={() => onMontarPara("percurso")}><Route size={15} aria-hidden /> Editar percurso</button>
+          <button type="button" className="botao-texto" disabled={ocupado} onClick={() => onMontarPara("pagamento")}><PackageOpen size={15} aria-hidden /> Escolher como o motoboy é pago</button>
+          <span className="dica">Monta as rotas seguras (ninguém recebe ainda) e abre a ferramenta.</span>
+        </div>
+      )}
+      {editavel && (editandoPercurso ? painelPercurso
+        : <div className="linha-botoes"><button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>
+            <span className="dica">Puxe a linha no mapa até a rua que você quer.</span></div>)}
+
+      {editavel && (
+        <div className="rota-modalidade">
+          <span className="rotulo">Como o motoboy desta rota é pago</span>
+          <div className="escolhas" role="radiogroup" aria-label="Modalidade desta rota">
+            {MODALIDADES.map((m) => (
+              <button key={m.valor} type="button" role="radio" aria-checked={modalidadeAtual === m.valor} className={modalidadeAtual === m.valor ? "ativo" : ""}
+                onClick={() => escolherModalidade(m.valor)}>{m.rotulo}</button>
+            ))}
+          </div>
+          <span className="dica">Vale só para esta rota. Os valores da modalidade escolhida aparecem logo abaixo, com a prévia do que o motoboy recebe.</span>
+        </div>
+      )}
 
       {editavel && (
         <div className="rota-previa-regras">

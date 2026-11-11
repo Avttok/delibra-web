@@ -1,6 +1,7 @@
 "use client";
 
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
+import { ChamadosDaCorrida } from "@/features/penalidades/Chamados";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FlaskConical, Landmark, MapPinned, Route, Trash2, XCircle } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
@@ -221,6 +222,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
               <span>{corrida.status === "reservada" ? "Reservada para" : "Motoboy"}: <strong>{nome(corrida.motoboy_id)}</strong></span>
             </p>
           )}
+          <ChamadosDaCorrida corridaId={corrida.id} comMotoboy={Boolean(corrida.motoboy_id) && ["aceita", "em_andamento", "reservada"].includes(corrida.status)} />
           <div className="numeros">
             <div><span className="rotulo">Valor</span><strong>{moeda(corrida.valor)}</strong></div>
             <div><span className="rotulo">Planejado</span><strong>{formatarKm(corrida.distancia_planejada_m)}</strong><small>{formatarDuracao(corrida.duracao_planejada_s)}</small></div>
@@ -358,6 +360,10 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
         paradas={pinos}
         rotaPlanejada={editandoPercurso && percursoNovo ? percursoNovo : corrida.rota_planejada}
         aoClicar={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem))]) : undefined}
+        vias={editandoPercurso ? vias : undefined}
+        onMoverVia={editandoPercurso ? (i, lat, lng) => setVias((v) => v.map((x, j) => j === i ? encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem)) : x)) : undefined}
+        onTirarVia={editandoPercurso ? (i) => setVias((v) => v.filter((_, j) => j !== i)) : undefined}
+        onArrastarLinha={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem))]) : undefined}
         trilha={trilha}
         motoboys={ativa && motoboy?.lat != null && motoboy.lng != null
           ? [{ id: motoboy.id, nome: motoboy.nome, lat: motoboy.lat, lng: motoboy.lng, status: motoboy.status, foto: motoboy.foto }] : []}

@@ -1,6 +1,7 @@
 "use client";
 
 import { PacotesPonto, pacotesDoPonto } from "./Pacotes";
+import { comSessao } from "@/features/pagamentos/Recebimentos";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -311,6 +312,11 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
             <button className="botao-texto" disabled={ocupado} onClick={() => acao("voltar_revisao")} title="Desfaz a rota enquanto nenhuma coleta/entrega foi feita"><Undo2 size={15} aria-hidden /> Voltar à revisão</button>}
           {["aprovado", "roteirizado", "em_rota"].includes(p.status) && <Dica titulo="Voltar à revisão" texto="Tira o pedido das rotas (as que ficarem vazias são canceladas, e o motoboy é avisado) para você mudar valor ou regras e aprovar de novo. Só dá enquanto nenhuma coleta ou entrega foi feita." />}
           {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !finalizado && <>
+            <button className="botao-texto" title="Confere no Mercado Pago o pagamento online do cliente" onClick={async () => {
+              const r = await comSessao("/api/pagamentos/verificar", { pedido_id: p.id });
+              if (r.status === "aprovado") toast("Pago no Mercado Pago. O pedido já segue.", "ok");
+              else toast(r.status === "sem_pagamento" ? "O cliente ainda não começou o pagamento online." : r.status === "recusado" ? "O pagamento foi recusado." : "Ainda aguardando o pagamento.", "aviso");
+            }}><RefreshCw size={15} aria-hidden /> Verificar no Mercado Pago</button>
             <button className="botao-texto" onClick={() => pago("pix")}><Package size={15} aria-hidden /> PIX recebido</button>
             <button className="botao-texto" onClick={() => pago("cartao")}><Package size={15} aria-hidden /> Cartão recebido</button>
           </>}

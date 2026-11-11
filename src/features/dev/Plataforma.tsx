@@ -12,7 +12,7 @@ const brl = (v: number | string | null | undefined) => Number(v ?? 0).toLocaleSt
 const num = (v: number | string | null | undefined, d = 0) => Number(v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: d });
 
 export interface Organizacao {
-  id: string; nome: string; nome_app?: string | null; slug: string | null; documento: string | null; logo_url: string | null; cor: string | null;
+  id: string; nome: string; nome_app?: string | null; nome_topo?: string | null; slug: string | null; documento: string | null; logo_url: string | null; cor: string | null;
   dono_id: string | null; status: "teste" | "ativa" | "suspensa" | "cancelada";
   cobranca_modelo: "percentual" | "licenca" | "isento"; cobranca_pct: number; mensalidade: number; vencimento_dia: number;
   compartilhar: "nunca" | "sem_livre" | "sempre" | "parceiros"; compartilhar_apos_min: number; receber_de_outras: boolean; parceiros: string[];
@@ -605,21 +605,23 @@ export function ConversasDev() {
 /** Dev: nome do app que esta empresa mostra no lugar de "Delibra". */
 function NomeAppDev({ org, onSalvo }: { org: Organizacao; onSalvo: () => void }) {
   const [nome, setNome] = useState(org.nome_app ?? "");
+  const [topo, setTopo] = useState(org.nome_topo ?? "");
   const [salvando, setSalvando] = useState(false);
   async function salvar() {
     const v = nome.trim();
     if (v && (v.length < 2 || v.length > 30)) return toast("O nome do app precisa ter de 2 a 30 letras.", "erro");
     setSalvando(true);
-    const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_nome_app: v, p_so_nome: true });
+    const { error } = await supabase().rpc("dev_marca_organizacao", { p_org: org.id, p: { nome_app: v, nome_topo: topo.trim() } });
     setSalvando(false);
     if (error) return toast(error.message, "erro");
     toast(v ? `O app desta empresa agora se chama ${v}.` : "Voltou a se chamar Delibra.", "ok");
     onSalvo();
   }
   return (
-    <div className="linha-botoes" style={{ alignItems: "flex-end", marginBottom: 10 }}>
-      <label className="campo" style={{ flex: 1 }}><span>Nome do app</span><input value={nome} maxLength={30} placeholder="Delibra" onChange={(e) => setNome(e.target.value)} /></label>
-      <button type="button" className="botao" disabled={salvando || nome.trim() === (org.nome_app ?? "")} onClick={salvar}>{salvando ? "Salvando…" : "Salvar nome"}</button>
+    <div className="grade-2" style={{ alignItems: "flex-end", marginBottom: 10 }}>
+      <label className="campo"><span>Nome do app</span><input value={nome} maxLength={30} placeholder="Delibra" onChange={(e) => setNome(e.target.value)} /></label>
+      <label className="campo"><span>Texto ao lado da logo (topo)</span><input value={topo} maxLength={30} placeholder={nome || "igual ao nome do app"} onChange={(e) => setTopo(e.target.value)} /></label>
+      <button type="button" className="botao" disabled={salvando || (nome.trim() === (org.nome_app ?? "") && topo.trim() === (org.nome_topo ?? ""))} onClick={salvar}>{salvando ? "Salvando…" : "Salvar nomes"}</button>
     </div>
   );
 }

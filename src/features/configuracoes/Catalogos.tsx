@@ -103,7 +103,25 @@ export function CatalogoZonas({ clienteId }: { clienteId?: string } = {}) {
           : "Se algum ponto do pedido (coleta ou entrega) cair dentro do raio, a zona soma no orçamento. Zona de um cliente só vale para ele."}
       </p>
       <div className={`catalogo-zonas ${cheio ? "tela-cheia" : ""}`}>
-        <CaixaMapa refMapa={caixa} mapa={mapa} className="catalogo-mapa" titulo="Zonas" />
+        <CaixaMapa refMapa={caixa} mapa={mapa} className="catalogo-mapa" titulo="Zonas" painelCheio={ed ? (
+          <div className="mapa-ferramentas">
+            <strong>{ed.nome || "Zona nova"}</strong>
+            <span className="dica">Toque no mapa para mudar o centro.</span>
+            <label className="campo"><span>Raio: {(ed.raio_m / 1000).toLocaleString("pt-BR")} km</span>
+              <span className="campo-raio-linha">
+                <input type="range" className="barra-raio" style={{ ["--pct" as string]: `${((ed.raio_m - 100) / 29900) * 100}%` }} min={100} max={30000} step={100} value={ed.raio_m} onChange={(e) => setEd({ ...ed, raio_m: Number(e.target.value) })} />
+                <span className="passo-campo campo-raio-num"><input inputMode="numeric" value={ed.raio_m} onChange={(e) => { const n = Number(e.target.value.replace(/\D/g, "")); if (!Number.isNaN(n)) setEd({ ...ed, raio_m: Math.min(30000, Math.max(0, n)) }); }} aria-label="Raio em metros" /><span className="unidade">m</span></span>
+              </span></label>
+            <div className="grade-campos">
+              <label className="campo"><span>Acréscimo %</span><input inputMode="decimal" value={tx(ed.fator_pct)} onChange={(e) => setEd({ ...ed, fator_pct: num(e.target.value) })} /></label>
+              <label className="campo"><span>Taxa fixa R$</span><input inputMode="decimal" value={tx(ed.adicional)} onChange={(e) => setEd({ ...ed, adicional: num(e.target.value) })} /></label>
+            </div>
+            <div className="linha-botoes">
+              <button type="button" className="botao-ouro" onClick={async () => { const { id, ...resto } = ed; if (await salvar(id ? ed : resto)) setEd(null); }}><Save size={15} aria-hidden /> Salvar</button>
+              <button type="button" className="botao-texto" onClick={() => setEd(null)}>Cancelar</button>
+            </div>
+          </div>
+        ) : <div className="linha-botoes"><button type="button" className="botao-ouro" onClick={nova}><Plus size={16} aria-hidden /> Nova zona</button><span className="dica">Toque numa zona da lista (fora da tela cheia) para editar.</span></div>} />
         <div className="catalogo-zonas-acoes">
           <button type="button" className="botao-ouro" onClick={nova}><Plus size={16} aria-hidden /> Nova zona</button>
           <button type="button" className="botao-texto vidro" onClick={() => setCheio(!cheio)}>{cheio ? "Sair da tela cheia" : "Tela cheia"}</button>

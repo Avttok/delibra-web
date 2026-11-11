@@ -1683,3 +1683,58 @@ body.com-mapa-cheio { overflow: hidden; }
 :where(.mapa-caixa) { position: relative; overflow: hidden; }
 .mapa-caixa > .mapa-caixa-mapa { position: absolute; inset: 0; }
 .mapa-caixa.mapa-cheia.mapa-cheia { position: fixed; inset: 0; z-index: 900; height: auto !important; border-radius: 0 !important; border: 0 !important; background: var(--fundo); }
+/* confirmar números (salva só no ✓) */
+.passo-ok, .passo-desfazer { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; cursor: pointer; flex-shrink: 0; }
+.passo-ok { background: var(--ouro); color: var(--sobre-ouro, #111); border: 0; }
+.passo-ok:disabled { opacity: .45; cursor: not-allowed; }
+.passo-desfazer { background: transparent; color: var(--texto-2); border: 1px solid var(--borda); }
+.passo { flex-wrap: wrap; }
+.campo-raio-num { max-width: 120px; }
+.campo-raio-linha { flex-wrap: wrap; }
+.mapa-ferramentas { display: flex; flex-direction: column; gap: 10px; }
+/* pontos de passagem do percurso */
+.via-pino { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; cursor: grab;
+  background: #fff; color: #111; border: 3px solid var(--ouro); box-shadow: 0 2px 8px rgba(0,0,0,.45); padding: 0; }
+.via-pino:active { cursor: grabbing; }
+.via-pino.fantasma { opacity: .85; border-style: dashed; pointer-events: none; }
+.rota-modalidade { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil); }
+/* Minha empresa */
+.empresa-previa { display: flex; flex-direction: column; gap: 12px; }
+.empresa-previa-topo { padding: 16px; border-radius: 16px; background: var(--fundo-2, var(--vidro)); border: 1px solid var(--borda); display: flex; align-items: center; min-height: 64px; }
+.empresa-previa-linhas { display: grid; gap: 8px; }
+.empresa-previa-linhas > span { display: flex; flex-direction: column; gap: 2px; }
+.empresa-previa-linhas small { color: var(--texto-3); font-size: 12px; }
+.empresa-previa-linhas strong { font-size: 18px; overflow-wrap: anywhere; }
+.fontes-previa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.fonte-opcao { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--borda); background: var(--vidro-sutil); color: var(--texto); cursor: pointer; text-align: left; min-width: 0; }
+.fonte-opcao strong { font-size: 18px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fonte-opcao small { color: var(--texto-3); font-size: 11px; }
+.fonte-opcao.ativo { border-color: var(--ouro); box-shadow: 0 0 0 1px var(--ouro) inset; }
+.linha-cor { display: flex; align-items: center; gap: 10px; }
+/* pagamento (PIX/cartão) */
+.pagar-fundo { position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; }
+.pagar { width: min(440px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 18px; border-radius: 22px; display: flex; flex-direction: column; gap: 14px; }
+.pagar-cabeca { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.pagar-cabeca > div { display: flex; flex-direction: column; gap: 2px; }
+.pagar-pix { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.pagar-pix img { background: #fff; padding: 10px; border-radius: 16px; width: 220px; height: 220px; }
+.pagar-copia { display: flex; gap: 8px; width: 100%; align-items: center; }
+.pagar-copia code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 10px; border-radius: 10px; background: var(--vidro-sutil); border: 1px solid var(--borda); font-size: 12px; }
+.girando { animation: girar 1s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.recebimentos { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.recebimentos-estado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
+/* chamados e penalidades */
+.chamados-faixa { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: color-mix(in srgb, var(--ouro) 18%, var(--fundo)); border-bottom: 1px solid var(--ouro); flex-wrap: wrap; }
+.chamados-faixa > span { flex: 1; min-width: 200px; font-weight: 700; }
+.chamado { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; border: 1px solid var(--borda); background: var(--vidro-sutil); }
+.chamado-pendente { border-color: var(--ouro); }
+.chamado-cabeca { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chamado-motivo { margin: 0; font-style: italic; color: var(--texto-2); }
+.penalidades { display: flex; flex-direction: column; gap: 12px; }
+.penalidades-medidor { display: flex; flex-direction: column; gap: 6px; }
+.penalidades-medidor small { font-size: 14px; color: var(--texto-3); }
+.barra-pontos { height: 8px; border-radius: 99px; background: var(--borda); overflow: hidden; }
+.barra-pontos i { display: block; height: 100%; background: linear-gradient(90deg, var(--ouro), var(--vermelho)); }
+.linha-item.apagado { opacity: .6; }

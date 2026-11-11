@@ -183,20 +183,20 @@ export function Parametro({ p, valor, estado, mostrarGrupo, onSalvar, bloqueado,
   const limitar = (n: number) => Math.min(p.max ?? Infinity, Math.max(p.min ?? -Infinity, n));
   const arred = (n: number) => Number(n.toFixed(Math.max(2, casas(passo))));
 
-  function adiar(n: number) {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => { onSalvar(arred(limitar(n))); setRascunho(null); }, 650);
-  }
-  function digitar(t: string) {
-    setRascunho(t);
-    const n = Number(t.replace(",", "."));
-    if (t.trim() !== "" && !Number.isNaN(n)) adiar(n);
-  }
+  // número: botões e digitação mudam só o rascunho; salva no ✓ (ou Enter)
+  void timer;
+  function digitar(t: string) { setRascunho(t); }
   function somar(d: number) {
     const atual = rascunho != null ? Number(rascunho.replace(",", ".")) || 0 : Number(valor);
-    const n = arred(limitar(atual + d));
-    setRascunho(formatar(n, passo));
-    adiar(n);
+    setRascunho(formatar(arred(limitar(atual + d)), passo));
+  }
+  const rascunhoNum = rascunho == null ? null : Number(rascunho.replace(/\./g, "").replace(",", "."));
+  const rascunhoValido = rascunhoNum != null && rascunho!.trim() !== "" && !Number.isNaN(rascunhoNum);
+  const mudou = rascunho != null && (!rascunhoValido || arred(limitar(rascunhoNum!)) !== Number(valor));
+  function confirmar() {
+    if (!rascunhoValido) return;
+    onSalvar(arred(limitar(rascunhoNum!)));
+    setRascunho(null);
   }
 
   const status = (
@@ -335,10 +335,15 @@ export function Parametro({ p, valor, estado, mostrarGrupo, onSalvar, bloqueado,
             <button type="button" onClick={() => somar(-passo)} aria-label="Diminuir" disabled={bloqueado || (p.min != null && Number(valor) <= p.min)}><Minus size={16} /></button>
             <span className="passo-campo">
               {p.unidade === "R$" && <span className="unidade">R$</span>}
-              <input inputMode="decimal" disabled={bloqueado} value={rascunho ?? formatar(Number(valor), passo)} onChange={(e) => digitar(e.target.value)} aria-label={p.rotulo} />
+              <input inputMode="decimal" disabled={bloqueado} value={rascunho ?? formatar(Number(valor), passo)} onChange={(e) => digitar(e.target.value)} aria-label={p.rotulo}
+                onKeyDown={(e) => { if (e.key === "Enter") confirmar(); if (e.key === "Escape") setRascunho(null); }} />
               {p.unidade && p.unidade !== "R$" && <span className="unidade">{p.unidade}</span>}
             </span>
             <button type="button" onClick={() => somar(passo)} aria-label="Aumentar" disabled={bloqueado || (p.max != null && Number(valor) >= p.max)}><Plus size={16} /></button>
+            {mudou && <>
+              <button type="button" className="passo-ok" onClick={confirmar} disabled={!rascunhoValido} aria-label="Salvar" title="Salvar (Enter)"><Check size={16} /></button>
+              <button type="button" className="passo-desfazer" onClick={() => setRascunho(null)} aria-label="Desfazer" title="Desfazer (Esc)"><X size={15} /></button>
+            </>}
           </div>
         )}
       </div>

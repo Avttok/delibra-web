@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChamadosPendentes } from "@/features/penalidades/Chamados";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -74,12 +75,12 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         sb.rpc("meu_perfil"),
       ]);
       const d = perfil.data as { nome?: string; foto_url?: string | null; modo_teste?: boolean; papeis?: Papel[]; dev?: boolean; cor_tema?: CorTema; modulos?: Record<string, boolean>;
-        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; status?: string; suspensa_motivo?: string | null; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null;
+        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; status?: string; suspensa_motivo?: string | null; nome_app?: string | null; nome_topo?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null;
       setPermSup(d?.supervisor && !d?.dev && !(d?.papeis ?? []).includes("gestor") ? (d?.permissoes ?? {}) : null);
       setEmpresa(d?.organizacao?.nome ?? null);
       // empresa suspensa ou cancelada pelo Dev: a equipe fica sem acesso
       setBloqueio(!d?.dev && d?.organizacao && ["suspensa", "cancelada"].includes(d.organizacao.status ?? "") ? { status: d.organizacao.status!, motivo: d.organizacao.suspensa_motivo ?? null } : null);
-      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
+      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, nomeTopo: d.organizacao.nome_topo ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
       setTeste(Boolean(d?.modo_teste));
       setPapeis(d?.papeis ?? []);
       setCorTema(d?.dev && d?.cor_tema === "vermelho" ? "vermelho" : "ouro");
@@ -258,6 +259,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             }}
           />
         </header>
+        <ChamadosPendentes />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
           {children}
           {telaDeMapa && (
