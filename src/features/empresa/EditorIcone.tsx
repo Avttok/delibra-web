@@ -9,9 +9,11 @@ import { AJUSTE_PADRAO, desenharIcone, temTransparencia, type AjusteIcone } from
  * "tirar o fundo" (o branco/cor das bordas vira transparente). Mostra como fica no escuro,
  * com o brilho da cor da empresa, e no claro.
  */
-export function EditorIcone({ img, cor, onCancelar, onPronto }: {
-  img: HTMLImageElement; cor: string | null | undefined; onCancelar: () => void; onPronto: (png: Blob) => void;
+export function EditorIcone({ img, cor, nome, escalaInicial, onCancelar, onPronto }: {
+  img: HTMLImageElement; cor: string | null | undefined; nome: string; escalaInicial?: number | null;
+  onCancelar: () => void; onPronto: (png: Blob, escala: number) => void;
 }) {
+  const [escala, setEscala] = useState(Number(escalaInicial) || 1.9);
   const [a, setA] = useState<AjusteIcone>(() => ({ ...AJUSTE_PADRAO, tirarFundo: !temTransparencia(img) }));
   const [url, setUrl] = useState<string | null>(null);
   const arrasto = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
@@ -42,7 +44,7 @@ export function EditorIcone({ img, cor, onCancelar, onPronto }: {
   }
 
   function salvar() {
-    canvas.current?.toBlob((b) => { if (b) onPronto(b); }, "image/png");
+    canvas.current?.toBlob((b) => { if (b) onPronto(b, escala); }, "image/png");
   }
 
   return (
@@ -64,6 +66,16 @@ export function EditorIcone({ img, cor, onCancelar, onPronto }: {
           </div>
         </div>
 
+        <div className="editor-icone-topo" aria-label="Prévia do topo do app">
+          <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: brilho, width: Math.round(30 * escala / 1.4), height: Math.round(30 * escala / 1.4) }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {url && <img src={url} alt="" className="logo-empresa-icone" style={{ width: "100%", height: "100%" }} />}
+          </span>
+          <strong>{nome}</strong>
+          <span className="editor-icone-topo-botoes"><i /><i /></span>
+        </div>
+        <label className="editor-icone-controle"><span>Tamanho no topo</span>
+          <input type="range" min={0.8} max={2.6} step={0.05} value={escala} onChange={(e) => setEscala(Number(e.target.value))} /></label>
         <label className="editor-icone-controle"><span><ZoomIn size={14} aria-hidden /> Zoom</span>
           <input type="range" min={0.4} max={2.5} step={0.01} value={a.zoom} onChange={(e) => set({ zoom: Number(e.target.value) })} /></label>
         <label className="editor-icone-controle"><span>Margem</span>

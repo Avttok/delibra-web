@@ -137,6 +137,9 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
     compartilhar: "nunca", compartilhar_apos_min: 3, receber_de_outras: false, parceiros: [],
   });
   const [ocupado, setOcupado] = useState(false);
+  // dono novo: cria a conta do gestor junto com a empresa
+  const [donoNovo, setDonoNovo] = useState<{ nome: string; email: string } | null>(null);
+  const [acesso, setAcesso] = useState<string | null>(null);
   const [licencas, setLicencas] = useState<{ id: string; modelo: string; valor: number; pct: number; inicio: string; fim: string | null; status: string }[]>([]);
   useEffect(() => {
     if (org) void supabase().rpc("dev_licencas", { p_org: org.id }).then(({ data }) => setLicencas((data as typeof licencas) ?? []));
@@ -146,14 +149,45 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
 
   async function salvar() {
     if (!f.nome?.trim()) return toast("Dê um nome para a empresa.", "aviso");
+    if (donoNovo && (!donoNovo.nome.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(donoNovo.email.trim()))) return toast("Preencha o nome e um e-mail válido do gestor.", "aviso");
     setOcupado(true);
-    const { data, error } = await supabase().rpc("dev_salvar_organizacao", { p: { ...f, id: org?.id ?? null } });
+    const sb = supabase();
+    const { data, error } = await sb.rpc("dev_salvar_organizacao", { p: { ...f, id: org?.id ?? null, ...(donoNovo ? { dono_id: null } : {}) } });
+    if (error) { setOcupado(false); return toast(error.message, "erro"); }
+    const idOrg = data as string;
+    if (donoNovo) {
+      const senha = gerarSenhaDono();
+      const { data: s } = await sb.auth.getSession();
+      const r = await fetch("/api/equipe/criar", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s.session?.access_token ?? ""}` },
+        body: JSON.stringify({ nome: donoNovo.nome.trim(), email: donoNovo.email.trim().toLowerCase(), senha, papeis: ["gestor"], organizacao_id: idOrg }) });
+      const j = (await r.json().catch(() => ({}))) as { ok?: boolean; id?: string; erro?: string };
+      if (!r.ok || !j.id) {
+        setOcupado(false);
+        return toast(j.erro === "email_existe" ? "Esse e-mail já tem conta. Escolha a pessoa na lista." : `A empresa foi criada, mas a conta do gestor não (${j.erro ?? r.status}).`, "erro");
+      }
+      await sb.rpc("dev_salvar_organizacao", { p: { ...f, id: idOrg, dono_id: j.id } });
+      setAcesso(`${f.nome?.trim()}\nGestor: ${donoNovo.nome.trim()}\nE-mail: ${donoNovo.email.trim().toLowerCase()}\nSenha: ${senha}\nSite: ${window.location.origin}/gestor`);
+      setDonoNovo(null);
+      setOcupado(false);
+      onSalvo(idOrg);
+      return;
+    }
     setOcupado(false);
-    if (error) return toast(error.message, "erro");
     toast(org ? "Empresa atualizada." : "Empresa criada.", "ok", { titulo: "Salvo" });
-    onSalvo(data as string);
+    onSalvo(idOrg);
     if (!org) onFechar();
   }
+
+  if (acesso) return (
+    <div className="empresa-form">
+      <p className="dica" style={{ margin: 0 }}>Empresa criada com o gestor. Passe estes dados para ele: a senha não aparece de novo.</p>
+      <pre className="acesso-criado">{acesso}</pre>
+      <div className="linha-botoes linha-botoes-iguais">
+        <button type="button" className="botao-texto" onClick={() => { void navigator.clipboard?.writeText(acesso); toast("Acesso copiado.", "ok"); }}>Copiar acesso</button>
+        <button type="button" className="botao" onClick={() => { setAcesso(null); onFechar(); }}>Pronto</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="empresa-form">
@@ -161,8 +195,8 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
         <details className="avancado">
           <summary>Ícone e nome do app (no lugar do Delibra)</summary>
           <NomeAppDev org={org} onSalvo={() => onSalvo(org.id)} />
-          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo) => {
-            const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_logo: logo ?? "", p_cor: null });
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo, esc) => {
+            const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_logo: logo ?? "", p_cor: null, p_escala: esc ?? null });
             if (!error) onSalvo(org.id);
             return error?.message ?? null;
           }} />
@@ -172,10 +206,18 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
         <label className="campo"><span>Nome</span><input value={f.nome ?? ""} onChange={(e) => muda("nome", e.target.value)} placeholder="Transportadora Exemplo" /></label>
         <label className="campo"><span>CNPJ</span><input value={f.documento ?? ""} onChange={(e) => muda("documento", e.target.value)} inputMode="numeric" /></label>
         <label className="campo"><span>Gestor (dono)</span>
-          <select value={f.dono_id ?? ""} onChange={(e) => muda("dono_id", e.target.value || null)}>
+          <select value={donoNovo ? "__novo" : f.dono_id ?? ""} onChange={(e) => {
+            if (e.target.value === "__novo") { setDonoNovo({ nome: "", email: "" }); muda("dono_id", null); }
+            else { setDonoNovo(null); muda("dono_id", e.target.value || null); }
+          }}>
             <option value="">Escolha depois</option>
+            <option value="__novo">+ Criar conta nova de gestor</option>
             {candidatosDono.map((p) => <option key={p.id} value={p.id}>{p.nome || p.id.slice(0, 8)}</option>)}
           </select></label>
+        {donoNovo && <>
+          <label className="campo"><span>Nome do gestor</span><input value={donoNovo.nome} onChange={(e) => setDonoNovo({ ...donoNovo, nome: e.target.value })} placeholder="Pablo" /></label>
+          <label className="campo"><span>E-mail do gestor</span><input type="email" value={donoNovo.email} onChange={(e) => setDonoNovo({ ...donoNovo, email: e.target.value })} placeholder="gestor@empresa.com" /></label>
+        </>}
         <label className="campo"><span>Situação</span>
           <select value={f.status} onChange={(e) => muda("status", e.target.value as Organizacao["status"])}>
             {(Object.keys(STATUS) as Organizacao["status"][]).map((k) => <option key={k} value={k}>{STATUS[k].rotulo}</option>)}
@@ -451,4 +493,12 @@ function NomeAppDev({ org, onSalvo }: { org: Organizacao; onSalvo: () => void })
       <button type="button" className="botao" disabled={salvando || nome.trim() === (org.nome_app ?? "")} onClick={salvar}>{salvando ? "Salvando…" : "Salvar nome"}</button>
     </div>
   );
+}
+
+/** Senha fácil de ditar (sem l/1, O/0), igual à das contas da equipe. */
+function gerarSenhaDono() {
+  const letras = "abcdefghjkmnpqrstuvwxyz", numeros = "23456789";
+  const pega = (t: string) => t[crypto.getRandomValues(new Uint32Array(1))[0] % t.length];
+  const parte = () => Array.from({ length: 4 }, () => pega(letras)).join("");
+  return `${parte()}-${parte()}-${Array.from({ length: 2 }, () => pega(numeros)).join("")}`;
 }

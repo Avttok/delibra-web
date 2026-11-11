@@ -8,7 +8,7 @@ import { definirMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { IconeEmpresa } from "./IconeEmpresa";
 import { toast } from "@/features/ui/toast";
 
-type Org = { id: string; nome: string; nome_app: string | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
+type Org = { id: string; nome: string; nome_app: string | null; logo_escala: number | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
 type Plano = {
   empresa: string; status: string; modelo: "percentual" | "licenca" | "isento"; pct: number; mensalidade: number;
   vencimento_dia: number; proximo_vencimento: string; de: string; ate: string; faturamento: number; rotas: number; devido: number;
@@ -45,7 +45,7 @@ export function PainelEmpresa() {
     if (error) return error.message.includes("apenas_gestor") ? "Só o dono da empresa (ou o Dev) muda isto." : error.message;
     const novo = { ...org!, ...(campos as Partial<Org>) };
     setOrg(novo);
-    definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, logo: novo.logo_url, cor: novo.cor });
+    definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, logo: novo.logo_url, cor: novo.cor, escala: novo.logo_escala });
     return null;
   }
 
@@ -69,7 +69,7 @@ export function PainelEmpresa() {
         <CabecaPagina icone={Landmark} titulo="Minha empresa" subtitulo="Marca no app e no site · seu plano" />
         <section className="bloco">
           <h3 className="titulo-bloco"><Palette size={16} aria-hidden /> Ícone e nome</h3>
-          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={(logo) => salvar({ logo_url: logo ?? "" })} />
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} escala={org.logo_escala} onSalvar={(logo, esc) => salvar({ logo_url: logo ?? "", ...(esc ? { logo_escala: esc } : {}) })} />
           <div className="grade-2" style={{ marginTop: 12 }}>
             <label className="campo"><span>Nome do app</span><input value={nomeApp} maxLength={30} placeholder="Delibra" onChange={(e) => setNomeApp(e.target.value)} /></label>
             <label className="campo"><span>Nome da empresa</span><input value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} /></label>

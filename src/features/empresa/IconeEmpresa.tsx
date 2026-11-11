@@ -12,9 +12,9 @@ import { carregarImagem } from "./editorIcone";
  * Ícone da empresa: substitui o Delibra no app do motoboy, no site e no atalho do celular.
  * `onSalvar` grava a URL (o gestor usa salvar_minha_organizacao; o Dev, definir_marca_organizacao).
  */
-export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
-  orgId: string; nome: string; logo: string | null; cor?: string | null;
-  onSalvar: (logo: string | null) => Promise<string | null>;
+export function IconeEmpresa({ orgId, nome, logo, cor, escala, onSalvar }: {
+  orgId: string; nome: string; logo: string | null; cor?: string | null; escala?: number | null;
+  onSalvar: (logo: string | null, escala?: number) => Promise<string | null>;
 }) {
   const entrada = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
@@ -28,7 +28,7 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
     if (entrada.current) entrada.current.value = "";
   }
 
-  async function enviar(png: Blob) {
+  async function enviar(png: Blob, esc: number) {
     setEditando(null);
     setEnviando(true);
     try {
@@ -37,7 +37,7 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
       const { error } = await sb.storage.from("marcas").upload(caminho, png, { contentType: "image/png", upsert: false });
       if (error) throw new Error(error.message);
       const url = sb.storage.from("marcas").getPublicUrl(caminho).data.publicUrl;
-      const erro = await onSalvar(url);
+      const erro = await onSalvar(url, esc);
       if (erro) throw new Error(erro);
       setAtual(url);
       toast("Ícone salvo. O app e o site já passam a usar ele.", "ok", { titulo: "Ícone da empresa" });
@@ -82,7 +82,7 @@ export function IconeEmpresa({ orgId, nome, logo, cor, onSalvar }: {
         {atual && <button type="button" className="botao-icone perigo" disabled={enviando} onClick={remover} aria-label="Voltar ao ícone do Delibra" title="Voltar ao ícone do Delibra"><Trash2 size={16} /></button>}
       </div>
       <p className="dica" style={{ margin: 0 }}>PNG com fundo transparente fica melhor; se a imagem tiver fundo, o editor tira. Dá para ajustar zoom, posição e margem antes de salvar. No celular, o motoboy coloca o atalho com este ícone em Ajustes → Ícone na tela inicial.</p>
-      {editando && <EditorIcone img={editando} cor={cor} onCancelar={() => setEditando(null)} onPronto={(b) => void enviar(b)} />}
+      {editando && <EditorIcone img={editando} cor={cor} nome={nome} escalaInicial={escala} onCancelar={() => setEditando(null)} onPronto={(b, e) => void enviar(b, e)} />}
       <input ref={entrada} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => escolher(e.target.files?.[0])} />
     </div>
   );

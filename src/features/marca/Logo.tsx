@@ -25,10 +25,11 @@ export function MarcaDelibra({ tamanho = 28 }: { tamanho?: number }) {
 export function Logo({ grande = false, delibra = false }: { grande?: boolean; delibra?: boolean }) {
   const t = grande ? 64 : 30;
   const marca = useMarcaEmpresa();
+  const tl = Math.round(t * (Number(marca?.escala) || 1.9) / 1.4); // tamanho escolhido pelo dono no editor
   if (!delibra && (marca?.logo || marca?.nomeApp)) return (
     <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={nomeDoApp(marca)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {marca.logo ? <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: marca.cor || "#d4af37", width: t, height: t }}><img src={marca.logo} alt="" width={t} height={t} className="logo-empresa-icone" /></span> : <MarcaDelibra tamanho={t} />}
+      {marca.logo ? <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: marca.cor || "#d4af37", width: tl, height: tl }}><img src={marca.logo} alt="" width={tl} height={tl} className="logo-empresa-icone" /></span> : <MarcaDelibra tamanho={t} />}
       <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20 }}>{nomeDoApp(marca)}</span>
     </span>
   );

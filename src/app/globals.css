@@ -1624,3 +1624,8 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .editor-icone-controle input[type=range] { width: 100%; accent-color: var(--ouro); }
 .linha-botoes-iguais > * { flex: 1; justify-content: center; min-height: 44px; }
 @media (max-width: 520px) { .editor-icone-previas { grid-template-columns: 1fr; } .editor-icone-mini { grid-template-columns: 1fr 1fr; } .editor-icone-mini small { grid-column: 1 / -1; } }
+.editor-icone-topo { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 14px; border-radius: 18px; background: linear-gradient(180deg, #1a1608, #0b0b0d); border: 1px solid var(--borda); }
+.editor-icone-topo strong { font-size: 20px; font-weight: 800; color: #f5f2ea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.editor-icone-topo-botoes { margin-left: auto; display: flex; gap: 8px; }
+.editor-icone-topo-botoes i { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+.acesso-criado { margin: 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--borda); background: var(--vidro-sutil); font-size: 14px; white-space: pre-wrap; }
