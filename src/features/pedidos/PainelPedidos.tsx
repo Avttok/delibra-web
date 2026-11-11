@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Ban, CalendarClock, Check, CheckCircle2, CircleDollarSign, ClipboardList, FlaskConical, Package, PackagePlus, RefreshCw, Route, Search, Undo2, Wallet, X, Zap,
+  BadgeCheck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useEmpresas, useEquipe, useRecarregarAoMudar } from "@/features/corridas/dados";
@@ -123,6 +124,7 @@ export function PainelPedidos() {
                   <span className="selo" style={{ color: COR_PEDIDO[p.status] }}>{ROTULO_PEDIDO[p.status]}</span>
                   {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !["cancelado", "recusado", "concluido"].includes(p.status) && <span className="selo" style={{ color: "#38bdf8" }}>Aguardando pagamento</span>}
                   {p.tipo === "planejado" ? <CalendarClock size={13} aria-label="Planejado" /> : <Zap size={13} aria-label="Express" />}
+                  {p.pagamento_status === "pago" && <span className="selo selo-pago"><BadgeCheck size={11} aria-hidden /> PAGO</span>}
                   {p.urgente && <span className="selo" style={{ color: "var(--vermelho)" }}>Urgente</span>}
                   {p.orcamento?.perigoso && <FlaskConical size={13} style={{ color: "var(--vermelho)" }} aria-label="Perigoso" />}
                   <span className="espaco" /><strong>{moedaBr(p.valor)}</strong>

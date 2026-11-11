@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Bike, Building2, CalendarClock, TriangleAlert, CheckSquare, Clock, FlaskConical, History, Megaphone, Plus, Route, Ruler, Search, Sparkles, Trash2, Users, X, Zap } from "lucide-react";
+import { BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Bike, Building2, CalendarClock, TriangleAlert, CheckSquare, Clock, FlaskConical, History, Megaphone, Plus, Route, Ruler, Search, Sparkles, Trash2, Users, X, Zap } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
 import { ApagarHistorico } from "./ApagarHistorico";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -134,6 +134,7 @@ export function PainelCorridas() {
                 <strong className="figura">{numeroCorrida(c)}</strong>
                 <span className="selo" style={{ color: COR_CORRIDA[c.status] }}>{ROTULO_CORRIDA[c.status]}</span>
                 {c.teste && <span className="selo" style={{ color: "var(--ouro)" }}><FlaskConical size={11} aria-hidden /> teste</span>}
+                {(c as typeof c & { pagamento_status?: string | null }).pagamento_status === "pago" && <span className="selo selo-pago"><BadgeCheck size={11} aria-hidden /> PAGO</span>}
                 {c.urgente && <span className="selo" style={{ color: "var(--vermelho)" }}><Zap size={11} aria-hidden /> urgente</span>}
                 {c.origem === "roteirizador" && <span className="selo" style={{ color: "#a78bfa" }}><Sparkles size={11} aria-hidden /> auto</span>}
                 {c.modo_despacho === "quadro" && !c.motoboy_id && c.status === "aguardando_motoboy" && <span className="selo" style={{ color: "var(--ouro-claro)" }}><Users size={11} aria-hidden /> quadro</span>}

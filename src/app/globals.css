@@ -1812,3 +1812,12 @@ body.com-mapa-cheio { overflow: hidden; }
 .forca-senha i { flex: 1; height: 6px; border-radius: 99px; background: var(--borda-forte, var(--borda)); }
 .forca-senha i.f1 { background: #ef4444; } .forca-senha i.f2 { background: var(--ouro); } .forca-senha i.f3 { background: #22c55e; }
 .forca-senha small { color: var(--texto-3); font-size: 12px; min-width: 40px; text-align: right; }
+
+/* chat: o balão usa a largura do texto (até o limite) e não quebra palavra por palavra */
+.chat-msg { min-width: 0; }
+.chat-linha-msg { max-width: 100%; }
+.chat-balao { width: max-content; max-width: 100%; min-width: 64px; box-sizing: border-box; }
+.chat-balao p { overflow-wrap: anywhere; word-break: normal; }
+.chat-autor.botao-limpo { background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+.chat-autor.botao-limpo:hover { text-decoration: underline; }
+.selo-pago { color: #22c55e; background: color-mix(in srgb, #22c55e 12%, transparent); border-color: color-mix(in srgb, #22c55e 45%, transparent); font-weight: 800; letter-spacing: .4px; }
