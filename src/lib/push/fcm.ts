@@ -20,6 +20,18 @@ function interpretar(bruto: string): unknown {
   return v;
 }
 
+/** Texto quebrado (aspas a mais, quebras de linha reais na chave): tira só os três campos. */
+function resgatar(bruto: string): Record<string, string> | null {
+  const t = bruto.replace(/\\"/g, '"');
+  const campo = (k: string) => t.match(new RegExp(`"${k}"\\s*:\\s*"([^"]+)"`))?.[1];
+  const chave = t.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/)?.[0];
+  const project_id = campo("project_id");
+  const client_email = campo("client_email");
+  if (!project_id || !client_email || !chave) return null;
+  const corpo = chave.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, "").replace(/\\[nr]|\\|\s/g, "");
+  return { type: "service_account", project_id, client_email, private_key: `-----BEGIN PRIVATE KEY-----\n${corpo.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----\n` };
+}
+
 /** Explica, sem revelar valores, o que tem na variável. */
 export function estadoConta(): { ok: boolean; motivo?: string; project_id?: string } {
   try {
@@ -30,7 +42,7 @@ export function estadoConta(): { ok: boolean; motivo?: string; project_id?: stri
   }
 }
 
-function lerConta(): ContaServico {
+export function lerConta(): ContaServico {
   if (conta) return conta;
   const bruto = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!bruto) throw new Error("FIREBASE_SERVICE_ACCOUNT não configurada na Vercel");
@@ -38,9 +50,10 @@ function lerConta(): ContaServico {
   try {
     v = interpretar(bruto);
   } catch {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT não é um JSON válido");
+    v = null;
   }
-  if (!v || typeof v !== "object") throw new Error("FIREBASE_SERVICE_ACCOUNT não é um JSON de objeto");
+  if (!v || typeof v !== "object") v = resgatar(bruto);
+  if (!v) throw new Error("FIREBASE_SERVICE_ACCOUNT não é um JSON válido (cole o arquivo .json inteiro, do { ao })");
   const o = v as Record<string, unknown>;
   if ("project_info" in o || "client" in o)
     throw new Error("FIREBASE_SERVICE_ACCOUNT tem o google-services.json do app; precisa da chave da conta de serviço (Firebase → Configurações do projeto → Contas de serviço → Gerar nova chave privada)");
