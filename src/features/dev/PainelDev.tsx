@@ -1,8 +1,10 @@
 "use client";
 
+import { IntegracoesDev } from "./Integracoes";
+
 import { useCallback, useEffect, useState } from "react";
 import { PagamentosDev } from "@/features/pagamentos/PagamentosDev";
-import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound } from "lucide-react";
+import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound, Plug } from "lucide-react";
 import { ApagarTudo } from "./ApagarTudo";
 import { AparelhosDev, ModulosDev, TarefasDev, type Aparelho, type Tarefa } from "./DevExtras";
 import { VersaoApp } from "./VersaoApp";
@@ -41,7 +43,7 @@ function ha(iso: string | null) {
 /** Console do Dev: o sistema inteiro à vista, módulos liga/desliga e quem vê cada um. */
 export function PainelDev() {
   const conta = useConta();
-  const [aba, setAba] = useState<"empresas" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar">("empresas");
+  const [aba, setAba] = useState<"empresas" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes">("empresas");
   const [oculto, setOculto] = useState(false);
   const lerOculto = useCallback(() => {
     void supabase().auth.getUser().then(({ data: u }) => supabase().from("perfis").select("dev_oculto").eq("id", u.user?.id ?? "").maybeSingle()
@@ -84,6 +86,7 @@ export function PainelDev() {
           <button className={aba === "conversas" ? "ativo" : ""} onClick={() => setAba("conversas")}><MessagesSquare size={14} aria-hidden /> Conversas</button>
           <button className={aba === "sistema" ? "ativo" : ""} onClick={() => setAba("sistema")}><LayoutDashboard size={14} aria-hidden /> Visão geral</button>
           <button className={aba === "modulos" ? "ativo" : ""} onClick={() => setAba("modulos")}><ToggleRight size={14} aria-hidden /> Módulos</button>
+          <button className={aba === "integracoes" ? "ativo" : ""} onClick={() => setAba("integracoes")}><Plug size={14} aria-hidden /> Integrações</button>
           <button className={aba === "versao" ? "ativo" : ""} onClick={() => setAba("versao")}><Rocket size={14} aria-hidden /> Versão do app</button>
           <button className={aba === "aparelhos" ? "ativo" : ""} onClick={() => setAba("aparelhos")}><Smartphone size={14} aria-hidden /> Aparelhos</button>
           <button className={aba === "tarefas" ? "ativo" : ""} onClick={() => setAba("tarefas")}><Timer size={14} aria-hidden /> Tarefas automáticas</button>
@@ -101,6 +104,7 @@ export function PainelDev() {
           {aba === "pagamentos" && <PagamentosDev />}
           {aba === "conversas" && <ConversasDev />}
           {aba === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
+          {aba === "integracoes" && <IntegracoesDev />}
           {aba === "versao" && <VersaoApp />}
           {aba === "sistema" && <DevOculto oculto={oculto} onMudou={lerOculto} />}
           {aba === "sistema" && painel && (<>

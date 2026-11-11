@@ -52,7 +52,7 @@ export type GrupoParametro =
   | "penalidades" | "chamados" | "perfil" | "app_motoboy" | "regiao"
   | "rastreamento" | "percurso" | "navegacao" | "mapa"
   | "chat" | "teste"
-  | "pular" | "offline" | "emergencia" | "avaliacoes" | "rastreio" | "jogo" | "auditoria" | "plataforma";
+  | "pular" | "offline" | "emergencia" | "avaliacoes" | "rastreio" | "jogo" | "auditoria" | "plataforma" | "integracoes" | "notafiscal";
 
 export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string; area: AreaParametro }> = {
   cli_cadastro: { area: "clientes", titulo: "Cadastro pelo site", descricao: "Como empresas e pessoas criam conta no site do cliente." },
@@ -98,6 +98,8 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   rastreio: { area: "clientes", titulo: "Link de rastreio", descricao: "Uma página para quem recebe acompanhar a entrega, sem precisar de conta." },
   jogo: { area: "motoboys", titulo: "Moedas do jogo", descricao: "Quanto cada coisa rende de moedas no joguinho e o limite de velocidade para jogar." },
   auditoria: { area: "sistema", titulo: "Histórico de mudanças", descricao: "Quem mudou o quê: pedidos, rotas, regras, clientes e zonas." },
+  integracoes: { area: "sistema", titulo: "Integrações e dinheiro", descricao: "Qual provedor recebe, quando o dinheiro libera, quem paga as taxas, devoluções, licença, e-mail e WhatsApp. Os módulos ficam prontos e desligados até conectar." },
+  notafiscal: { area: "clientes", titulo: "Nota fiscal", descricao: "Emissão automática ou manual (o certificado é opcional: só para quem quer emitir)." },
   plataforma: { area: "sistema", titulo: "Plataforma", descricao: "Endereço do site, verificação em dois passos e cadastro de empresas novas." },
 };
 
@@ -490,6 +492,27 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "dev_chat_audio_max_s", grupo: "chat", rotulo: "Tempo máximo do áudio", descricao: "A gravação para sozinha nesse tempo.", tipo: "numero", padrao: 60, unidade: "s", min: 5, max: 600, passo: 5, soDev: true },
   { chave: "dev_chat_audio_dias", grupo: "chat", rotulo: "Áudios ficam guardados por", descricao: "Depois disso o áudio some (a mensagem fica). 0 = sempre.", tipo: "numero", padrao: 30, unidade: "dias", min: 0, max: 3650, passo: 1, soDev: true },
   { chave: "dev_chat_retencao_dias", grupo: "chat", rotulo: "Conversas ficam guardadas por", descricao: "Mensagens mais antigas são apagadas todo dia. 0 = sempre. Exporte antes no ícone de download da conversa.", tipo: "numero", padrao: 0, unidade: "dias", min: 0, max: 3650, passo: 30, soDev: true },
+  // ---------------------------------------------------------------- integrações (módulos desligados)
+  { chave: "dev_pag_provedor", grupo: "integracoes", rotulo: "Quem recebe os pagamentos", descricao: "", tipo: "escolha", padrao: "mercadopago", soDev: true,
+    opcoes: [{ valor: "mercadopago", rotulo: "Mercado Pago (split)", dica: "Empresa recebe e a plataforma fica com a parte dela." }, { valor: "asaas", rotulo: "Asaas (divide em três)", dica: "Motoboy, empresa e plataforma. Precisa conectar (Dev → Integrações)." }] },
+  { chave: "dev_pag_liberacao_dias", grupo: "integracoes", rotulo: "Dinheiro libera em", descricao: "Prazo para o valor ficar disponível depois de pago.", tipo: "escolha", padrao: "7", soDev: true,
+    opcoes: [{ valor: "0", rotulo: "Na hora" }, { valor: "1", rotulo: "1 dia" }, { valor: "2", rotulo: "2 dias" }, { valor: "7", rotulo: "7 dias" }, { valor: "14", rotulo: "14 dias" }, { valor: "30", rotulo: "30 dias" }] },
+  { chave: "dev_pag_taxa_quem", grupo: "integracoes", rotulo: "Quem paga a taxa do provedor", descricao: "", tipo: "escolha", padrao: "empresa", soDev: true, escopos: ["cliente"],
+    opcoes: [{ valor: "empresa", rotulo: "A empresa", dica: "A plataforma não paga taxa." }, { valor: "dividir", rotulo: "Dividir" }, { valor: "plataforma", rotulo: "A plataforma" }] },
+  { chave: "dev_licenca_modo", grupo: "integracoes", rotulo: "Como a empresa paga a plataforma", descricao: "", tipo: "escolha", padrao: "split", soDev: true,
+    opcoes: [{ valor: "split", rotulo: "Parte de cada pagamento" }, { valor: "fatura_mensal", rotulo: "Fatura mensal (PIX/cartão)" }, { valor: "fatura_anual", rotulo: "Fatura anual (PIX/cartão)" }] },
+  { chave: "dev_devolucao_gestor_decide", grupo: "integracoes", rotulo: "Gestor decide a devolução", descricao: "Ligado: em pedido pago e cancelado, o gestor escolhe como devolver. Desligado: vale a regra abaixo para todos.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "devolucao_padrao", grupo: "integracoes", rotulo: "Pedido pago e cancelado", descricao: "", tipo: "escolha", padrao: "total", escopos: ["cliente"],
+    opcoes: [{ valor: "total", rotulo: "Devolve tudo" }, { valor: "taxa", rotulo: "Devolve menos uma taxa" }, { valor: "nada_coletado", rotulo: "Devolve só se nada foi coletado" }, { valor: "manual", rotulo: "Decido em cada pedido" }] },
+  { chave: "devolucao_taxa", grupo: "integracoes", rotulo: "Taxa de cancelamento", descricao: "Quando a devolução é \u201cmenos uma taxa\u201d.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 500, passo: 0.5, escopos: ["cliente"] },
+  { chave: "dev_email_provedor", grupo: "integracoes", rotulo: "E-mail", descricao: "", tipo: "escolha", padrao: "nenhum", soDev: true,
+    opcoes: [{ valor: "nenhum", rotulo: "Desligado" }, { valor: "resend", rotulo: "Resend", dica: "Precisa conectar (Dev → Integrações)." }] },
+  { chave: "dev_whatsapp_provedor", grupo: "integracoes", rotulo: "WhatsApp", descricao: "", tipo: "escolha", padrao: "nenhum", soDev: true,
+    opcoes: [{ valor: "nenhum", rotulo: "Desligado" }, { valor: "meta", rotulo: "WhatsApp da Meta", dica: "Precisa conectar (Dev → Integrações)." }] },
+  { chave: "dev_nf_provedor", grupo: "notafiscal", rotulo: "Emissor de nota fiscal", descricao: "", tipo: "escolha", padrao: "nenhum", soDev: true,
+    opcoes: [{ valor: "nenhum", rotulo: "Desligado" }, { valor: "focus", rotulo: "Focus NFe" }, { valor: "plugnotas", rotulo: "PlugNotas" }, { valor: "nfeio", rotulo: "NFE.io" }, { valor: "enotas", rotulo: "eNotas" }] },
+  { chave: "nf_emissao", grupo: "notafiscal", rotulo: "Quando emitir", descricao: "", tipo: "escolha", padrao: "manual", escopos: ["cliente"],
+    opcoes: [{ valor: "manual", rotulo: "Quando eu clicar em Emitir" }, { valor: "pago", rotulo: "Sozinha, quando o pedido for pago" }, { valor: "entregue", rotulo: "Sozinha, quando for entregue" }] },
 ];
 
 export type ValorParametro = number | boolean | string | string[];

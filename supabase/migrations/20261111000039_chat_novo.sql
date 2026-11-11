@@ -10,7 +10,11 @@ insert into public.configuracoes (chave, valor) values
   ('chat_atendimento_ligado', 'false'), ('chat_atendimento_de', '"08:00"'), ('chat_atendimento_ate', '"18:00"'), ('chat_atendimento_dias', '[1,2,3,4,5]'),
   ('chat_resposta_auto', '"Recebemos sua mensagem. Nosso atendimento é das 8h às 18h, em dias úteis; respondemos assim que voltarmos."'),
   ('chat_gestor_gerencia_grupos', 'true'), ('chat_audio_ligado', 'true'),
-  ('dev_chat_audio_ligado', 'true'), ('dev_chat_audio_max_s', '60'), ('dev_chat_audio_dias', '30'), ('dev_chat_retencao_dias', '0')
+  ('dev_chat_audio_ligado', 'true'), ('dev_chat_audio_max_s', '60'), ('dev_chat_audio_dias', '30'), ('dev_chat_retencao_dias', '0'),
+  -- integrações (módulos prontos e desligados)
+  ('dev_pag_provedor', '"mercadopago"'), ('dev_pag_liberacao_dias', '"7"'), ('dev_pag_taxa_quem', '"empresa"'), ('dev_licenca_modo', '"split"'),
+  ('dev_devolucao_gestor_decide', 'true'), ('devolucao_padrao', '"total"'), ('devolucao_taxa', '0'),
+  ('dev_email_provedor', '"nenhum"'), ('dev_whatsapp_provedor', '"nenhum"'), ('dev_nf_provedor', '"nenhum"'), ('nf_emissao', '"manual"')
 on conflict (chave) do nothing;
 
 alter table public.chat_conversas drop constraint if exists chat_conversas_tipo_check;
