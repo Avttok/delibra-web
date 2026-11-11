@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { Building2, ChevronDown, ClipboardList, Heart, List, Map, Route, Settings2, Store, Users, Wallet, MessagesSquare } from "lucide-react";
+import { Building2, ChevronDown, ClipboardList, Heart, LayoutDashboard, List, Map, Route, Settings2, Store, Users, Wallet, MessagesSquare } from "lucide-react";
 import { sair as sairDaConta, supabase } from "@/lib/supabase/client";
 import { contas } from "@/lib/supabase/contas";
 import { LoginForm } from "@/features/auth/LoginForm";
@@ -28,6 +28,7 @@ const ContextoSessao = createContext<Session | null>(null);
 export const useSessaoGestor = () => useContext(ContextoSessao);
 
 const ABAS = [
+  { href: "/gestor/inicio", rotulo: "Hoje", icone: LayoutDashboard },
   { href: "/gestor/mapa", rotulo: "Mapa", icone: Map },
   { href: "/gestor/pedidos", rotulo: "Pedidos", icone: ClipboardList },
   { href: "/gestor/corridas", rotulo: "Rotas", icone: Route },

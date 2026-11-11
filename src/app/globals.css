@@ -1907,3 +1907,25 @@ body.com-mapa-cheio { overflow: hidden; }
 .chat-membro > span:not(.espaco) { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .chat-add { width: 100%; }
 @media (prefers-reduced-motion: reduce) { .chat-acoes, .chat-enviar.gravando { animation: none; } .chat-emoji { transition: none; } }
+
+/* ---------- painel do dia ---------- */
+.painel-dia { max-width: 1100px; margin: 0 auto; width: 100%; padding: 16px !important; display: grid; gap: 14px; align-content: start; }
+.painel-alertas { display: grid; gap: 8px; }
+.painel-alerta { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--ouro) 40%, transparent); background: color-mix(in srgb, var(--ouro) 8%, transparent); color: inherit; text-decoration: none; font-weight: 600; }
+.painel-alerta.forte { border-color: var(--vermelho); background: color-mix(in srgb, var(--vermelho) 12%, transparent); color: var(--vermelho); }
+.painel-alerta:hover { filter: brightness(1.08); }
+.painel-tranquilo { margin: 0; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--borda); opacity: .8; }
+.painel-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.painel-numero { display: grid; gap: 4px; padding: 14px; border-radius: 18px; border: 1px solid var(--borda); background: color-mix(in srgb, currentColor 3%, transparent); }
+.painel-numero .figura { font-size: 30px; line-height: 1.1; }
+.painel-numero.destaque { grid-column: span 2; border-color: color-mix(in srgb, var(--ouro) 45%, transparent); }
+.painel-numero.destaque .figura { font-size: 38px; }
+.painel-linha { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.painel-barras { display: grid; grid-template-columns: repeat(18, 1fr); align-items: end; gap: 4px; height: 140px; margin-top: 10px; }
+.painel-barra { display: grid; grid-template-rows: 1fr auto; height: 100%; align-items: end; text-align: center; }
+.painel-barra i { display: block; min-height: 2px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--ouro-claro, #f3d27a), var(--ouro)); }
+.painel-barra small { font-size: 10px; opacity: .6; height: 14px; }
+.painel-top ol { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; counter-reset: top; }
+.painel-top li { display: flex; justify-content: space-between; gap: 8px; counter-increment: top; }
+.painel-top li span::before { content: counter(top) ". "; opacity: .55; }
+@media (max-width: 720px) { .painel-linha { grid-template-columns: 1fr; } .painel-numero.destaque { grid-column: auto; } }
