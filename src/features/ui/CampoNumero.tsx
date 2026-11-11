@@ -19,6 +19,7 @@ export function useModoNumero(): [boolean, (barra: boolean) => void] {
     setBarra(v);
     try { localStorage.setItem(CHAVE, v ? "1" : "0"); } catch { /* sem armazenamento */ }
     window.dispatchEvent(new CustomEvent(EVENTO, { detail: v }));
+    window.dispatchEvent(new Event("pwex-tema-mudou"));
   };
   return [barra, definir];
 }

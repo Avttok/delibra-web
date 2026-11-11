@@ -849,7 +849,9 @@ begin
   perform public.jogo_meu();
   -- poderes usados saem do inventário
   foreach v_p in array coalesce(p_poderes, '{}') loop
-    update public.jogo_perfis set itens = array_remove(itens, v_p) where motoboy_id = auth.uid() and v_p like 'poder_%' and v_p = any (itens);
+    -- tira só um (pode ter vários do mesmo)
+    update public.jogo_perfis set itens = itens[1:array_position(itens, v_p) - 1] || itens[array_position(itens, v_p) + 1:]
+     where motoboy_id = auth.uid() and v_p like 'poder_%' and v_p = any (itens);
   end loop;
   update public.jogo_perfis set moedas = moedas + v_m, xp = xp + least(greatest(p_pontos, 0), 5000) / 10 + v_m,
          recorde = greatest(recorde, least(greatest(p_pontos, 0), 100000)), partidas = partidas + 1, atualizado_em = now()

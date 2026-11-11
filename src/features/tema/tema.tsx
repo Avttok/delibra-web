@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export type PreferenciaTema = "claro" | "escuro" | "sistema";
 export type Tema = "claro" | "escuro";
@@ -65,16 +66,58 @@ export function ProvedorTema({ children }: { children: ReactNode }) {
     if (estilo === "ouro") delete document.documentElement.dataset.estilo; else document.documentElement.dataset.estilo = estilo;
   }, [tema, estilo]);
 
-  const definirEstilo = useCallback((e: Estilo) => {
-    try { localStorage.setItem(CHAVE_ESTILO, e); } catch {}
-    setEstilo(e);
+  // ---------------------------------------------------------------- tema da pessoa: o mesmo no app e no site
+  const envio = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const atual = useRef({ preferencia: "sistema" as PreferenciaTema, estilo: "ouro" as Estilo });
+  const enviar = useCallback(() => {
+    if (envio.current) clearTimeout(envio.current);
+    envio.current = setTimeout(async () => {
+      envio.current = null;
+      try {
+        const sb = supabase();
+        const { data } = await sb.auth.getSession();
+        if (!data.session) return;
+        let barra = true; try { barra = localStorage.getItem("pwex_numero_barra") !== "0"; } catch {}
+        await sb.rpc("salvar_meu_tema", { p: { preferencia: atual.current.preferencia, estilo: atual.current.estilo, numero_barra: barra } });
+      } catch { /* sem conexão: fica só neste navegador */ }
+    }, 1200);
   }, []);
 
-  const definir = useCallback((p: PreferenciaTema) => {
+  const definirEstilo = useCallback((e: Estilo, mandar = true) => {
+    try { localStorage.setItem(CHAVE_ESTILO, e); } catch {}
+    setEstilo(e); atual.current.estilo = e;
+    if (mandar) enviar();
+  }, [enviar]);
+
+  const definir = useCallback((p: PreferenciaTema, mandar = true) => {
     try { localStorage.setItem(CHAVE, p); } catch {}
-    setPreferencia(p);
+    setPreferencia(p); atual.current.preferencia = p;
     setTema(resolver(p));
-  }, []);
+    if (mandar) enviar();
+  }, [enviar]);
+
+  // ao entrar: o que a conta tem salvo vale aqui (conta sem tema recebe o deste navegador)
+  useEffect(() => {
+    let sb: ReturnType<typeof supabase>;
+    try { sb = supabase(); } catch { return; }
+    const aplicar = async (uid: string | undefined) => {
+      if (!uid || envio.current) return;
+      const { data } = await sb.from("perfis").select("tema").eq("id", uid).maybeSingle();
+      const t = (data?.tema ?? {}) as { preferencia?: string; estilo?: string; numero_barra?: boolean };
+      if (!Object.keys(t).length) { enviar(); return; }
+      if (t.preferencia === "claro" || t.preferencia === "escuro" || t.preferencia === "sistema") definir(t.preferencia, false);
+      if (t.estilo && ESTILOS.some((e) => e.k === t.estilo)) definirEstilo(t.estilo as Estilo, false);
+      if (typeof t.numero_barra === "boolean") {
+        try { localStorage.setItem("pwex_numero_barra", t.numero_barra ? "1" : "0"); } catch {}
+        window.dispatchEvent(new CustomEvent("pwex-numero-modo", { detail: t.numero_barra }));
+      }
+    };
+    void sb.auth.getSession().then(({ data }) => aplicar(data.session?.user.id));
+    const aoNumero = () => enviar();
+    window.addEventListener("pwex-tema-mudou", aoNumero);
+    const { data: sub } = sb.auth.onAuthStateChange((ev, s) => { if (ev === "SIGNED_IN") void aplicar(s?.user.id); });
+    return () => { sub.subscription.unsubscribe(); window.removeEventListener("pwex-tema-mudou", aoNumero); };
+  }, [definir, definirEstilo, enviar]);
 
   // ciclo: sistema → claro → escuro → sistema
   const alternar = useCallback(() => {
