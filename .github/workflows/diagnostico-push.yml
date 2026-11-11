@@ -22,7 +22,7 @@ jobs:
             case
               when content is null then ''
               when content ilike '%not valid json%' or content ilike '%Unexpected token%' or content ilike '%JSON at position%' then 'FIREBASE_SERVICE_ACCOUNT nao e um JSON valido'
-              when content ilike '%FIREBASE_SERVICE_ACCOUNT%' then 'FIREBASE_SERVICE_ACCOUNT ausente'
+              when content ilike '%FIREBASE_SERVICE_ACCOUNT%' then left(content, 200)
               when content ilike '%pkcs8%' or content ilike '%private_key%' or content ilike '%PEM%' then 'private_key em formato errado'
               when content ilike '%invalid_grant%' then 'Google OAuth: invalid_grant (chave revogada ou relogio)'
               when content ilike '%Google OAuth%' then 'Google OAuth falhou: ' || substring(content from 'Google OAuth [0-9]+')
