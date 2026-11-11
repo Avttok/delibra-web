@@ -1,0 +1,37 @@
+name: Diagnóstico do push
+
+# Mostra as últimas respostas do envio de avisos (só leitura). O log é público:
+# nada de corpo bruto, só status e a categoria do erro.
+on:
+  workflow_dispatch:
+
+jobs:
+  ver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Instalar o psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Últimas respostas
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$DB" -q -P pager=off <<'SQL'
+          select id, created, status_code,
+            left(coalesce(error_msg, ''), 80) as erro_rede,
+            case
+              when content is null then ''
+              when content ilike '%not valid json%' or content ilike '%Unexpected token%' or content ilike '%JSON at position%' then 'FIREBASE_SERVICE_ACCOUNT nao e um JSON valido'
+              when content ilike '%FIREBASE_SERVICE_ACCOUNT%' then 'FIREBASE_SERVICE_ACCOUNT ausente'
+              when content ilike '%pkcs8%' or content ilike '%private_key%' or content ilike '%PEM%' then 'private_key em formato errado'
+              when content ilike '%invalid_grant%' then 'Google OAuth: invalid_grant (chave revogada ou relogio)'
+              when content ilike '%Google OAuth%' then 'Google OAuth falhou: ' || substring(content from 'Google OAuth [0-9]+')
+              when content ilike '%nao_autorizado%' then 'segredo recusado (401)'
+              when content ilike '%UNREGISTERED%' or content ilike '%NOT_FOUND%' then 'token do celular invalido'
+              when content ilike '%SENDER_ID_MISMATCH%' then 'Firebase de outro projeto'
+              when content ilike '%PERMISSION_DENIED%' then 'conta de servico sem permissao no FCM'
+              when content ilike '%"ok":true%' then 'ok'
+              else regexp_replace(left(content, 120), '"[^"]{16,}"', '"…"', 'g')
+            end as categoria
+          from net._http_response order by id desc limit 15;
+          SQL
