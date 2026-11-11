@@ -26,7 +26,27 @@ interface Sugestoes { acoes: Record<string, number>; pedidos_revisados: number; 
 
 /** Regras de pagamento que dá para mudar numa rota (as dos Ajustes → Motoboys → pagamento). */
 const GRUPOS_PAG = new Set(["pagamento", "pag_combinar", "pag_zonas", "pag_km", "pag_entrega", "pag_fixo"]);
-const PARAMS_PAG = PARAMETROS.filter((p) => GRUPOS_PAG.has(p.grupo) && !p.soDev && p.chave !== "dev_origem");
+const PARAMS_PAG = PARAMETROS.filter((p) => GRUPOS_PAG.has(p.grupo) && !p.soDev && !p.escondido);
+
+/** Só os parâmetros das modalidades escolhidas (igual ao app); a volta mostra os detalhes só ligada. */
+function paramsPag(regras: Record<string, unknown>, modoCalc?: string | null) {
+  const lista = Array.isArray(regras.pag_modos) ? (regras.pag_modos as string[]) : [];
+  const modos = new Set(lista.length ? lista : [String(regras.pag_modo ?? (modoCalc && modoCalc !== "combinado" ? modoCalc : "zonas"))]);
+  const volta = regras.pag_volta === true;
+  return PARAMS_PAG.filter((p) => {
+    switch (p.grupo) {
+      case "pag_zonas": return modos.has("zonas");
+      case "pag_km": return modos.has("rota");
+      case "pag_entrega": return modos.has("por_entrega");
+      case "pag_fixo": return modos.has("fixo");
+      case "pag_combinar": return modos.size > 1;
+      default:
+        if (p.chave === "repasse_motoboy_pct") return modos.has("percentual");
+        if (["pag_volta_valor_km", "pag_volta_pct", "pag_volta_teto"].includes(p.chave)) return volta;
+        return true;
+    }
+  });
+}
 const EDITAVEL = ["montada", "agendada", "aguardando_motoboy", "sem_motoboy"];
 const ACAO: Record<string, string> = { separar: "separou entregas", mover: "moveu entregas", juntar: "juntou rotas", ordenar: "mudou a ordem", regras: "mudou o pagamento", valor: "mudou o valor da rota" };
 
@@ -243,7 +263,7 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug }: {
                   ))}
                 </div>
               )}
-              <EditorRegras params={PARAMS_PAG} valores={regras} cfg={cfg} estado={{}} onDefinir={(k, v) => setRegras((o) => { const n = { ...o }; if (v == null) delete n[k]; else n[k] = v; return n; })} />
+              <EditorRegras params={paramsPag(regras, (pag as { modo?: string } | null)?.modo)} valores={regras} cfg={cfg} estado={{}} onDefinir={(k, v) => setRegras((o) => { const n = { ...o }; if (v == null) delete n[k]; else n[k] = v; return n; })} />
               <div className="linha-botoes">
                 <button className="botao-ouro" disabled={ocupado || !mudouRegras} onClick={() => rodar(() => sb.rpc("definir_regras_rota", { p_corrida: r.id, p_regras: regras, p_motivo: null }), "Regras desta rota salvas.")}><Check size={15} aria-hidden /> Salvar regras</button>
                 {mudouRegras && <button className="botao-texto" onClick={() => setRegras(r.pag_regras ?? {})}><X size={14} aria-hidden /> Desfazer</button>}
