@@ -37,7 +37,10 @@ export async function POST(req: Request) {
   // PIX ainda válido para o mesmo valor: reaproveita (não gera outro QR)
   if (metodo === "pix" && p.pix_aberto) return Response.json({ id: p.pix_aberto.id, metodo, qr_code: p.pix_aberto.qr_code, qr_base64: p.pix_aberto.qr_base64, expira_em: p.pix_aberto.expira_em, valor: p.pix_aberto.valor });
 
-  const origem = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || new URL(req.url).origin;
+  // endereço do site: o que o Dev escolheu em Ajustes (domínio próprio) > variável do servidor > o endereço atual
+  const { data: cfgSite } = await sb.from("configuracoes").select("valor").eq("chave", "dev_site_url").maybeSingle();
+  const escolhido = typeof cfgSite?.valor === "string" && cfgSite.valor.startsWith("https://") ? cfgSite.valor.replace(/\/$/, "") : null;
+  const origem = escolhido || process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || new URL(req.url).origin;
   const ref = randomUUID();
   const notificar = `${origem}/api/pagamentos/webhook?ref=${ref}`;
   const email = p.email || "cliente@delibra.app";

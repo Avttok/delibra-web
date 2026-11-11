@@ -1,5 +1,6 @@
 "use client";
 
+import { BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 import { PacotesPonto, pacotesDoPonto } from "./Pacotes";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
@@ -329,6 +330,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
         </div>
         {!finalizado && p.status !== "recebido" && <SituacaoRota pedidoId={p.id} chave={`${p.status}|${p.pagamento_status}|${JSON.stringify(regras)}|${rotas.length}`} />}
         <p className="dica" style={{ margin: 0 }}>{formatarKm(p.distancia_estimada_m)} estimados · {(p.pedido_pontos ?? []).filter((x) => x.tipo === "entrega").length} entrega(s)</p>
+        {!["cancelado", "recusado"].includes(p.status) && cfg.saas_rastreio !== false && cfg.rastreio_ligado !== false && <BotaoRastreio pedidoId={p.id} compacto />}
       </div>
       {["recebido", "aprovado"].includes(p.status) && (
         <PainelJuntar pedidoId={p.id} empresaId={p.empresa_id ?? null} regras={regras} onMudar={setRegras} />

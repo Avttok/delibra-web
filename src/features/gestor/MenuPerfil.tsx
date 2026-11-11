@@ -7,7 +7,7 @@ import { ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Camera, CodeXml, FlaskConical, Heart, KeyRound, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type } from "lucide-react";
+import { Camera, CodeXml, FlaskConical, Heart, KeyRound, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type, History } from "lucide-react";
 import { TrocarSenhaModal } from "@/features/conta/TrocarSenha";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { supabase } from "@/lib/supabase/client";
@@ -105,14 +105,6 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
             </div>
           </div>
 
-          {conta.dev && (
-            <label className="menu-item menu-teste">
-              <Palette size={17} aria-hidden />
-              <span className="menu-teste-texto"><strong>Tema vermelho</strong><span>{conta.corTema === "vermelho" ? "A cor do Dev" : "Dourado, como todos"}</span></span>
-              <input type="checkbox" role="switch" checked={conta.corTema === "vermelho"} onChange={trocarCor} />
-            </label>
-          )}
-
           {conta.modulo("modo_teste") && (
             <label className="menu-item menu-teste">
               <FlaskConical size={17} aria-hidden />
@@ -134,10 +126,23 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
               <Landmark size={17} aria-hidden /> Minha empresa e plano
             </Link>
           )}
-          {conta.dev && (
-            <Link href="/gestor/dev" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
-              <CodeXml size={17} aria-hidden /> Console Dev
+          {(conta.dev || conta.papeis.includes("gestor")) && (
+            <Link href="/gestor/historico" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
+              <History size={17} aria-hidden /> Histórico de mudanças
             </Link>
+          )}
+          {conta.dev && (
+            <div className="menu-grupo" role="group" aria-label="Dev">
+              <span className="menu-grupo-titulo"><CodeXml size={13} aria-hidden /> Dev</span>
+              <Link href="/gestor/dev" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
+                <CodeXml size={17} aria-hidden /> Console Dev
+              </Link>
+              <label className="menu-item menu-teste">
+                <Palette size={17} aria-hidden />
+                <span className="menu-teste-texto"><strong>Tema vermelho</strong><span>{conta.corTema === "vermelho" ? "A cor do Dev" : "Dourado, como todos"}</span></span>
+                <input type="checkbox" role="switch" checked={conta.corTema === "vermelho"} onChange={trocarCor} />
+              </label>
+            </div>
           )}
 
           {cfgM.usuario_troca_senha !== false && (

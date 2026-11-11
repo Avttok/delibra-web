@@ -1854,3 +1854,23 @@ body.com-mapa-cheio { overflow: hidden; }
 .rastreio-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
 .rastreio-link code { font-size: 12px; overflow-wrap: anywhere; padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, currentColor 8%, transparent); }
 @media (prefers-reduced-motion: reduce) { .estrela { transition: none; } }
+.menu-grupo { display: grid; gap: 2px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--borda); }
+.menu-grupo-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--ouro); padding: 2px 12px; }
+
+/* ---------- histórico de mudanças ---------- */
+.historico-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.historico-filtros .campo-busca { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--borda); }
+.historico-filtros .campo-busca input { border: 0; background: none; flex: 1; padding: 10px 0; color: inherit; }
+.historico-dia { margin-bottom: 18px; }
+.historico-dia .rotulo { text-transform: none; }
+.historico-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.historico-item { display: flex; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--borda); }
+.historico-icone { width: 26px; height: 26px; border-radius: 99px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--ouro) 14%, transparent); color: var(--ouro); }
+.historico-item.insert .historico-icone { background: color-mix(in srgb, #22c55e 14%, transparent); color: #22c55e; }
+.historico-item.delete .historico-icone { background: color-mix(in srgb, var(--vermelho) 14%, transparent); color: var(--vermelho); }
+.historico-texto { display: grid; gap: 2px; min-width: 0; }
+.historico-campos { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.historico-campos li { overflow-wrap: anywhere; }
+.historico-campo { display: inline-block; min-width: 110px; opacity: .65; margin-right: 6px; }
+.historico-campos s { opacity: .55; }
+.historico { max-width: 920px; margin: 0 auto; padding: 16px !important; width: 100%; }
