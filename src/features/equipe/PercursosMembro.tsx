@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CaixaMapa } from "@/features/ui/CaixaMapa";
 import { Copy, Package, Search } from "lucide-react";
 import type { LngLatBoundsLike } from "maplibre-gl";
 import { supabase } from "@/lib/supabase/client";
@@ -82,7 +83,7 @@ export function PercursosMembro({ id, teste }: { id: string; teste: boolean }) {
           <input type="date" max={diaIso(new Date())} value={outroDia} onChange={(e) => setOutroDia(e.target.value)} aria-label="Outro dia" />
         </label>
       </div>
-      <div ref={caixa} style={{ height: 320, borderRadius: 16, overflow: "hidden", border: "1px solid var(--borda)" }} />
+      <CaixaMapa refMapa={caixa} mapa={mapa} style={{ height: 320, borderRadius: 16, overflow: "hidden", border: "1px solid var(--borda)" }} titulo="Percursos" />
       <div className="legenda-percurso"><span>Início</span><span className={`degrade ${teste ? "teste" : ""}`} /><span>Fim</span></div>
       {pings == null ? <p className="dica">Carregando…</p> : registros.length === 0 ? <p className="vazio">Nenhum percurso neste dia.</p> : (
         <div className="registros" style={{ padding: 0 }}>

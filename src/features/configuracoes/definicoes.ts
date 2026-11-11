@@ -48,7 +48,7 @@ export type GrupoParametro =
   | "cli_cadastro" | "cli_pode" | "cli_ve" | "faturas"
   | "precocliente" | "preco" | "distancia"
   | "pedidos" | "aprender" | "rotas" | "despacho" | "extensao" | "quadro" | "planejadas"
-  | "pagamento" | "pag_combinar" | "pag_zonas" | "pag_km" | "pag_entrega" | "pag_fixo" | "mb_ve" | "local" | "comprovantes" | "veiculo"
+  | "pagamento" | "pag_combinar" | "pag_zonas" | "pag_km" | "pag_entrega" | "pag_fixo" | "pag_periodo" | "mb_ve" | "local" | "comprovantes" | "veiculo"
   | "rastreamento" | "percurso" | "navegacao" | "mapa"
   | "chat" | "teste";
 
@@ -71,6 +71,7 @@ export const GRUPOS: Record<GrupoParametro, { titulo: string; descricao: string;
   pag_combinar: { area: "motoboys", titulo: "Vários cálculos juntos", descricao: "Use mais de um modelo ao mesmo tempo (ex.: zonas + por entrega + fixo) e escolha como combinar." },
   pag_entrega: { area: "motoboys", titulo: "Pagamento por entrega", descricao: "Cada entrega paga o km dela (coleta → entrega) mais um fixo." },
   pag_fixo: { area: "motoboys", titulo: "Pagamento fixo", descricao: "Um valor por rota, por entrega e por coleta." },
+  pag_periodo: { area: "motoboys", titulo: "Salário, diária e hora", descricao: "Para quem trabalha para a empresa: salário fixo no mês, diária, hora em corrida e um mínimo garantido no holerite." },
   pag_zonas: { area: "motoboys", titulo: "Pagamento por zonas", descricao: "Raio das entregas e o que paga quando estão juntas ou espalhadas." },
   pag_km: { area: "motoboys", titulo: "Pagamento por km", descricao: "Valores do modelo \u201cPor km\u201d." },
   mb_ve: { area: "motoboys", titulo: "O que o motoboy vê e holerite", descricao: "Valores, aba Holerite e período da folha." },
@@ -149,11 +150,15 @@ export const PARAMETROS: DefParametro[] = [
     opcoes: [{ valor: "zonas", rotulo: "Por zonas", dica: "Entregas juntas (raios que se encostam): km da entrega de referência + fixo por entrega a mais. Entregas espalhadas: porcentagem da rota." },
              { valor: "rota", rotulo: "Por km", dica: "Km da entrega de referência × valor do km + valor por entrega extra. Nunca passa do que a rota paga." }, { valor: "percentual", rotulo: "Percentual", dica: "Uma parte do valor da rota (ex.: 65%); o gestor fica com o resto." },
              { valor: "por_entrega", rotulo: "Por entrega", dica: "Cada entrega paga o km dela (da coleta até ela) + um fixo por entrega." },
-             { valor: "fixo", rotulo: "Fixo", dica: "Um valor fixo por rota, por entrega e por coleta." }] },
+             { valor: "fixo", rotulo: "Fixo", dica: "Um valor fixo por rota, por entrega e por coleta." },
+             { valor: "salario", rotulo: "Salário fixo", dica: "Recebe um salário no mês (no holerite). As rotas não pagam à parte, a não ser que você marque outro cálculo junto." },
+             { valor: "diaria", rotulo: "Diária", dica: "Um valor por dia em que fez pelo menos uma rota (no holerite)." },
+             { valor: "por_hora", rotulo: "Por hora", dica: "Um valor por hora em corrida, do aceite à conclusão (no holerite)." }] },
   // ---------------------------------------------------------------- vários cálculos
   { chave: "pag_modos", grupo: "pag_combinar", rotulo: "Usar estes cálculos juntos", descricao: "Nenhum marcado = só o modelo de pagamento acima. Marcando dois ou mais, todos entram e se combinam como escolhido abaixo.", tipo: "multi", padrao: [],
     escopos: ["tipo", "cliente", "motoboy"],
-    opcoes: [{ valor: "zonas", rotulo: "Zonas" }, { valor: "rota", rotulo: "Por km" }, { valor: "percentual", rotulo: "Percentual" }, { valor: "por_entrega", rotulo: "Por entrega" }, { valor: "fixo", rotulo: "Fixo" }] },
+    opcoes: [{ valor: "zonas", rotulo: "Zonas" }, { valor: "rota", rotulo: "Por km" }, { valor: "percentual", rotulo: "Percentual" }, { valor: "por_entrega", rotulo: "Por entrega" }, { valor: "fixo", rotulo: "Fixo" },
+             { valor: "salario", rotulo: "Salário fixo" }, { valor: "diaria", rotulo: "Diária" }, { valor: "por_hora", rotulo: "Por hora" }] },
   { chave: "pag_combinar", grupo: "pag_combinar", rotulo: "Como combinar", descricao: "", tipo: "escolha", padrao: "soma", escopos: ["tipo", "cliente", "motoboy"],
     opcoes: [{ valor: "soma", rotulo: "Somar", dica: "Soma todos os cálculos marcados (ex.: km da zona + fixo por rota)." },
              { valor: "maior", rotulo: "O maior", dica: "Calcula todos e paga o que der mais." },
@@ -242,6 +247,11 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "precisao_max_m", grupo: "local", rotulo: "Tolerância ao erro do GPS", descricao: "Quanto da imprecisão informada pelo celular é descontada da distância.", tipo: "numero", padrao: 80, unidade: "m", min: 0, max: 500, passo: 10 },
   { chave: "posicao_valida_s", grupo: "local", rotulo: "Validade da posição", descricao: "Se o app não mandar a posição na hora, usa a última se for mais recente que isso.", tipo: "numero", padrao: 180, unidade: "s", min: 30, max: 900 },
 
+  { chave: "pag_salario_mensal", grupo: "pag_periodo", rotulo: "Salário do mês", descricao: "Entra no holerite. Marque \u201cSalário fixo\u201d no modelo de pagamento (ou nos cálculos juntos) do motoboy.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 50000, passo: 50, escopos: ["motoboy"] },
+  { chave: "pag_salario_proporcional", grupo: "pag_periodo", rotulo: "Salário proporcional ao período", descricao: "Ligado: holerite de 15 dias paga metade do mês, e assim por diante.", descricaoDesligado: "Desligado: cada holerite paga o salário cheio (use com holerite mensal).", tipo: "booleano", padrao: true, escopos: ["motoboy"] },
+  { chave: "pag_diaria_valor", grupo: "pag_periodo", rotulo: "Valor da diária", descricao: "Por dia em que o motoboy fez pelo menos uma rota. Marque \u201cDiária\u201d no modelo de pagamento.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 2000, passo: 5, escopos: ["motoboy"] },
+  { chave: "pag_hora_valor", grupo: "pag_periodo", rotulo: "Valor da hora em corrida", descricao: "Do aceite à conclusão de cada rota. Marque \u201cPor hora\u201d no modelo de pagamento.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 500, passo: 1, escopos: ["motoboy"] },
+  { chave: "pag_minimo_periodo", grupo: "pag_periodo", rotulo: "Mínimo garantido no período", descricao: "Se o holerite ficar abaixo disso, completa a diferença. 0 = sem mínimo. Vale com qualquer modelo.", tipo: "numero", padrao: 0, unidade: "R$", min: 0, max: 50000, passo: 50, escopos: ["motoboy"] },
   { chave: "pag_volta", grupo: "pagamento", rotulo: "Pagar a volta", descricao: "Ligado: o motoboy recebe também a volta, da última parada até o ponto de partida (a coleta), em km × valor.", descricaoDesligado: "Desligado: paga só o caminho da rota.", tipo: "booleano", padrao: false, escopos: ["tipo", "cliente", "motoboy"] },
   { chave: "pag_volta_valor_km", grupo: "pagamento", rotulo: "Volta: valor do km", descricao: "Quanto vale cada km da volta (linha reta × fator de rua).", tipo: "numero", padrao: 2, unidade: "R$", min: 0, max: 50, passo: 0.1, escopos: ["tipo", "cliente", "motoboy"] },
   { chave: "pag_volta_pct", grupo: "pagamento", rotulo: "Volta: quanto pagar", descricao: "100 = a volta inteira; 50 = metade.", tipo: "numero", padrao: 100, unidade: "%", min: 0, max: 200, passo: 5, escopos: ["tipo", "cliente", "motoboy"] },

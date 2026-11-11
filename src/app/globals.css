@@ -1655,3 +1655,31 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .editor-icone-cores input[type=color] { width: 30px; height: 28px; border: 0; background: none; padding: 0; }
 .fontes-nome { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .fontes-nome .chip.ativo { background: var(--ouro); color: var(--sobre-ouro, #120f06); border-color: var(--ouro); }
+
+/* listas simples de valores (salário, diárias, detalhes de empresa) */
+.lista-simples { display: flex; flex-direction: column; gap: 6px; }
+.linha-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--vidro-sutil); border: 1px solid var(--borda); }
+.linha-item > span { min-width: 0; overflow-wrap: anywhere; }
+.empresa-detalhe { display: flex; flex-direction: column; gap: 12px; padding-top: 6px; border-top: 1px solid var(--borda); }
+.empresa-detalhe .linha-item select { max-width: 150px; flex-shrink: 0; }
+details.perigo > summary { color: var(--vermelho); }
+.bloqueio-empresa { min-height: 70vh; display: grid; place-items: center; text-align: center; padding: 24px 16px; }
+.bloqueio-empresa > div { max-width: 420px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+
+/* mapas: tela cheia e controles */
+.mapa.mapa-cheia { position: fixed; inset: 0; z-index: 900; background: var(--fundo); }
+.mapa.mapa-cheia::after { display: none; }
+body.com-mapa-cheio { overflow: hidden; }
+.mapa-cheia-topo { position: absolute; top: 10px; left: 10px; z-index: 3; display: flex; align-items: center; gap: 8px; }
+.mapa-cheia .mapa-cheia-topo { top: max(12px, env(safe-area-inset-top)); left: 12px; }
+.mapa-cheia-titulo { padding: 7px 14px; border-radius: 99px; background: var(--vidro-forte, var(--vidro)); border: 1px solid var(--borda); font-weight: 700; backdrop-filter: blur(10px); }
+.mapa-botao { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--borda);
+  background: var(--vidro-forte, var(--vidro)); color: var(--texto); backdrop-filter: blur(10px); cursor: pointer; }
+.mapa-botao:hover { border-color: var(--ouro); }
+.mapa-botao:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+.mapa-controles { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 8px; }
+.mapa-cheia-painel { position: absolute; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 3; max-width: 560px; margin: 0 auto;
+  padding: 14px; border-radius: 18px; max-height: 45vh; overflow: auto; }
+:where(.mapa-caixa) { position: relative; overflow: hidden; }
+.mapa-caixa > .mapa-caixa-mapa { position: absolute; inset: 0; }
+.mapa-caixa.mapa-cheia.mapa-cheia { position: fixed; inset: 0; z-index: 900; height: auto !important; border-radius: 0 !important; border: 0 !important; background: var(--fundo); }

@@ -63,6 +63,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
 
   const [permSup, setPermSup] = useState<Record<string, boolean> | null>(null);
   const [empresa, setEmpresa] = useState<string | null>(null);
+  const [bloqueio, setBloqueio] = useState<{ status: string; motivo: string | null } | null>(null);
   useEffect(() => {
     const sb = supabase();
     async function verificar(s: Session | null) {
@@ -73,9 +74,11 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         sb.rpc("meu_perfil"),
       ]);
       const d = perfil.data as { nome?: string; foto_url?: string | null; modo_teste?: boolean; papeis?: Papel[]; dev?: boolean; cor_tema?: CorTema; modulos?: Record<string, boolean>;
-        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null;
+        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; status?: string; suspensa_motivo?: string | null; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null;
       setPermSup(d?.supervisor && !d?.dev && !(d?.papeis ?? []).includes("gestor") ? (d?.permissoes ?? {}) : null);
       setEmpresa(d?.organizacao?.nome ?? null);
+      // empresa suspensa ou cancelada pelo Dev: a equipe fica sem acesso
+      setBloqueio(!d?.dev && d?.organizacao && ["suspensa", "cancelada"].includes(d.organizacao.status ?? "") ? { status: d.organizacao.status!, motivo: d.organizacao.suspensa_motivo ?? null } : null);
       definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
       setTeste(Boolean(d?.modo_teste));
       setPapeis(d?.papeis ?? []);
@@ -202,6 +205,18 @@ export function AreaGestor({ children }: { children: ReactNode }) {
       <main className="tela-login">
         <div className="caixa-login vidro">
           <p className="erro">Este usuário não tem acesso de gestor.</p>
+          <button className="botao-ouro" onClick={sair}>Sair</button>
+        </div>
+      </main>
+    );
+
+  if (bloqueio)
+    return (
+      <main className="tela-login">
+        <div className="caixa-login vidro">
+          <p className="erro">{bloqueio.status === "cancelada" ? "O acesso desta empresa foi encerrado." : "O acesso desta empresa está suspenso."}</p>
+          {bloqueio.motivo && <p className="dica">Motivo: {bloqueio.motivo}</p>}
+          <p className="dica">Fale com o suporte da plataforma para reativar.</p>
           <button className="botao-ouro" onClick={sair}>Sair</button>
         </div>
       </main>

@@ -19,6 +19,7 @@ interface LinhaFolha {
 interface Holerite {
   status: string; rotas: number; entregas: number; km: number; calculado: number; ajustes_rotas: number; total: number; observacoes: string | null;
   ajustes: { id: string; descricao: string; valor: number; criado_em: string }[];
+  fixos?: { tipo: string; descricao: string; detalhe?: string; valor?: number }[];
   itens: { id: string; numero: number; concluida_em: string; entregas: number; km: number; clientes: string | null; calculo: CalculoPagamento | null; ajuste: number; ajuste_motivo: string | null; valor: number; faturado: number }[];
 }
 type Periodo = "diario" | "semanal" | "quinzenal" | "mensal";
@@ -157,6 +158,12 @@ function DetalheHolerite({ l, ini, fim, teste, onMudou, onFechar }: { l: LinhaFo
           ))}</tbody>
         </table>
       </div>
+      {(h.fixos?.length ?? 0) > 0 && (<>
+        <span className="rotulo">Salário, diárias e horas<Dica titulo="Pagamento do período" texto="Vem do modelo de pagamento do motoboy (Regras dele): salário fixo, diária, hora em corrida e mínimo garantido. Já está somado no total." /></span>
+        <div className="lista-simples">{h.fixos!.map((f, i) => (
+          <div key={i} className="linha-item"><span>{f.descricao}{f.detalhe ? <span className="dica"> · {f.detalhe}</span> : null}</span><strong>{moedaBr(f.valor)}</strong></div>
+        ))}</div>
+      </>)}
       <span className="rotulo">Ajustes do período<Dica titulo="Ajustes" texto="Bônus (valor positivo) ou desconto (valor negativo, com −). O motoboy não vê o motivo: o total do ajuste aparece repartido entre as rotas do holerite dele." /></span>
       {h.ajustes.length === 0 && <p className="dica" style={{ margin: 0 }}>Nenhum (bônus, vale, desconto…).</p>}
       {h.ajustes.map((a) => (

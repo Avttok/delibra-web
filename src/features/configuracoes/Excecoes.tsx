@@ -117,8 +117,9 @@ export function RegrasDoAlvo({ escopo, alvo, nome }: { escopo: Escopo; alvo: str
   const [estado, setEstado] = useState<Record<string, "salvando" | "salvo" | "erro" | undefined>>({});
   const [busca, setBusca] = useState("");
   const carregar = useCallback(() => {
-    supabase().from("politicas").select("chave,valor").eq("escopo", escopo).eq("alvo", alvo)
-      .then(({ data }) => setValores(Object.fromEntries(((data ?? []) as { chave: string; valor: ValorParametro }[]).map((x) => [x.chave, x.valor]))));
+    // tipo de pedido: as regras são da empresa (o banco guarda "empresa:tipo"); a função devolve já resolvido
+    supabase().rpc("politicas_do_alvo", { p_escopo: escopo, p_alvo: alvo })
+      .then(({ data }) => setValores((data ?? {}) as Record<string, ValorParametro>));
   }, [escopo, alvo]);
   useEffect(() => { carregar(); }, [carregar]);
   async function definir(chave: string, valor: ValorParametro | null) {
@@ -151,7 +152,13 @@ export function Excecoes({ cfg }: { cfg: Configuracoes }) {
   const [estado, setEstado] = useState<Record<string, "salvando" | "salvo" | "erro" | undefined>>({});
 
   const carregar = useCallback(() => {
-    supabase().from("politicas").select("escopo,alvo,chave,valor").then(({ data }) => setPoliticas((data ?? []) as Politica[]));
+    supabase().from("politicas").select("escopo,alvo,chave,valor").then(({ data }) => {
+      // tipo: "empresa:tipo" vira só "tipo"; a da empresa vence a regra geral
+      const lista = ((data ?? []) as Politica[]).map((x) => ({ ...x, qualificada: x.escopo === "tipo" && x.alvo.includes(":"), alvo: x.escopo === "tipo" ? x.alvo.replace(/^[^:]*:/, "") : x.alvo }));
+      lista.sort((a, b) => Number(b.qualificada) - Number(a.qualificada));
+      const vistos = new Set<string>();
+      setPoliticas(lista.filter((x) => { const k = `${x.escopo}|${x.alvo}|${x.chave}`; if (vistos.has(k)) return false; vistos.add(k); return true; }));
+    });
   }, []);
   useEffect(() => { carregar(); supabase().from("tipos_pedido").select("chave,nome").order("ordem").then(({ data }) => setTipos((data ?? []) as Tipo[])); }, [carregar]);
 

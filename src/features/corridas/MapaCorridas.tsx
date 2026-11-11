@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Crosshair, Maximize2, Minus, Plus, X } from "lucide-react";
 import { maplibregl } from "@/lib/mapa/maplibre";
 import { useMapa } from "@/lib/mapa/useMapa";
 import { corOuro } from "@/lib/mapa/cores";
@@ -45,6 +46,14 @@ interface Props {
   restanteDe?: { lat: number; lng: number } | null;
   /** Legenda "Feito / A fazer" no canto (padrão: aparece quando há os dois tipos de linha). */
   legenda?: boolean;
+  /** Botão de tela cheia (padrão: sim). Desligue nos mapas que já ocupam a página. */
+  maximizavel?: boolean;
+  /** Título mostrado na tela cheia. */
+  titulo?: string;
+  /** Painel embaixo na tela cheia (ex.: ferramentas de editar o percurso). */
+  painelCheio?: ReactNode;
+  /** Avisa quando entra/sai da tela cheia. */
+  onCheio?: (cheio: boolean) => void;
 }
 
 const VAZIO = { type: "FeatureCollection" as const, features: [] };
@@ -58,7 +67,9 @@ function linha(coords: [number, number][]) {
 }
 
 /** Mapa genérico das telas de corrida: paradas numeradas, rota planejada, trilha real e motoboys. */
-export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true }: Props) {
+export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio }: Props) {
+  const [cheio, setCheioBase] = useState(false);
+  const setCheio = (v: boolean) => { setCheioBase(v); onCheio?.(v); };
   // sem rota pronta: traça o caminho pelas ruas entre as paradas, na ordem
   const chaveParadas = paradas.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join(";");
   const [caminho, setCaminho] = useState<string | null>(null);
@@ -238,9 +249,44 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboy
     m.flyTo({ center: [foco.lng, foco.lat], zoom: Math.max(m.getZoom(), 15.5), duration: 700 });
   }, [mapa, pronto, foco]);
 
+  // tela cheia: o mesmo mapa (cliques, edição e marcadores continuam), por cima de tudo
+  useEffect(() => {
+    const m = mapa.current;
+    if (m) setTimeout(() => m.resize(), 30);
+    if (!cheio) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { setCheioBase(false); onCheio?.(false); } };
+    window.addEventListener("keydown", esc);
+    document.body.classList.add("com-mapa-cheio");
+    return () => { window.removeEventListener("keydown", esc); document.body.classList.remove("com-mapa-cheio"); };
+  }, [cheio, mapa]); // eslint-disable-line react-hooks/exhaustive-deps
+  function enquadrarTudo() {
+    const m = mapa.current;
+    if (!m) return;
+    const pts: [number, number][] = [...paradas.map((p) => [p.lng, p.lat] as [number, number]), ...motoboys.map((x) => [x.lng, x.lat] as [number, number]), ...trilha];
+    if (!pts.length) return;
+    const b = pts.reduce((bb, p) => bb.extend(p), new maplibregl.LngLatBounds(pts[0], pts[0]));
+    m.fitBounds(b, { padding: 70, maxZoom: 16, duration: 600 });
+  }
+
   const comFeito = trilha.length >= 2, comAFazer = aFazer.length > 0;
   return (
-    <div ref={container} className="mapa">
+    <div ref={container} className={`mapa${cheio ? " mapa-cheia" : ""}`}>
+      {maximizavel && (
+        <div className="mapa-cheia-topo">
+          <button type="button" className="mapa-botao" aria-label={cheio ? "Sair da tela cheia" : "Tela cheia"} title={cheio ? "Sair da tela cheia (Esc)" : "Tela cheia"} onClick={() => setCheio(!cheio)}>
+            {cheio ? <X size={18} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
+          </button>
+          {cheio && titulo && <span className="mapa-cheia-titulo">{titulo}</span>}
+        </div>
+      )}
+      {cheio && (
+        <div className="mapa-controles">
+          <button type="button" className="mapa-botao" aria-label="Aproximar" onClick={() => mapa.current?.zoomIn()}><Plus size={18} aria-hidden /></button>
+          <button type="button" className="mapa-botao" aria-label="Afastar" onClick={() => mapa.current?.zoomOut()}><Minus size={18} aria-hidden /></button>
+          <button type="button" className="mapa-botao" aria-label="Enquadrar tudo" title="Enquadrar tudo" onClick={enquadrarTudo}><Crosshair size={18} aria-hidden /></button>
+        </div>
+      )}
+      {cheio && painelCheio && <div className="mapa-cheia-painel vidro">{painelCheio}</div>}
       {legenda && comFeito && (
         <div className="mapa-legenda" aria-label="Legenda do mapa">
           <span><i className="feito" /> Feito</span>

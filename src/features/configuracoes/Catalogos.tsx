@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CaixaMapa } from "@/features/ui/CaixaMapa";
 import { CircleDot, Clock, FlaskConical, Package, Plus, Save, Trash2, TriangleAlert } from "lucide-react";
 import type { GeoJSONSource } from "maplibre-gl";
 import { supabase } from "@/lib/supabase/client";
@@ -102,7 +103,7 @@ export function CatalogoZonas({ clienteId }: { clienteId?: string } = {}) {
           : "Se algum ponto do pedido (coleta ou entrega) cair dentro do raio, a zona soma no orçamento. Zona de um cliente só vale para ele."}
       </p>
       <div className={`catalogo-zonas ${cheio ? "tela-cheia" : ""}`}>
-        <div className="catalogo-mapa" ref={caixa} />
+        <CaixaMapa refMapa={caixa} mapa={mapa} className="catalogo-mapa" titulo="Zonas" />
         <div className="catalogo-zonas-acoes">
           <button type="button" className="botao-ouro" onClick={nova}><Plus size={16} aria-hidden /> Nova zona</button>
           <button type="button" className="botao-texto vidro" onClick={() => setCheio(!cheio)}>{cheio ? "Sair da tela cheia" : "Tela cheia"}</button>

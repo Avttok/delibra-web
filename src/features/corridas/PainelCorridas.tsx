@@ -183,7 +183,7 @@ export function PainelCorridas() {
           />
         )}
       </aside>
-      <MapaCorridas
+      <MapaCorridas maximizavel={false}
         paradas={pinosAtivos}
         rotas={caminhosAtivos}
         caminhoAuto={false}

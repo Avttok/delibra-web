@@ -134,6 +134,12 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const [editandoPercurso, setEditandoPercurso] = useState(false);
   const [vias, setVias] = useState<ViaPercurso[]>([]);
   const [percursoNovo, setPercursoNovo] = useState<string | null>(null);
+  const [mapaCheio, setMapaCheio] = useState(false);
+  const painelPercurso = (
+    <EditarPercurso corridaId={corrida.id} paradas={[...corrida.paradas].sort((a, b) => a.ordem - b.ordem).map((p) => ({ lat: p.lat, lng: p.lng }))}
+      vias={vias} setVias={setVias} onPolyline={setPercursoNovo} distanciaAntes={corrida.distancia_planejada_m}
+      onFechar={() => { setEditandoPercurso(false); setVias([]); setPercursoNovo(null); }} />
+  );
   const equipe = useEquipe();
   const { empresas } = useEmpresas();
   const cfg = useConfiguracoes();
@@ -195,9 +201,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
         <BotaoCompartilhar anexo={{ tipo: "rota", id: corrida.id, titulo: `${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`, sub: `${nomeCliente(corrida, empresas)} · ${corrida.paradas.filter((p) => p.tipo === "entrega").length} entrega(s)` }} />
 
         {!["concluida", "cancelada"].includes(corrida.status) && corrida.paradas.length >= 2 && (editandoPercurso
-          ? <EditarPercurso corridaId={corrida.id} paradas={[...corrida.paradas].sort((a, b) => a.ordem - b.ordem).map((p) => ({ lat: p.lat, lng: p.lng }))}
-              vias={vias} setVias={setVias} onPolyline={setPercursoNovo} distanciaAntes={corrida.distancia_planejada_m}
-              onFechar={() => { setEditandoPercurso(false); setVias([]); setPercursoNovo(null); }} />
+          ? (mapaCheio ? <p className="dica">Editando na tela cheia do mapa.</p> : painelPercurso)
           : <button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>)}
 
         <section className="bloco">
@@ -348,6 +352,9 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
       </aside>
 
       <MapaCorridas
+        titulo={`Rota #${corrida.numero}`}
+        onCheio={setMapaCheio}
+        painelCheio={editandoPercurso ? painelPercurso : undefined}
         paradas={pinos}
         rotaPlanejada={editandoPercurso && percursoNovo ? percursoNovo : corrida.rota_planejada}
         aoClicar={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem))]) : undefined}

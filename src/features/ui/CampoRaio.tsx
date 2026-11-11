@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CaixaMapa } from "@/features/ui/CaixaMapa";
 import type { GeoJSONSource } from "maplibre-gl";
 import { Map as IconeMapa } from "lucide-react";
 import { useMapa } from "@/lib/mapa/useMapa";
@@ -99,7 +100,7 @@ function MapaRaio({ metros, exemplo }: { metros: number; exemplo: "coleta" | "du
   const encostam = exemplo === "dupla" ? dist <= 2 * metros : null;
   return (
     <div className="campo-raio-mapa">
-      <div ref={caixa} className="campo-raio-mapa-caixa" />
+      <CaixaMapa refMapa={caixa} mapa={mapa} className="campo-raio-mapa-caixa" titulo="Raio" />
       <p className="dica" style={{ margin: 0 }}>
         {exemplo === "dupla" ? <>Duas entregas a {(dist / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km: {encostam ? <strong style={{ color: "var(--verde)" }}>os raios se encostam (mesma zona)</strong> : <strong>os raios não se encostam</strong>}. </> : null}
         Toque no mapa para mudar o centro do exemplo.

@@ -17,6 +17,8 @@ export interface Organizacao {
   cobranca_modelo: "percentual" | "licenca" | "isento"; cobranca_pct: number; mensalidade: number; vencimento_dia: number;
   compartilhar: "nunca" | "sem_livre" | "sempre" | "parceiros"; compartilhar_apos_min: number; receber_de_outras: boolean; parceiros: string[];
   observacoes: string | null; criado_em: string;
+  cobranca_periodo?: "mensal" | "anual" | "vitalicia"; suspensa_motivo?: string | null; limites?: { motoboys?: number; gestores?: number; clientes?: number } | null;
+  rotas_30d?: number; faturado_30d?: number; ultimo_pedido?: string | null;
   dono?: { id: string; nome: string; foto: string | null } | null; gestores?: number; motoboys?: number; online?: number; clientes?: number;
   licenca?: { modelo: string; valor: number; pct: number; inicio: string } | null;
 }
@@ -25,7 +27,12 @@ const STATUS: Record<Organizacao["status"], { rotulo: string; cor: string }> = {
   teste: { rotulo: "Em teste", cor: "#a78bfa" }, ativa: { rotulo: "Ativa", cor: "#22c55e" },
   suspensa: { rotulo: "Suspensa", cor: "#f59e0b" }, cancelada: { rotulo: "Cancelada", cor: "#ef4444" },
 };
-const MODELO: Record<Organizacao["cobranca_modelo"], string> = { percentual: "Percentual do faturamento", licenca: "Licença mensal", isento: "Isenta" };
+const MODELO: Record<Organizacao["cobranca_modelo"], string> = { percentual: "Percentual do faturamento", licenca: "Licença", isento: "Isenta" };
+const PERIODO: Record<NonNullable<Organizacao["cobranca_periodo"]>, { rotulo: string; valor: string; sufixo: string }> = {
+  mensal: { rotulo: "Mensal", valor: "Valor por mês (R$)", sufixo: "/mês" },
+  anual: { rotulo: "Anual", valor: "Valor por ano (R$)", sufixo: "/ano" },
+  vitalicia: { rotulo: "Vitalícia", valor: "Valor único (R$)", sufixo: " (vitalícia)" },
+};
 const ALCANCE: Record<Organizacao["compartilhar"], { rotulo: string; dica: string }> = {
   nunca: { rotulo: "Nunca", dica: "As rotas só vão para os motoboys desta empresa." },
   sem_livre: { rotulo: "Sem motoboy livre", dica: "Se ninguém da empresa pegar, depois do tempo abaixo a rota aparece para motoboys de outras empresas que aceitam receber." },
@@ -34,7 +41,7 @@ const ALCANCE: Record<Organizacao["compartilhar"], { rotulo: string; dica: strin
 };
 
 function resumoCobranca(o: Organizacao) {
-  return o.cobranca_modelo === "percentual" ? `${num(o.cobranca_pct, 2)}% do faturamento` : o.cobranca_modelo === "licenca" ? `${brl(o.mensalidade)}/mês` : "Isenta";
+  return o.cobranca_modelo === "percentual" ? `${num(o.cobranca_pct, 2)}% do faturamento` : o.cobranca_modelo === "licenca" ? `${brl(o.mensalidade)}${PERIODO[o.cobranca_periodo ?? "mensal"].sufixo}` : "Isenta";
 }
 
 /** Dev: ficar oculto (aparece como "Dev", com o ícone </>, em mapa, equipe, clientes e chat). */
@@ -118,7 +125,8 @@ export function EmpresasDev() {
             <div className="empresa-numeros">
               <span><Users size={13} aria-hidden /> {o.motoboys ?? 0} motoboys <small>({o.online ?? 0} online)</small></span>
               <span><Building2 size={13} aria-hidden /> {o.clientes ?? 0} clientes</span>
-              <span><Route size={13} aria-hidden /> {ALCANCE[o.compartilhar].rotulo}</span>
+              <span><Route size={13} aria-hidden /> {num(o.rotas_30d)} rotas em 30 dias · {brl(o.faturado_30d)}</span>
+              <span><Handshake size={13} aria-hidden /> {ALCANCE[o.compartilhar].rotulo}</span>
             </div>
             {atual?.id === o.id && <FormEmpresa org={o} todas={lista} pessoas={pessoas} onFechar={() => setSel(null)} onSalvo={() => void carregar()} onFocar={() => void focar(o.id)} />}
           </div>
@@ -140,7 +148,7 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
   // dono novo: cria a conta do gestor junto com a empresa
   const [donoNovo, setDonoNovo] = useState<{ nome: string; email: string } | null>(null);
   const [acesso, setAcesso] = useState<string | null>(null);
-  const [licencas, setLicencas] = useState<{ id: string; modelo: string; valor: number; pct: number; inicio: string; fim: string | null; status: string }[]>([]);
+  const [licencas, setLicencas] = useState<{ id: string; modelo: string; valor: number; pct: number; inicio: string; fim: string | null; status: string; periodo?: string }[]>([]);
   useEffect(() => {
     if (org) void supabase().rpc("dev_licencas", { p_org: org.id }).then(({ data }) => setLicencas((data as typeof licencas) ?? []));
   }, [org]);
@@ -232,14 +240,34 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
       </div>
       <div className="grade-2">
         {f.cobranca_modelo === "percentual" && <label className="campo"><span>Percentual (%)</span><input type="number" min={0} max={100} step={0.5} value={f.cobranca_pct ?? 5} onChange={(e) => muda("cobranca_pct", Number(e.target.value))} /></label>}
-        {f.cobranca_modelo === "licenca" && <label className="campo"><span>Mensalidade (R$)</span><input type="number" min={0} step={10} value={f.mensalidade ?? 0} onChange={(e) => muda("mensalidade", Number(e.target.value))} /></label>}
-        {f.cobranca_modelo !== "isento" && <label className="campo"><span>Dia do vencimento</span><input type="number" min={1} max={28} value={f.vencimento_dia ?? 10} onChange={(e) => muda("vencimento_dia", Number(e.target.value))} /></label>}
+        {f.cobranca_modelo === "licenca" && <label className="campo"><span>Licença</span>
+          <select value={f.cobranca_periodo ?? "mensal"} onChange={(e) => muda("cobranca_periodo", e.target.value as Organizacao["cobranca_periodo"])}>
+            {(Object.keys(PERIODO) as NonNullable<Organizacao["cobranca_periodo"]>[]).map((k) => <option key={k} value={k}>{PERIODO[k].rotulo}</option>)}
+          </select></label>}
+        {f.cobranca_modelo === "licenca" && <label className="campo"><span>{PERIODO[f.cobranca_periodo ?? "mensal"].valor}</span><input type="number" min={0} step={10} value={f.mensalidade ?? 0} onChange={(e) => muda("mensalidade", Number(e.target.value))} /></label>}
+        {f.cobranca_modelo !== "isento" && !(f.cobranca_modelo === "licenca" && f.cobranca_periodo === "vitalicia") && <label className="campo"><span>Dia do vencimento</span><input type="number" min={1} max={28} value={f.vencimento_dia ?? 10} onChange={(e) => muda("vencimento_dia", Number(e.target.value))} /></label>}
       </div>
       <p className="dica" style={{ margin: 0 }}>
         {f.cobranca_modelo === "percentual" ? "A plataforma fica com esse percentual de cada rota concluída (sai da parte da empresa, não do motoboy)."
-          : f.cobranca_modelo === "licenca" ? "A empresa paga a mensalidade e nenhuma rota tem percentual da plataforma."
+          : f.cobranca_modelo === "licenca" ? (f.cobranca_periodo === "vitalicia" ? "A empresa paga uma vez e usa sem mensalidade. Nenhuma rota tem percentual da plataforma."
+            : f.cobranca_periodo === "anual" ? "A empresa paga uma vez por ano. Nenhuma rota tem percentual da plataforma." : "A empresa paga todo mês. Nenhuma rota tem percentual da plataforma.")
           : "Nada é cobrado desta empresa."}
       </p>
+
+      {(f.status === "suspensa" || f.status === "cancelada") && (
+        <label className="campo"><span>Motivo (a equipe da empresa vê ao entrar)</span>
+          <input value={f.suspensa_motivo ?? ""} onChange={(e) => muda("suspensa_motivo", e.target.value)} placeholder="Ex.: mensalidade em atraso" /></label>
+      )}
+      {(f.status === "suspensa" || f.status === "cancelada") && <p className="dica" style={{ margin: 0 }}>Suspensa ou cancelada: gestores e motoboys desta empresa ficam sem acesso até você reativar.</p>}
+
+      <span className="rotulo"><Users size={13} aria-hidden /> Limites do plano</span>
+      <div className="grade-3">
+        {(["motoboys", "gestores", "clientes"] as const).map((k) => (
+          <label key={k} className="campo"><span>Máx. de {k}</span>
+            <input type="number" min={0} placeholder="sem limite" value={f.limites?.[k] ?? ""}
+              onChange={(e) => { const v = e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)); const l = { ...(f.limites ?? {}) }; if (v == null || v === 0) delete l[k]; else l[k] = v; muda("limites", l); }} /></label>
+        ))}
+      </div>
 
       <span className="rotulo"><Handshake size={13} aria-hidden /> Rotas desta empresa chegam a motoboys de outras?</span>
       <div className="segmentado" style={{ gridTemplateColumns: "repeat(4, 1fr)" }} role="radiogroup">
@@ -268,19 +296,120 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
         <button className="botao-texto" onClick={onFechar}>Fechar</button>
       </div>
 
+      {org && <DetalheEmpresa org={org} todas={todas} onMudou={() => onSalvo(org.id)} onExcluida={() => { onFechar(); onSalvo(""); }} />}
+
       {org && licencas.length > 0 && (
         <details className="licencas">
           <summary><Receipt size={13} aria-hidden /> Histórico de cobrança ({licencas.length})</summary>
           <table className="dev-tabela">
             <thead><tr><th>Modelo</th><th>Valor</th><th>De</th><th>Até</th></tr></thead>
             <tbody>{licencas.map((l) => (
-              <tr key={l.id}><td>{MODELO[l.modelo as Organizacao["cobranca_modelo"]] ?? l.modelo}</td>
+              <tr key={l.id}><td>{MODELO[l.modelo as Organizacao["cobranca_modelo"]] ?? l.modelo}{l.modelo === "licenca" && l.periodo ? ` ${PERIODO[l.periodo as "mensal"]?.rotulo.toLowerCase() ?? ""}` : ""}</td>
                 <td>{l.modelo === "percentual" ? `${num(l.pct, 2)}%` : l.modelo === "licenca" ? brl(l.valor) : "—"}</td>
                 <td>{new Date(l.inicio + "T12:00").toLocaleDateString("pt-BR")}</td><td>{l.fim ? new Date(l.fim + "T12:00").toLocaleDateString("pt-BR") : "valendo"}</td></tr>
             ))}</tbody>
           </table>
         </details>
       )}
+    </div>
+  );
+}
+
+// ===================================================================== Detalhe da empresa
+interface DetalheOrg {
+  equipe: { id: string; nome: string; foto: string | null; papeis: string[]; email: string | null; ultimo_acesso: string | null; dono: boolean; status: string | null; posicao_em: string | null; versao_app: number | null }[];
+  numeros: Record<string, number | string | null>;
+  clientes_lista: { id: string; nome: string; pedidos: number }[];
+}
+const PAPEL: Record<string, string> = { gestor: "Gestor", supervisor: "Supervisor", motoboy: "Motoboy", cliente: "Cliente" };
+const quandoFoi = (iso: string | null) => {
+  if (!iso) return "nunca";
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 2) return "agora"; if (min < 60) return `há ${min} min`; if (min < 1440) return `há ${Math.round(min / 60)} h`;
+  return new Date(iso).toLocaleDateString("pt-BR");
+};
+
+function DetalheEmpresa({ org, todas, onMudou, onExcluida }: { org: Organizacao; todas: Organizacao[]; onMudou: () => void; onExcluida: () => void }) {
+  const [d, setD] = useState<DetalheOrg | null>(null);
+  const [busca, setBusca] = useState("");
+  const [excluir, setExcluir] = useState<{ senha: string; nome: string } | null>(null);
+  const carregar = useCallback(() => {
+    void supabase().rpc("dev_empresa_detalhe", { p_org: org.id }).then(({ data, error }) => { if (error) toast(error.message, "erro"); else setD(data as DetalheOrg); });
+  }, [org.id]);
+  useEffect(() => { carregar(); }, [carregar]);
+  if (!d) return <p className="dica">Carregando a empresa…</p>;
+  const n = d.numeros;
+  const equipe = d.equipe.filter((p) => !busca || `${p.nome} ${p.email ?? ""}`.toLowerCase().includes(busca.toLowerCase()));
+
+  async function mover(id: string, destino: string) {
+    const { error } = await supabase().rpc("dev_mover_pessoa", { p_usuario: id, p_org: destino || null });
+    if (error) return toast(error.message.includes("limite_") ? "A empresa de destino chegou ao limite do plano." : error.message, "erro");
+    toast("Pessoa movida.", "ok"); carregar(); onMudou();
+  }
+  async function confirmarExclusao() {
+    if (!excluir) return;
+    const { data, error } = await supabase().rpc("dev_excluir_organizacao", { p_org: org.id, p_senha: excluir.senha, p_confirmar: excluir.nome });
+    const r = data as { ok?: boolean; erro?: string; restantes?: number; contas_sem_empresa?: number } | null;
+    if (error) return toast(error.message.includes("confirmacao_errada") ? "Digite o nome da empresa exatamente como está." : error.message, "erro");
+    if (r?.erro) return toast(r.erro === "senha_incorreta" ? `Senha incorreta (${r.restantes} tentativas).` : "Muitas tentativas. Espere 15 minutos.", "erro");
+    toast(`Empresa excluída. ${r?.contas_sem_empresa ?? 0} conta(s) ficaram sem empresa.`, "ok");
+    onExcluida();
+  }
+
+  return (
+    <div className="empresa-detalhe">
+      <div className="dev-grade">
+        <div className="dev-num"><strong>{num(n.pedidos_30d)}</strong><span>Pedidos 30 dias</span></div>
+        <div className="dev-num"><strong>{num(n.rotas_30d)}</strong><span>Rotas 30 dias</span></div>
+        <div className="dev-num"><strong>{brl(n.faturado_30d)}</strong><span>Faturado 30 dias</span></div>
+        <div className="dev-num"><strong>{brl(n.faturado_total)}</strong><span>Faturado total</span></div>
+        <div className="dev-num"><strong>{num(n.em_andamento)}</strong><span>Rotas agora</span></div>
+        <div className="dev-num"><strong>{num(n.clientes)}</strong><span>Clientes</span></div>
+        <div className="dev-num"><strong>{num(n.zonas)}</strong><span>Zonas</span></div>
+        <div className="dev-num"><strong>{quandoFoi(n.ultimo_pedido as string | null)}</strong><span>Último pedido</span></div>
+      </div>
+
+      <span className="rotulo"><Users size={13} aria-hidden /> Equipe ({d.equipe.length})</span>
+      {d.equipe.length > 6 && <label className="busca-mini"><input placeholder="Buscar na equipe" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>}
+      <div className="lista-simples">
+        {equipe.length === 0 && <p className="dica" style={{ margin: 0 }}>Ninguém nesta empresa ainda.</p>}
+        {equipe.map((p) => (
+          <div key={p.id} className="linha-item">
+            <span>
+              <strong>{p.nome || "Sem nome"}</strong>{p.dono && <small className="selo" style={{ color: "var(--ouro)" }}>dono</small>}
+              <span className="dica"> · {p.papeis.map((x) => PAPEL[x] ?? x).join(", ")}{p.email ? ` · ${p.email}` : ""}</span>
+              <span className="dica" style={{ display: "block" }}>Entrou {quandoFoi(p.ultimo_acesso)}{p.versao_app ? ` · app build ${p.versao_app}` : ""}{p.status && p.status !== "offline" ? ` · ${p.status === "em_corrida" ? "em corrida" : "online"}` : ""}</span>
+            </span>
+            <select aria-label={`Mover ${p.nome}`} value="" onChange={(e) => e.target.value && void mover(p.id, e.target.value === "__nenhuma" ? "" : e.target.value)}>
+              <option value="">Mover…</option>
+              {todas.filter((o) => o.id !== org.id).map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+              <option value="__nenhuma">Sem empresa</option>
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {d.clientes_lista.length > 0 && (
+        <details className="avancado">
+          <summary><Building2 size={13} aria-hidden /> Clientes ({d.clientes_lista.length})</summary>
+          <div className="lista-simples">{d.clientes_lista.map((c) => <div key={c.id} className="linha-item"><span>{c.nome}</span><span className="dica">{num(c.pedidos)} pedidos</span></div>)}</div>
+        </details>
+      )}
+
+      <details className="avancado perigo">
+        <summary><Trash2 size={13} aria-hidden /> Excluir empresa</summary>
+        <p className="dica">Apaga a empresa com clientes, pedidos, rotas, faturas, holerites, zonas e chat dela. As contas das pessoas continuam, sem empresa (dá para mover depois). Não dá para desfazer.</p>
+        {!excluir ? <button className="botao-texto perigo-texto" onClick={() => setExcluir({ senha: "", nome: "" })}><Trash2 size={14} aria-hidden /> Quero excluir</button> : (
+          <div className="grade-2">
+            <label className="campo"><span>Digite o nome: {org.nome}</span><input value={excluir.nome} onChange={(e) => setExcluir({ ...excluir, nome: e.target.value })} /></label>
+            <label className="campo"><span>Sua senha</span><input type="password" value={excluir.senha} onChange={(e) => setExcluir({ ...excluir, senha: e.target.value })} /></label>
+            <div className="linha-botoes">
+              <button className="botao-perigo" disabled={excluir.nome !== org.nome || !excluir.senha} onClick={() => void confirmarExclusao()}><Trash2 size={14} aria-hidden /> Excluir de vez</button>
+              <button className="botao-texto" onClick={() => setExcluir(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+      </details>
     </div>
   );
 }
