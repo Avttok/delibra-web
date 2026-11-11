@@ -124,7 +124,7 @@ begin
   select coalesce(p.valor, c.valor) into v_dias from public.configuracoes c
     left join public.politicas p on p.escopo = 'organizacao' and p.alvo = p_org::text and p.chave = 'chat_atendimento_dias'
    where c.chave = 'chat_atendimento_dias';
-  if jsonb_typeof(v_dias) = 'array' and not (v_dias @> to_jsonb(extract(isodow from v_agora)::int)) then return true; end if;
+  if jsonb_typeof(v_dias) = 'array' and not (v_dias @> to_jsonb(extract(isodow from v_agora)::int) or v_dias @> to_jsonb(extract(isodow from v_agora)::int::text)) then return true; end if;
   return v_agora::time < v_de or v_agora::time >= v_ate;
 exception when others then return false;
 end;

@@ -472,6 +472,24 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "saas_dois_passos", grupo: "plataforma", rotulo: "Verificação em dois passos", descricao: "Ligado: gestores podem exigir um código do app autenticador ao entrar.", tipo: "booleano", padrao: false, soDev: true },
   { chave: "saas_cadastro_empresas", grupo: "plataforma", rotulo: "Empresas novas se cadastram sozinhas", descricao: "Ligado: a página de vendas mostra \u201cComeçar teste grátis\u201d.", descricaoDesligado: "Desligado: só você cadastra empresas (Dev → Empresas).", tipo: "booleano", padrao: false, soDev: true },
   { chave: "saas_teste_dias", grupo: "plataforma", rotulo: "Dias de teste grátis", descricao: "Para empresas que se cadastram sozinhas.", tipo: "numero", padrao: 14, unidade: "dias", min: 0, max: 90, passo: 1, soDev: true },
+  // ---------------------------------------------------------------- chat novo
+  { chave: "chat_reacoes", grupo: "chat", rotulo: "Reagir às mensagens", descricao: "Ligado: segurar (app) ou tocar (site) numa mensagem mostra 👍 ❤️ 😂 e outras.", tipo: "booleano", padrao: true },
+  { chave: "chat_editar_min", grupo: "chat", rotulo: "Tempo para editar", descricao: "Depois de mandar, a pessoa corrige o texto por esse tempo (fica “editada”). 0 = não edita.", tipo: "numero", padrao: 15, unidade: "min", min: 0, max: 1440, passo: 5 },
+  { chave: "chat_corrida_ligado", grupo: "chat", rotulo: "Grupo de cada corrida", descricao: "Ligado: quando o motoboy pega a rota abre um grupo dela; ao terminar, vai para o histórico (só leitura).", tipo: "booleano", padrao: true },
+  { chave: "chat_cliente_motoboy", grupo: "chat", rotulo: "Cliente fala com o motoboy", descricao: "Ligado: quem pediu entra no grupo da corrida e conversa com o motoboy enquanto ela durar.", tipo: "booleano", padrao: true },
+  { chave: "chat_caixa_empresa", grupo: "chat", rotulo: "Cliente fala com a empresa", descricao: "Ligado: no site o cliente tem “Falar com a empresa”; gestores e supervisores com chat respondem (aparece quem respondeu).", tipo: "booleano", padrao: true },
+  { chave: "chat_atendimento_ligado", grupo: "chat", rotulo: "Horário de atendimento", descricao: "Ligado: fora do horário, o cliente recebe a resposta automática (no máximo uma por hora).", tipo: "booleano", padrao: false },
+  { chave: "chat_atendimento_de", grupo: "chat", rotulo: "Atende a partir de", descricao: "Hora de Brasília.", tipo: "texto", padrao: "08:00", exemplo: "08:00" },
+  { chave: "chat_atendimento_ate", grupo: "chat", rotulo: "Atende até", descricao: "Hora de Brasília.", tipo: "texto", padrao: "18:00", exemplo: "18:00" },
+  { chave: "chat_atendimento_dias", grupo: "chat", rotulo: "Dias de atendimento", descricao: "", tipo: "multi", padrao: ["1", "2", "3", "4", "5"],
+    opcoes: [{ valor: "1", rotulo: "Seg" }, { valor: "2", rotulo: "Ter" }, { valor: "3", rotulo: "Qua" }, { valor: "4", rotulo: "Qui" }, { valor: "5", rotulo: "Sex" }, { valor: "6", rotulo: "Sáb" }, { valor: "7", rotulo: "Dom" }] },
+  { chave: "chat_resposta_auto", grupo: "chat", rotulo: "Resposta automática", descricao: "O que o cliente recebe fora do horário.", tipo: "texto", padrao: "Recebemos sua mensagem. Nosso atendimento é das 8h às 18h, em dias úteis; respondemos assim que voltarmos.", exemplo: "Respondemos assim que voltarmos." },
+  { chave: "chat_gestor_gerencia_grupos", grupo: "chat", rotulo: "Gestores administram os grupos", descricao: "Ligado: gestores adicionam e tiram pessoas, fazem admins e renomeiam qualquer grupo da empresa.", tipo: "booleano", padrao: true },
+  { chave: "chat_audio_ligado", grupo: "chat", rotulo: "Áudio no chat", descricao: "Ligado: o botão do microfone grava e manda áudio (o tempo máximo é do Dev).", tipo: "booleano", padrao: true },
+  { chave: "dev_chat_audio_ligado", grupo: "chat", rotulo: "Áudio existe", descricao: "Desligado: ninguém manda áudio, em nenhuma empresa.", tipo: "booleano", padrao: true, soDev: true },
+  { chave: "dev_chat_audio_max_s", grupo: "chat", rotulo: "Tempo máximo do áudio", descricao: "A gravação para sozinha nesse tempo.", tipo: "numero", padrao: 60, unidade: "s", min: 5, max: 600, passo: 5, soDev: true },
+  { chave: "dev_chat_audio_dias", grupo: "chat", rotulo: "Áudios ficam guardados por", descricao: "Depois disso o áudio some (a mensagem fica). 0 = sempre.", tipo: "numero", padrao: 30, unidade: "dias", min: 0, max: 3650, passo: 1, soDev: true },
+  { chave: "dev_chat_retencao_dias", grupo: "chat", rotulo: "Conversas ficam guardadas por", descricao: "Mensagens mais antigas são apagadas todo dia. 0 = sempre. Exporte antes no ícone de download da conversa.", tipo: "numero", padrao: 0, unidade: "dias", min: 0, max: 3650, passo: 30, soDev: true },
 ];
 
 export type ValorParametro = number | boolean | string | string[];
