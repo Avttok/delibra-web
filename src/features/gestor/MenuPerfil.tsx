@@ -1,9 +1,13 @@
 "use client";
 
+import { FONTES, aplicarFonteUsuario, lerFonteUsuario } from "@/features/marca/fontes";
+
+import { ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Camera, CodeXml, FlaskConical, Heart, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark } from "lucide-react";
+import { Camera, CodeXml, FlaskConical, Heart, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { ESTILOS, useTema } from "@/features/tema/tema";
 import { abrirTour } from "@/features/ui/Tour";
@@ -31,6 +35,7 @@ function Avatar({ nome, foto, classe = "" }: { nome: string; foto: string | null
 
 /** Foto do usuário no topo: abre o menu com perfil, tema, modo teste e sair. */
 export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Props) {
+  const marca = useMarcaEmpresa();
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState(false);
   const [erroTeste, setErroTeste] = useState<string | null>(null);
@@ -113,6 +118,13 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
           )}
           {erroTeste && <p className="erro menu-erro">{erroTeste}</p>}
 
+          <label className="menu-item menu-teste">
+            <Type size={17} aria-hidden />
+            <span className="menu-teste-texto"><strong>Fonte</strong><span>Só para você, neste navegador</span></span>
+            <select className="menu-fonte" defaultValue={typeof window !== "undefined" ? lerFonteUsuario() : "ARCHIVO"} onChange={(e) => aplicarFonteUsuario(e.target.value)} aria-label="Fonte do site">
+              {FONTES.map((f) => <option key={f.chave} value={f.chave}>{f.rotulo}</option>)}
+            </select>
+          </label>
           {(conta.dev || conta.papeis.includes("gestor")) && (
             <Link href="/gestor/empresa" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
               <Landmark size={17} aria-hidden /> Minha empresa e plano
@@ -133,7 +145,7 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
           <button type="button" role="menuitem" className="menu-item menu-sair" onClick={onSair}>
             <LogOut size={17} aria-hidden /> Sair
           </button>
-          <p className="menu-irmao">Um projeto de irmão para irmão! <Heart size={12} aria-label="com amor" fill="currentColor" /></p>
+          {ehPw(marca) && <p className="menu-irmao">Um projeto de irmão para irmão! <Heart size={12} aria-label="com amor" fill="currentColor" /></p>}
         </div>
       )}
 

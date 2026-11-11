@@ -18,7 +18,6 @@ export default function PaginaAjuda() {
     <footer className="lp-rodape">
       <Logo />
       <nav aria-label="Rodapé"><Link href="/">Painel do gestor</Link></nav>
-      <p>Um projeto de irmão para irmão.</p>
     </footer>
   );
   return <CentralAjuda publicos={["motoboy", "gestor"]} topo={topo} rodape={rodape}

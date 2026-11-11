@@ -18,6 +18,16 @@ const REGRA: Record<string, string> = {
 /** O cálculo do motoboy, linha a linha. */
 
 export function ContaMotoboy({ calc }: { calc: CalculoPagamento }) {
+  const v = (calc as CalculoPagamento & { volta?: { km: number; valor_km: number; pct: number; valor: number } }).volta;
+  return (
+    <>
+      <ContaMotoboyBase calc={calc} />
+      {v && <div className="orcamento-linha"><span>Volta até a partida<small>{Number(v.km).toLocaleString("pt-BR")} km × {moeda(v.valor_km)}{Number(v.pct) !== 100 ? ` · ${v.pct}%` : ""}</small></span><strong>+ {moeda(v.valor)}</strong></div>}
+    </>
+  );
+}
+
+function ContaMotoboyBase({ calc }: { calc: CalculoPagamento }) {
   const z = (calc as CalculoPagamento & { zona?: { raio_m: number; agrupada: boolean; juntas: number; entregas: number } }).zona;
   const zona = z && (
     <p className="dica" style={{ margin: 0 }}>

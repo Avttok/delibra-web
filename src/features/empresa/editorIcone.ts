@@ -12,6 +12,11 @@ export async function carregarImagem(arquivo: File): Promise<HTMLImageElement> {
 }
 
 /** A imagem tem pixels transparentes? (aí "tirar o fundo" já vem desligado) */
+/** Abre uma imagem já publicada (a original guardada) para reajustar sem enviar outra. */
+export async function carregarUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((ok, erro) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = erro; i.src = `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`; });
+}
+
 export function temTransparencia(img: HTMLImageElement): boolean {
   const c = document.createElement("canvas"); const l = 64; c.width = l; c.height = l;
   const g = c.getContext("2d")!; g.drawImage(img, 0, 0, l, l);

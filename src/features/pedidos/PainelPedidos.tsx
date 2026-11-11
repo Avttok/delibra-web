@@ -14,6 +14,7 @@ import { buscarPercursos } from "@/lib/mapa/percursos";
 import { SelosPonto, type OpcoesDoPonto } from "./OpcoesPonto";
 import { EditarOrcamento } from "./EditarOrcamento";
 import { OrcamentoNoMapa } from "./OrcamentoNoMapa";
+import { distanciasColetaEntrega } from "@/features/geo";
 import { RotasDoPedido } from "./RotasDoPedido";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { formatarKm } from "@/features/corridas/tipos";
@@ -255,6 +256,31 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
       <div className="formulario vidro">
         <h3 className="display" style={{ margin: 0 }}><Wallet size={18} aria-hidden /> Cobrança</h3>
         {p.orcamento ? <EditarOrcamento key={JSON.stringify(p.orcamento.linhas)} pedidoId={p.id} orc={p.orcamento} bloqueado={["cancelado", "recusado"].includes(p.status)} /> : <p className="dica">Sem orçamento.</p>}
+        {["recebido", "aprovado"].includes(p.status) && (
+          // distância do preço: pelas ruas (o caminho do motoboy) ou linha reta
+          <div className="campo"><span>Distância do preço</span>
+            <div className="segmentado" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              {([["ruas", "Pelas ruas"], ["reta", "Linha reta"]] as const).map(([k, rot]) => {
+                const atual = String((regras as Record<string, unknown>).orcamento_trajeto ?? (p.orcamento as { trajeto?: string } | null)?.trajeto ?? "ruas");
+                return <button key={k} type="button" className={atual === k ? "ativo" : ""} disabled={ocupado} onClick={async () => {
+                  if (atual === k) return;
+                  setOcupado(true);
+                  const sb = supabase();
+                  if (k === "ruas") {
+                    const ds = await distanciasColetaEntrega(pontos.map((x) => ({ tipo: x.tipo, lat: x.lat, lng: x.lng })));
+                    await sb.rpc("definir_distancias_pedido", { p_pedido: p.id, p_dist: pontos.map((x, i) => ({ id: x.id, dist_m: ds[i] })).filter((x) => x.dist_m != null) });
+                  }
+                  const novas = { ...regras, orcamento_trajeto: k };
+                  const { error } = await sb.rpc("definir_regras_pedido", { p_pedido: p.id, p_regras: novas });
+                  setOcupado(false);
+                  if (error) return toast(error.message, "erro");
+                  setRegras(novas);
+                  toast(k === "ruas" ? "Cobrando pelas ruas." : "Cobrando em linha reta.", "ok");
+                }}>{rot}</button>;
+              })}
+            </div>
+          </div>
+        )}
         {p.orcamento && pontos.length >= 2 && (
           <details className="avancado">
             <summary>Como chegou no valor, no mapa</summary>

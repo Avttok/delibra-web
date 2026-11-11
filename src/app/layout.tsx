@@ -1,3 +1,5 @@
+import { OlhoSenha } from "@/features/ui/OlhoSenha";
+import { FonteUsuario } from "@/features/marca/FonteUsuario";
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/archivo/wdth.css";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -28,6 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: scriptTema }} />
       </head>
       <body>
+        <OlhoSenha />
+        <FonteUsuario />
         <ProvedorTema>{children}</ProvedorTema>
         <RolagemLateral />
       </body>

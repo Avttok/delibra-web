@@ -6,9 +6,10 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { definirMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { IconeEmpresa } from "./IconeEmpresa";
+import { FONTES } from "@/features/marca/fontes";
 import { toast } from "@/features/ui/toast";
 
-type Org = { id: string; nome: string; nome_app: string | null; logo_escala: number | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
+type Org = { id: string; nome: string; nome_app: string | null; logo_escala: number | null; logo_original_url: string | null; logo_brilho_cor: string | null; logo_brilho: number | null; fonte_nome: string | null; slug: string | null; logo_url: string | null; cor: string | null; documento: string | null };
 type Plano = {
   empresa: string; status: string; modelo: "percentual" | "licenca" | "isento"; pct: number; mensalidade: number;
   vencimento_dia: number; proximo_vencimento: string; de: string; ate: string; faturamento: number; rotas: number; devido: number;
@@ -45,7 +46,12 @@ export function PainelEmpresa() {
     if (error) return error.message.includes("apenas_gestor") ? "Só o dono da empresa (ou o Dev) muda isto." : error.message;
     const novo = { ...org!, ...(campos as Partial<Org>) };
     setOrg(novo);
-    definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, logo: novo.logo_url, cor: novo.cor, escala: novo.logo_escala });
+    definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, logo: novo.logo_url, cor: novo.cor, escala: novo.logo_escala, brilhoCor: novo.logo_brilho_cor, brilho: novo.logo_brilho, fonte: novo.fonte_nome });
+    // relê do banco: as chaves salvas têm nomes diferentes das colunas (brilho_cor → logo_brilho_cor…)
+    void carregar().then(() => void supabase().rpc("minha_organizacao").then(({ data }) => {
+      const o = data as Org | null;
+      if (o) definirMarcaEmpresa({ nome: o.nome, nomeApp: o.nome_app, logo: o.logo_url, cor: o.cor, escala: o.logo_escala, brilhoCor: o.logo_brilho_cor, brilho: o.logo_brilho, fonte: o.fonte_nome });
+    }));
     return null;
   }
 
@@ -69,11 +75,21 @@ export function PainelEmpresa() {
         <CabecaPagina icone={Landmark} titulo="Minha empresa" subtitulo="Marca no app e no site · seu plano" />
         <section className="bloco">
           <h3 className="titulo-bloco"><Palette size={16} aria-hidden /> Ícone e nome</h3>
-          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} escala={org.logo_escala} onSalvar={(logo, esc) => salvar({ logo_url: logo ?? "", ...(esc ? { logo_escala: esc } : {}) })} />
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} escala={org.logo_escala}
+            original={org.logo_original_url} brilhoCor={org.logo_brilho_cor} brilho={org.logo_brilho} fonte={org.fonte_nome}
+            onSalvar={(logo, extras) => salvar({ logo_url: logo ?? "", ...(extras ?? {}) })} />
           <div className="grade-2" style={{ marginTop: 12 }}>
             <label className="campo"><span>Nome do app</span><input value={nomeApp} maxLength={30} placeholder="Delibra" onChange={(e) => setNomeApp(e.target.value)} /></label>
             <label className="campo"><span>Nome da empresa</span><input value={nome} maxLength={60} onChange={(e) => setNome(e.target.value)} /></label>
             <label className="campo curto"><span>Cor da marca</span><input type="color" value={cor} onChange={(e) => setCor(e.target.value)} /></label>
+          </div>
+          <div className="campo"><span>Fonte do nome no topo</span>
+            <div className="fontes-nome">
+              {FONTES.map((f) => (
+                <button key={f.chave} type="button" className={`chip${(org.fonte_nome ?? "ARCHIVO") === f.chave ? " ativo" : ""}`} style={{ fontFamily: f.css, fontWeight: 700 }}
+                  onClick={() => void salvar({ fonte: f.chave === "ARCHIVO" ? "" : f.chave })}>{f.rotulo.replace(" (padrão)", "")}</button>
+              ))}
+            </div>
           </div>
           <p className="dica" style={{ margin: "0 0 8px" }}>O nome do app aparece no lugar de “Delibra” no topo do app do motoboy e do site, no atalho do celular e nas telas de entrar. Em branco = Delibra.</p>
           <div className="linha-botoes">

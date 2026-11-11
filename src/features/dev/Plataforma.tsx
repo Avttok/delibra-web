@@ -195,8 +195,8 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
         <details className="avancado">
           <summary>Ícone e nome do app (no lugar do Delibra)</summary>
           <NomeAppDev org={org} onSalvo={() => onSalvo(org.id)} />
-          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo, esc) => {
-            const { error } = await supabase().rpc("definir_marca_organizacao", { p_org: org.id, p_logo: logo ?? "", p_cor: null, p_escala: esc ?? null });
+          <IconeEmpresa orgId={org.id} nome={org.nome_app || org.nome} logo={org.logo_url} cor={org.cor} onSalvar={async (logo, extras) => {
+            const { error } = await supabase().rpc("dev_marca_organizacao", { p_org: org.id, p: { logo_url: logo ?? "", ...(extras ?? {}) } });
             if (!error) onSalvo(org.id);
             return error?.message ?? null;
           }} />

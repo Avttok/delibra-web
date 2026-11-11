@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react";
  * Fica guardada no navegador para a próxima visita já abrir com ela.
  */
 /** `nomeApp`: nome que aparece no lugar de "Delibra" (vazio = Delibra). */
-export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null; nomeApp?: string | null; escala?: number | null };
+export type MarcaEmpresa = { nome: string; logo: string | null; cor?: string | null; nomeApp?: string | null; escala?: number | null; brilhoCor?: string | null; brilho?: number | null; fonte?: string | null };
 
 /** Nome do app para esta conta: o escolhido pela empresa, ou o da empresa quando ela tem ícone, ou Delibra. */
 export const nomeDoApp = (m: MarcaEmpresa | null) => m?.nomeApp || (m?.logo ? m.nome : "Delibra");
@@ -72,3 +72,6 @@ export function useMarcaEmpresa(): MarcaEmpresa | null {
     () => null,
   );
 }
+
+/** O rodapé "de irmão para irmão" é só da PW Express. */
+export const ehPw = (m: MarcaEmpresa | null) => !!m && `${m.nome} ${m.nomeApp ?? ""}`.toLowerCase().includes("pw");

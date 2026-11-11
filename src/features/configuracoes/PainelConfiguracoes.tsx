@@ -1,5 +1,6 @@
 "use client";
 
+import { combina } from "@/features/ui/busca";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Dica } from "@/features/ui/Tour";
 import {
@@ -63,7 +64,7 @@ export function PainelConfiguracoes() {
   const termo = sem(busca.trim());
   const filtrar = (lista: DefParametro[]) => (soMudados ? lista.filter((p) => mudou(p, cfg[p.chave])) : lista);
   const resultado = useMemo(
-    () => (termo ? filtrar(visiveis.filter((p) => sem(`${p.rotulo} ${p.descricao} ${p.descricaoDesligado ?? ""} ${GRUPOS[p.grupo].titulo} ${p.chave}`).includes(termo))) : []),
+    () => (termo ? filtrar(visiveis.filter((p) => combina(termo, p.rotulo, p.descricao, p.descricaoDesligado, GRUPOS[p.grupo].titulo, p.chave))) : []),
     [termo, soMudados, cfg], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const extra = PAGINAS_EXTRAS.find((x) => x.chave === pagina);

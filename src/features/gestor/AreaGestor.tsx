@@ -9,7 +9,7 @@ import { sair as sairDaConta, supabase } from "@/lib/supabase/client";
 import { contas } from "@/lib/supabase/contas";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { Logo } from "@/features/marca/Logo";
-import { definirMarcaEmpresa, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
+import { definirMarcaEmpresa, ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { useEstabelecimentos } from "@/lib/mapa/estabelecimentos";
 import { ProvedorTeste } from "@/features/teste/modoTeste";
 import { MenuPerfil } from "./MenuPerfil";
@@ -73,10 +73,10 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         sb.rpc("meu_perfil"),
       ]);
       const d = perfil.data as { nome?: string; foto_url?: string | null; modo_teste?: boolean; papeis?: Papel[]; dev?: boolean; cor_tema?: CorTema; modulos?: Record<string, boolean>;
-        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null } | null } | null;
+        supervisor?: boolean; permissoes?: Record<string, boolean>; organizacao?: { id: string; nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null;
       setPermSup(d?.supervisor && !d?.dev && !(d?.papeis ?? []).includes("gestor") ? (d?.permissoes ?? {}) : null);
       setEmpresa(d?.organizacao?.nome ?? null);
-      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala } : null);
+      definirMarcaEmpresa(d?.organizacao ? { nome: d.organizacao.nome, nomeApp: d.organizacao.nome_app ?? null, logo: d.organizacao.logo ?? null, cor: d.organizacao.cor, escala: d.organizacao.logo_escala, brilhoCor: d.organizacao.brilho_cor, brilho: d.organizacao.brilho, fonte: d.organizacao.fonte } : null);
       setTeste(Boolean(d?.modo_teste));
       setPapeis(d?.papeis ?? []);
       setCorTema(d?.dev && d?.cor_tema === "vermelho" ? "vermelho" : "ouro");
@@ -256,9 +256,9 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <footer className="rodape">
+        {ehPw(marca) && <footer className="rodape">
           Um projeto de irmão para irmão! <Heart size={13} aria-label="com amor" className="coracao" fill="currentColor" />
-        </footer>
+        </footer>}
       </div>
       <Toasts />
       </ProvedorTeste>

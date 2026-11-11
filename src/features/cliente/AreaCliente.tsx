@@ -6,7 +6,7 @@ import { Eye, FlaskConical, Heart, Hourglass, LogOut } from "lucide-react";
 import { sair, supabase } from "@/lib/supabase/client";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { Logo } from "@/features/marca/Logo";
-import { definirMarcaEmpresa } from "@/features/marca/marcaEmpresa";
+import { definirMarcaEmpresa, ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { BotaoTema } from "@/features/tema/BotaoTema";
 import { Toasts } from "@/features/ui/toast";
 import { CriarConta } from "./CriarConta";
@@ -24,6 +24,7 @@ type Estado = { fase: "carregando" } | { fase: "anonimo" } | { fase: "logado"; a
  * Gestor/Dev entram também e escolhem de qual cliente querem ver o site (para testar tudo).
  */
 export function AreaCliente({ children }: { children: ReactNode }) {
+  const marca = useMarcaEmpresa();
   const [estado, setEstado] = useState<Estado>({ fase: "carregando" });
   const [cadastrando, setCadastrando] = useState(false);
   // /entrar?criar=1 abre direto o cadastro da empresa
@@ -43,8 +44,8 @@ export function AreaCliente({ children }: { children: ReactNode }) {
   const verificar = useCallback(async (s: Session | null) => {
     if (!s) return setEstado({ fase: "anonimo" });
     const [{ data }, perfil] = await Promise.all([supabase().rpc("meu_acesso_cliente"), supabase().rpc("meu_perfil")]);
-    const org = (perfil.data as { organizacao?: { nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null } | null } | null)?.organizacao;
-    if (org) definirMarcaEmpresa({ nome: org.nome, nomeApp: org.nome_app ?? null, logo: org.logo ?? null, cor: org.cor, escala: org.logo_escala });
+    const org = (perfil.data as { organizacao?: { nome: string; nome_app?: string | null; logo?: string | null; cor?: string | null; logo_escala?: number | null; brilho_cor?: string | null; brilho?: number | null; fonte?: string | null } | null } | null)?.organizacao;
+    if (org) definirMarcaEmpresa({ nome: org.nome, nomeApp: org.nome_app ?? null, logo: org.logo ?? null, cor: org.cor, escala: org.logo_escala, brilhoCor: org.brilho_cor, brilho: org.brilho, fonte: org.fonte });
     setEstado({ fase: "logado", a: (data as Acesso | null) ?? { tipo: "nenhum" } });
   }, []);
 
@@ -121,9 +122,9 @@ export function AreaCliente({ children }: { children: ReactNode }) {
         </div>
       )}
       <main className="cliente-corpo" key={versao}>{children}</main>
-      <footer className="rodape">
+      {ehPw(marca) && <footer className="rodape">
         Um projeto de irmão para irmão! <Heart size={13} aria-label="com amor" className="coracao" fill="currentColor" />
-      </footer>
+      </footer>}
       <Toasts />
     </div>
   );

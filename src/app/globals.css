@@ -62,7 +62,7 @@
 html, body { margin: 0; height: 100%; }
 html { background: var(--fundo); }
 body {
-  font-family: "Archivo Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--fonte-app, "Archivo Variable"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-stretch: 100%;
   color: var(--texto);
   background:
@@ -1534,7 +1534,7 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 
 /* ícone próprio da empresa no lugar do Delibra */
 .logo-empresa-brilho { position: relative; display: inline-grid; place-items: center; flex: none; }
-.logo-empresa-brilho::before { content: ""; position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--brilho) 55%, transparent), color-mix(in srgb, var(--brilho) 15%, transparent) 45%, transparent 70%); pointer-events: none; }
+.logo-empresa-brilho::before { content: ""; position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--brilho) var(--forca, 55%), transparent), color-mix(in srgb, var(--brilho) calc(var(--forca, 55%) / 3), transparent) 45%, transparent 70%); pointer-events: none; }
 .logo-empresa-icone { position: relative; object-fit: contain; flex: none; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--brilho) 55%, transparent)); }
 .logo-empresa .logo-delibra-nome { text-transform: none; letter-spacing: -0.01em; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1549,7 +1549,7 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .previa-app.vazio { aspect-ratio: 1; border-radius: 22%; background: rgba(255,255,255,0.08); }
 .previa-app .icone-padrao { width: 100%; aspect-ratio: 1; border-radius: 22%; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
 .icone-marca { width: 100%; aspect-ratio: 1; border-radius: 22%; display: grid; place-items: center; overflow: hidden;
-  background: radial-gradient(circle, color-mix(in srgb, var(--brilho) 50%, transparent), transparent 66%), #0b0b0d; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+  background: radial-gradient(circle, color-mix(in srgb, var(--brilho) var(--forca, 50%), transparent), transparent 66%), #0b0b0d; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
 .icone-marca img { width: 80%; height: 80%; object-fit: contain; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--brilho) 60%, transparent)); }
 .previa-barra .icone-marca { width: 30px; height: 30px; }
 .previa-app .icone-padrao { display: grid; place-items: center; background: #0b0b0d; }
@@ -1612,7 +1612,7 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .editor-icone-previas { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; align-items: start; }
 .editor-icone-palco { position: relative; aspect-ratio: 1; border-radius: 22%; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--borda); touch-action: none; }
 .editor-icone-palco img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
-.editor-icone-palco.escuro { background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--brilho) 45%, transparent), transparent 62%), #0b0b0d; cursor: grab; }
+.editor-icone-palco.escuro { background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--brilho) var(--forca, 45%), transparent), transparent 62%), #0b0b0d; cursor: grab; }
 .editor-icone-palco.escuro img { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--brilho) 60%, transparent)); }
 .editor-icone-palco.claro { background: #f4f4f4; }
 .editor-icone-palco.xadrez { background: repeating-conic-gradient(#cfcfcf 0 25%, #fff 0 50%) 0 0 / 16px 16px; }
@@ -1640,3 +1640,18 @@ a.chat-cartao:hover { border-color: var(--ouro); }
 .raio-rapido small { color: var(--texto-3); font-size: 11.5px; }
 .raio-rapido b { min-width: 64px; text-align: center; }
 .raio-rapido .botao-icone { width: 34px; height: 34px; font-size: 18px; }
+
+/* olho dos campos de senha */
+.olho-pai { position: relative; }
+.olho-input { padding-right: 44px !important; }
+.olho-botao { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center;
+  border: 0; border-radius: 10px; background: transparent; color: var(--texto-3); cursor: pointer; }
+.olho-botao:hover { color: var(--ouro); }
+.menu-fonte { max-width: 130px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--borda); background: var(--vidro-sutil); color: var(--texto); font-size: 12.5px; }
+
+.editor-icone-cores { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cor-bolinha { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--borda-forte, rgba(255,255,255,.2)); cursor: pointer; font-size: 10px; font-weight: 800; color: #000; }
+.cor-bolinha.ativa { outline: 2px solid var(--texto); outline-offset: 2px; }
+.editor-icone-cores input[type=color] { width: 30px; height: 28px; border: 0; background: none; padding: 0; }
+.fontes-nome { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fontes-nome .chip.ativo { background: var(--ouro); color: var(--sobre-ouro, #120f06); border-color: var(--ouro); }

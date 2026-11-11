@@ -1,6 +1,7 @@
 "use client";
 
 import { nomeDoApp, useMarcaEmpresa } from "./marcaEmpresa";
+import { cssFonte } from "./fontes";
 
 /**
  * Logo da Delibra: o D com as ondas de radar + o nome.
@@ -29,8 +30,8 @@ export function Logo({ grande = false, delibra = false }: { grande?: boolean; de
   if (!delibra && (marca?.logo || marca?.nomeApp)) return (
     <span className={`logo-delibra logo-empresa${grande ? " grande" : ""}`} role="img" aria-label={nomeDoApp(marca)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {marca.logo ? <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: marca.cor || "#d4af37", width: tl, height: tl }}><img src={marca.logo} alt="" width={tl} height={tl} className="logo-empresa-icone" /></span> : <MarcaDelibra tamanho={t} />}
-      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20 }}>{nomeDoApp(marca)}</span>
+      {marca.logo ? <span className="logo-empresa-brilho" style={{ ["--brilho" as string]: marca.brilhoCor || marca.cor || "#d4af37", ["--forca" as string]: `${Math.round((marca.brilho ?? 0.55) * 100)}%`, width: tl, height: tl }}><img src={marca.logo} alt="" width={tl} height={tl} className="logo-empresa-icone" /></span> : <MarcaDelibra tamanho={t} />}
+      <span className="logo-delibra-nome" style={{ fontSize: grande ? 40 : 20, fontFamily: marca.fonte ? cssFonte(marca.fonte) : undefined, fontStretch: marca.fonte ? "100%" : undefined }}>{nomeDoApp(marca)}</span>
     </span>
   );
   return (

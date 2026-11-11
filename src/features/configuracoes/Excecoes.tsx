@@ -1,5 +1,6 @@
 "use client";
 
+import { combina } from "@/features/ui/busca";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bike, Building2, Layers, RotateCcw, Search, Tags } from "lucide-react";
 import { useConfiguracoes } from "./useConfiguracoes";
@@ -45,7 +46,7 @@ export function EditorRegras({ params, valores, cfg, estado, onDefinir, filtro }
   const areas = AREAS.filter((a) => params.some((p) => GRUPOS[p.grupo].area === a.chave));
   const conta_ = (lista: typeof PARAMETROS) => lista.filter((p) => p.chave in valores).length;
   let lista = params;
-  if (termo) lista = lista.filter((p) => sem(`${p.rotulo} ${p.descricao} ${GRUPOS[p.grupo].titulo}`).includes(termo));
+  if (termo) lista = lista.filter((p) => combina(termo, p.rotulo, p.descricao, GRUPOS[p.grupo].titulo));
   else {
     if (area !== "todas") lista = lista.filter((p) => GRUPOS[p.grupo].area === area);
     if (secao) lista = lista.filter((p) => p.grupo === secao);
