@@ -516,3 +516,54 @@ end;
 $$;
 revoke execute on function public.reabrir_corrida(uuid) from public, anon;
 grant execute on function public.reabrir_corrida(uuid) to authenticated;
+
+
+-- ===================================================================== painel do dia mais completo (Lote 42)
+create or replace function public.painel_do_dia()
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare v_hoje timestamptz := date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo';
+  v_teste boolean := coalesce((select p.modo_teste from public.perfis p where p.id = auth.uid()), false);
+begin
+  if not public.is_gestor() then raise exception 'apenas_gestor' using errcode = '42501'; end if;
+  return jsonb_build_object(
+    'pedidos_hoje', (select count(*) from public.pedidos p where public.ve_org(p.organizacao_id) and p.criado_em >= v_hoje),
+    'para_revisar', (select count(*) from public.pedidos p where public.ve_org(p.organizacao_id) and p.status::text = 'recebido'),
+    'rotas_ativas', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text in ('aceita', 'em_andamento')),
+    'rotas_esperando', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text in ('aguardando_motoboy', 'sem_motoboy', 'montada')),
+    'sem_motoboy', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'sem_motoboy'),
+    'concluidas_hoje', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje),
+    'faturamento_hoje', (select coalesce(sum(c.valor), 0) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje),
+    'gestao_hoje', (select coalesce(sum(c.valor_gestao), 0) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje),
+    'km_hoje', (select round(coalesce(sum(coalesce(c.distancia_real_m, c.distancia_planejada_m)), 0) / 1000.0, 1) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje),
+    'motoboys_online', (select count(*) from public.motoboys m join public.perfis p on p.id = m.id where public.ve_org(p.organizacao_id) and m.status::text <> 'offline' and p.modo_teste = v_teste),
+    'motoboys_em_rota', (select count(*) from public.motoboys m join public.perfis p on p.id = m.id where public.ve_org(p.organizacao_id) and m.status::text = 'em_corrida' and p.modo_teste = v_teste),
+    'emergencias', (select count(*) from public.emergencias e where public.ve_org(e.organizacao_id) and e.resolvida_em is null),
+    'chamados', (select count(*) from public.chamados_corrida h where public.ve_org(h.organizacao_id) and h.status = 'pendente'),
+    'aguardando_confirmacao', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.aguardando_confirmacao),
+    'nota_media_30d', (select round(avg(a.nota)::numeric, 1) from public.avaliacoes a where public.ve_org(a.organizacao_id) and a.criado_em > now() - interval '30 days'),
+    'notas_ruins_hoje', (select count(*) from public.avaliacoes a where public.ve_org(a.organizacao_id) and a.criado_em >= v_hoje and a.nota <= 2),
+    'por_hora', (select coalesce(jsonb_agg(jsonb_build_object('hora', h, 'rotas', n) order by h), '[]') from (
+                   select extract(hour from c.concluida_em at time zone 'America/Sao_Paulo')::int h, count(*) n from public.corridas c
+                    where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje group by 1) x),
+    'canceladas_hoje', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'cancelada' and c.cancelada_em >= v_hoje),
+    'entregas_hoje', (select count(*) from public.paradas x join public.corridas c on c.id = x.corrida_id where public.ve_org(c.organizacao_id) and c.teste = v_teste
+                       and x.tipo::text = 'entrega' and x.status::text = 'concluida' and x.concluida_em >= v_hoje),
+    'tempo_medio_min', (select round(avg(extract(epoch from (c.concluida_em - coalesce(c.aceita_em, c.iniciada_em))) / 60.0))::int from public.corridas c
+                         where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje and coalesce(c.aceita_em, c.iniciada_em) is not null),
+    'pagar_motoboys_hoje', (select coalesce(sum(c.valor_motoboy), 0) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje),
+    'ontem_concluidas', (select count(*) from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida'
+                          and c.concluida_em >= v_hoje - interval '1 day' and c.concluida_em < now() - interval '1 day'),
+    'hora_agora', extract(hour from now() at time zone 'America/Sao_Paulo')::int,
+    'em_andamento', (select coalesce(jsonb_agg(x order by x->>'desde'), '[]') from (
+                   select jsonb_build_object('id', c.id, 'numero', c.numero, 'motoboy', split_part(public.nome_publico(c.motoboy_id), ' ', 1), 'status', c.status::text,
+                     'feitas', (select count(*) from public.paradas p where p.corrida_id = c.id and p.status::text = 'concluida'),
+                     'total', (select count(*) from public.paradas p where p.corrida_id = c.id), 'desde', coalesce(c.aceita_em, c.criada_em)) x
+                     from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text in ('aceita', 'em_andamento')
+                     order by coalesce(c.aceita_em, c.criada_em) limit 8) y),
+    'top_motoboys', (select coalesce(jsonb_agg(jsonb_build_object('nome', split_part(public.nome_publico(x.motoboy_id), ' ', 1), 'rotas', x.n) order by x.n desc), '[]') from (
+                   select c.motoboy_id, count(*) n from public.corridas c where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.concluida_em >= v_hoje and c.motoboy_id is not null
+                    group by 1 order by 2 desc limit 5) x));
+end;
+$$;
+revoke execute on function public.painel_do_dia() from public, anon;
+grant execute on function public.painel_do_dia() to authenticated;

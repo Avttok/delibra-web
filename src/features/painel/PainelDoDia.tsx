@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bike, CircleDollarSign, ClipboardList, CloudOff, Hand, LayoutDashboard, Route, Siren, Star, Trophy } from "lucide-react";
+import { AlertTriangle, Bike, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { moeda } from "@/features/precos/estrategias";
@@ -11,7 +12,54 @@ type Painel = {
   pedidos_hoje: number; para_revisar: number; rotas_ativas: number; rotas_esperando: number; sem_motoboy: number; concluidas_hoje: number;
   faturamento_hoje: number; gestao_hoje: number; km_hoje: number; motoboys_online: number; motoboys_em_rota: number; emergencias: number; chamados: number;
   aguardando_confirmacao: number; nota_media_30d: number | null; notas_ruins_hoje: number; por_hora: { hora: number; rotas: number }[]; top_motoboys: { nome: string; rotas: number }[];
+  canceladas_hoje?: number; entregas_hoje?: number; tempo_medio_min?: number | null; pagar_motoboys_hoje?: number; ontem_concluidas?: number; hora_agora?: number;
+  em_andamento?: { id: string; numero: number; motoboy: string; status: string; feitas: number; total: number }[];
 };
+
+/** Barras por hora em SVG: rótulos que não quebram, valor em cima e a hora de agora marcada. */
+function GraficoHoras({ por, agora }: { por: { hora: number; rotas: number }[]; agora: number }) {
+  const mapa = new Map(por.map((x) => [x.hora, x.rotas]));
+  const horasCom = por.map((x) => x.hora);
+  const ini = Math.max(0, Math.min(7, ...horasCom));
+  const fim = Math.min(23, Math.max(agora, ini + 5, ...horasCom));
+  const n = fim - ini + 1;
+  const max = Math.max(1, ...por.map((x) => x.rotas));
+  const W = 600, H = 170, base = H - 22, topo = 18, passo = W / n, larg = Math.min(26, passo * 0.62);
+  const cada = n > 12 ? 2 : 1;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="painel-grafico" role="img" aria-label="Rotas concluídas por hora do dia">
+      <line x1={0} x2={W} y1={base} y2={base} className="g-base" />
+      {Array.from({ length: n }, (_, k) => {
+        const h = ini + k, v = mapa.get(h) ?? 0, cx = passo * k + passo / 2;
+        const alt = v === 0 ? 2 : Math.max(5, ((base - topo) * v) / max);
+        return (
+          <g key={h}>
+            <title>{`${h}h: ${v} rota${v === 1 ? "" : "s"}`}</title>
+            <rect x={cx - larg / 2} y={base - alt} width={larg} height={alt} rx={5} className={h === agora ? "g-agora" : v ? "g-barra" : "g-vazia"} />
+            {v > 0 && <text x={cx} y={base - alt - 5} textAnchor="middle" className="g-valor">{v}</text>}
+            {(k % cada === 0 || h === agora) && <text x={cx} y={H - 4} textAnchor="middle" className={h === agora ? "g-hora atual" : "g-hora"}>{h}h</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function comparaOntem(p: Painel) {
+  const o = p.ontem_concluidas ?? 0, d = p.concluidas_hoje - o;
+  if (!o && !p.concluidas_hoje) return "nenhuma ainda";
+  return d >= 0 ? `+${d} que ontem a esta hora` : `${d} que ontem a esta hora`;
+}
+
+function Numero({ icone: Ic, rotulo, valor, dica }: { icone: LucideIcon; rotulo: string; valor: number | string; dica: string }) {
+  return (
+    <div className="painel-numero">
+      <span className="rotulo"><Ic size={12} aria-hidden /> {rotulo}</span>
+      <strong className="figura">{valor}</strong>
+      <span className="dica">{dica}</span>
+    </div>
+  );
+}
 
 /** Como está o dia: números que importam agora e o que precisa de você. */
 export function PainelDoDia() {
@@ -37,9 +85,6 @@ export function PainelDoDia() {
     p.aguardando_confirmacao > 0 && { icone: CloudOff, texto: `${p.aguardando_confirmacao} rota${p.aguardando_confirmacao > 1 ? "s" : ""} fechada${p.aguardando_confirmacao > 1 ? "s" : ""} sem sinal, aguardando confirmação`, href: "/gestor/corridas", forte: false },
     p.notas_ruins_hoje > 0 && { icone: Star, texto: `${p.notas_ruins_hoje} avaliação${p.notas_ruins_hoje > 1 ? "ões" : ""} ruim hoje`, href: "/gestor/corridas", forte: false },
   ].filter(Boolean) as { icone: typeof Siren; texto: string; href: string; forte: boolean }[] : [];
-  const maxHora = Math.max(1, ...(p?.por_hora ?? []).map((h) => h.rotas));
-  const horas = Array.from({ length: 24 }, (_, h) => ({ h, n: p?.por_hora.find((x) => x.hora === h)?.rotas ?? 0 })).slice(6, 24);
-
   return (
     <section className="conteudo painel-dia">
       <CabecaPagina icone={LayoutDashboard} titulo="Hoje" subtitulo={new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} />
@@ -58,35 +103,47 @@ export function PainelDoDia() {
           <div className="painel-numero destaque">
             <span className="rotulo"><CircleDollarSign size={12} aria-hidden /> Faturado hoje</span>
             <strong className="figura texto-grad">{moeda(p.faturamento_hoje)}</strong>
-            <span className="dica">{moeda(p.gestao_hoje)} para a empresa · {p.km_hoje.toLocaleString("pt-BR")} km</span>
+            <div className="painel-mini">
+              <span><small>Empresa</small><b>{moeda(p.gestao_hoje)}</b></span>
+              <span><small>Motoboys</small><b>{moeda(p.pagar_motoboys_hoje ?? 0)}</b></span>
+              <span><small>Rodado</small><b>{p.km_hoje.toLocaleString("pt-BR")} km</b></span>
+            </div>
           </div>
-          <div className="painel-numero"><span className="rotulo"><Route size={12} aria-hidden /> Rotas</span><strong className="figura">{p.concluidas_hoje}</strong>
-            <span className="dica">concluídas · {p.rotas_ativas} em andamento · {p.rotas_esperando} esperando</span></div>
-          <div className="painel-numero"><span className="rotulo"><Bike size={12} aria-hidden /> Motoboys</span><strong className="figura">{p.motoboys_online}</strong>
-            <span className="dica">online · {p.motoboys_em_rota} em rota</span></div>
-          <div className="painel-numero"><span className="rotulo"><ClipboardList size={12} aria-hidden /> Pedidos</span><strong className="figura">{p.pedidos_hoje}</strong>
-            <span className="dica">hoje · {p.para_revisar} para revisar</span></div>
-          <div className="painel-numero"><span className="rotulo"><Star size={12} aria-hidden /> Nota (30 dias)</span><strong className="figura">{p.nota_media_30d != null ? p.nota_media_30d.toLocaleString("pt-BR") : "—"}</strong>
-            <span className="dica">{p.nota_media_30d != null ? "média das avaliações" : "sem avaliações ainda"}</span></div>
+          <Numero icone={Route} rotulo="Rotas feitas" valor={p.concluidas_hoje} dica={comparaOntem(p)} />
+          <Numero icone={PackageCheck} rotulo="Entregas" valor={p.entregas_hoje ?? "—"} dica={`${p.canceladas_hoje ?? 0} rota(s) cancelada(s)`} />
+          <Numero icone={Bike} rotulo="Na rua" valor={p.rotas_ativas} dica={`${p.rotas_esperando} esperando motoboy`} />
+          <Numero icone={Users} rotulo="Motoboys" valor={p.motoboys_online} dica={`online · ${p.motoboys_em_rota} em rota`} />
+          <Numero icone={ClipboardList} rotulo="Pedidos" valor={p.pedidos_hoje} dica={`${p.para_revisar} para revisar`} />
+          <Numero icone={Clock} rotulo="Tempo médio" valor={p.tempo_medio_min != null ? `${p.tempo_medio_min} min` : "—"} dica="do aceite à conclusão" />
+          <Numero icone={Star} rotulo="Nota (30 dias)" valor={p.nota_media_30d != null ? p.nota_media_30d.toLocaleString("pt-BR") : "—"} dica={p.nota_media_30d != null ? "média das avaliações" : "sem avaliações ainda"} />
         </div>
 
         <div className="painel-linha">
           <div className="bloco painel-horas">
-            <span className="rotulo">Rotas concluídas por hora</span>
-            <div className="painel-barras" role="img" aria-label="Rotas concluídas por hora do dia">
-              {horas.map((x) => (
-                <div key={x.h} className="painel-barra" title={`${x.h}h: ${x.n} rota${x.n === 1 ? "" : "s"}`}>
-                  <i style={{ height: `${(x.n / maxHora) * 100}%` }} />
-                  <small>{x.h % 3 === 0 ? `${x.h}h` : ""}</small>
-                </div>
-              ))}
+            <div className="painel-cabeca-bloco">
+              <span className="rotulo">Rotas concluídas por hora</span>
+              {(() => { const pico = [...p.por_hora].sort((a, b) => b.rotas - a.rotas)[0]; return pico && pico.rotas > 0 ? <span className="dica">Pico às {pico.hora}h ({pico.rotas})</span> : null; })()}
             </div>
+            <GraficoHoras por={p.por_hora} agora={p.hora_agora ?? new Date().getHours()} />
           </div>
           <div className="bloco painel-top">
             <span className="rotulo"><Trophy size={12} aria-hidden /> Quem mais entregou hoje</span>
-            {p.top_motoboys.length ? <ol>{p.top_motoboys.map((m) => <li key={m.nome}><span>{m.nome}</span><strong>{m.rotas}</strong></li>)}</ol> : <p className="dica">Nenhuma rota concluída ainda.</p>}
+            {p.top_motoboys.length ? <ol>{p.top_motoboys.map((m) => {
+              const max = Math.max(1, ...p.top_motoboys.map((x) => x.rotas));
+              return <li key={m.nome}><span>{m.nome}</span><i><em style={{ width: `${(m.rotas / max) * 100}%` }} /></i><strong>{m.rotas}</strong></li>;
+            })}</ol> : <p className="dica">Nenhuma rota concluída ainda.</p>}
           </div>
         </div>
+
+        {(p.em_andamento ?? []).length > 0 && (
+          <div className="bloco painel-rua">
+            <span className="rotulo"><Bike size={12} aria-hidden /> Na rua agora</span>
+            <ul>{p.em_andamento!.map((r) => (
+              <li key={r.id}><Link href={`/gestor/corridas?c=${r.id}`}><b>#{r.numero}</b><span>{r.motoboy || "Motoboy"}</span>
+                <i><em style={{ width: `${(r.feitas / Math.max(1, r.total)) * 100}%` }} /></i><small>{r.feitas} de {r.total} paradas</small></Link></li>
+            ))}</ul>
+          </div>
+        )}
       </>}
     </section>
   );

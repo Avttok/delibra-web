@@ -17,7 +17,7 @@ export interface Organizacao {
   cobranca_modelo: "percentual" | "licenca" | "isento"; cobranca_pct: number; mensalidade: number; vencimento_dia: number;
   compartilhar: "nunca" | "sem_livre" | "sempre" | "parceiros"; compartilhar_apos_min: number; receber_de_outras: boolean; parceiros: string[];
   observacoes: string | null; criado_em: string;
-  cobranca_periodo?: "mensal" | "anual" | "vitalicia"; suspensa_motivo?: string | null; limites?: { motoboys?: number; gestores?: number; clientes?: number } | null;
+  cobranca_periodo?: "mensal" | "anual" | "vitalicia"; suspensa_motivo?: string | null; limites?: { motoboys?: number; gestores?: number; supervisores?: number; clientes?: number } | null;
   rotas_30d?: number; faturado_30d?: number; ultimo_pedido?: string | null;
   dono?: { id: string; nome: string; foto: string | null } | null; gestores?: number; motoboys?: number; online?: number; clientes?: number;
   licenca?: { modelo: string; valor: number; pct: number; inicio: string } | null;
@@ -272,13 +272,14 @@ function FormEmpresa({ org, todas, pessoas, onFechar, onSalvo, onFocar }: {
       {(f.status === "suspensa" || f.status === "cancelada") && <p className="dica" style={{ margin: 0 }}>Suspensa ou cancelada: gestores e motoboys desta empresa ficam sem acesso até você reativar.</p>}
 
       <span className="rotulo"><Users size={13} aria-hidden /> Limites do plano</span>
-      <div className="grade-3">
-        {(["motoboys", "gestores", "clientes"] as const).map((k) => (
+      <div className="grade-4">
+        {(["gestores", "supervisores", "motoboys", "clientes"] as const).map((k) => (
           <label key={k} className="campo"><span>Máx. de {k}</span>
-            <input type="number" min={0} placeholder="sem limite" value={f.limites?.[k] ?? ""}
+            <input type="number" min={0} placeholder={k === "gestores" ? "padrão (1)" : "sem limite"} value={f.limites?.[k] ?? ""}
               onChange={(e) => { const v = e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)); const l = { ...(f.limites ?? {}) }; if (v == null || v === 0) delete l[k]; else l[k] = v; muda("limites", l); }} /></label>
         ))}
       </div>
+      <p className="dica" style={{ margin: 0 }}>Gestores: só você cria. Vazio usa o padrão de Ajustes → Dev (1 gestor por empresa).</p>
 
       <span className="rotulo"><Handshake size={13} aria-hidden /> Rotas desta empresa chegam a motoboys de outras?</span>
       <div className="segmentado" style={{ gridTemplateColumns: "repeat(4, 1fr)" }} role="radiogroup">

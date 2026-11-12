@@ -9,6 +9,7 @@ import { moeda } from "@/features/precos/estrategias";
 import { toast } from "@/features/ui/toast";
 import { traduzir } from "@/features/pedidos/tipos";
 import type { MembroEquipe } from "./dados";
+import { PagamentoMotoboy } from "./PagamentoMotoboy";
 import type { CalculoPagamento, Corrida } from "./tipos";
 
 const REGRA: Record<string, string> = {
@@ -216,25 +217,7 @@ export function BlocoRota({ corrida, equipe }: { corrida: Corrida; equipe: Membr
         </section>
       )}
 
-      {corrida.pag_calculo && (
-        <section className="bloco">
-          <span className="rotulo"><Calculator size={12} aria-hidden /> Pagamento do motoboy {corrida.motoboy_id ? "" : "(prévia com as regras gerais)"}</span>
-          <ContaMotoboy calc={corrida.pag_calculo} />
-          {corrida.motoboy_id && (
-            <>
-              <div className="pedido-valor">
-                <label className="campo"><span>Ajuste (+/−)</span><span className="passo-campo"><span className="unidade">R$</span><input inputMode="decimal" value={ajuste} onChange={(e) => setAjuste(e.target.value)} /></span></label>
-                <label className="campo" style={{ flex: 2 }}><span>Motivo</span><input placeholder="Ex.: chuva, espera longa, rota mais curta" value={motivo} onChange={(e) => setMotivo(e.target.value)} /></label>
-              </div>
-              <div className="linha-botoes">
-                <button className="botao-texto" onClick={salvarAjuste}>Salvar ajuste</button>
-                <button className="botao-texto" onClick={recalcular}><RefreshCw size={14} aria-hidden /> Recalcular</button>
-                <span className="espaco" /><strong>A pagar: {moeda(corrida.valor_motoboy ?? 0)}</strong>
-              </div>
-            </>
-          )}
-        </section>
-      )}
+      {corrida.pag_calculo && <PagamentoMotoboy corrida={corrida} conta={<ContaMotoboy calc={corrida.pag_calculo} />} />}
     </>
   );
 }

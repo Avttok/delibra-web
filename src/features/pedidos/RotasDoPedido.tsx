@@ -9,6 +9,7 @@ import { moeda } from "@/features/precos/estrategias";
 import { formatarKm } from "@/features/corridas/tipos";
 import type { CalculoPagamento } from "@/features/corridas/tipos";
 import { ContaMotoboy } from "@/features/corridas/BlocoRota";
+import { EditorCalculos } from "@/features/corridas/PagamentoMotoboy";
 import { EditarPercurso, encaixarVia, type ViaPercurso } from "@/features/corridas/EditarPercurso";
 import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas";
 import { EditorRegras, fmtRegra } from "@/features/configuracoes/Excecoes";
@@ -150,6 +151,8 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
   const sb = supabase();
   const cfg = useConfiguracoes();
   const editavel = !previa && EDITAVEL.includes(r.status);
+  // o cálculo do motoboy muda antes e depois do aceite (até a rota ser cancelada ou o holerite fechar)
+  const mudaPagamento = !previa && r.status !== "cancelada";
   const [paradas, setParadas] = useState(r.paradas);
   const [valor, setValor] = useState(r.valor_manual != null ? String(r.valor_manual).replace(".", ",") : "");
   const [regras, setRegras] = useState<Record<string, ValorParametro>>(r.pag_regras ?? {});
@@ -290,23 +293,10 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
         : <div className="linha-botoes"><button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>
             <span className="dica">Puxe a linha no mapa até a rua que você quer.</span></div>)}
 
-      {editavel && (
-        <div className="rota-modalidade">
-          <span className="rotulo">Como o motoboy desta rota é pago</span>
-          <div className="escolhas" role="radiogroup" aria-label="Modalidade desta rota">
-            {MODALIDADES.map((m) => (
-              <button key={m.valor} type="button" role="radio" aria-checked={modalidadeAtual === m.valor} className={modalidadeAtual === m.valor ? "ativo" : ""}
-                onClick={() => escolherModalidade(m.valor)}>{m.rotulo}</button>
-            ))}
-          </div>
-          <span className="dica">Vale só para esta rota. Os valores da modalidade escolhida aparecem logo abaixo, com a prévia do que o motoboy recebe.</span>
-        </div>
-      )}
-
-      {editavel && (
+      {mudaPagamento && (
         <div className="rota-previa-regras">
           <button type="button" className="botao-texto" onClick={() => setVerRegras((v) => !v)}>
-            <PackageOpen size={15} aria-hidden /> {verRegras ? "Esconder" : "Mudar"} as regras de pagamento desta rota{Object.keys(r.pag_regras ?? {}).length ? ` (${Object.keys(r.pag_regras ?? {}).length})` : ""}
+            <PackageOpen size={15} aria-hidden /> {verRegras ? "Esconder" : "Mudar"} como o motoboy desta rota é pago{Object.keys(r.pag_regras ?? {}).length ? ` (${Object.keys(r.pag_regras ?? {}).length})` : ""}
           </button>
           {verRegras && (
             <>
@@ -319,7 +309,7 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
                   ))}
                 </div>
               )}
-              <EditorRegras params={paramsPag(regras, (pag as { modo?: string } | null)?.modo)} valores={regras} cfg={cfg} estado={{}} onDefinir={(k, v) => setRegras((o) => { const n = { ...o }; if (v == null) delete n[k]; else n[k] = v; return n; })} />
+              <EditorCalculos regras={regras} onMudar={setRegras} calc={pag as CalculoPagamento | null} />
               <div className="linha-botoes">
                 <button className="botao-ouro" disabled={ocupado || !mudouRegras} onClick={() => rodar(() => sb.rpc("definir_regras_rota", { p_corrida: r.id, p_regras: regras, p_motivo: null }), "Regras desta rota salvas.")}><Check size={15} aria-hidden /> Salvar regras</button>
                 {mudouRegras && <button className="botao-texto" onClick={() => setRegras(r.pag_regras ?? {})}><X size={14} aria-hidden /> Desfazer</button>}
@@ -343,7 +333,7 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
           )}
         </div>
       )}
-      {!editavel && !previa && <p className="dica" style={{ margin: 0 }}>Rota já com motoboy ou finalizada: o pagamento só muda no detalhe da rota.</p>}
+      {!editavel && !previa && <p className="dica" style={{ margin: 0 }}>Rota já com motoboy: o percurso não muda mais, mas o pagamento dele continua ajustável aqui e no detalhe da rota.</p>}
       <p className="dica" style={{ margin: 0 }}>
         <Merge size={12} aria-hidden /> Tudo o que você muda aqui (ordem, separar, juntar, valor e regras) fica registrado e ajuda o sistema a sugerir da próxima vez.
       </p>

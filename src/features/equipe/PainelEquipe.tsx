@@ -13,7 +13,7 @@ import { SeletorIcone } from "@/features/ui/icones";
 import { useEmpresas } from "@/features/corridas/dados";
 import { RegistroMembro } from "./RegistroMembro";
 import { PercursosMembro } from "./PercursosMembro";
-import { BloquearConta, ExcluirConta, NovaConta, RedefinirSenha } from "./ContasEquipe";
+import { BloquearConta, ExcluirConta, NovaConta, OpcaoCargo, RedefinirSenha, useVagas } from "./ContasEquipe";
 import { useSessaoGestor } from "@/features/gestor/AreaGestor";
 import { useConta } from "@/features/conta/conta";
 import { PERMISSOES_SUPERVISOR, SelosCargo } from "@/features/conta/Cargos";
@@ -43,6 +43,7 @@ export function PainelEquipe() {
   const [supervisor, setSupervisor] = useState(false);
   const [permissoes, setPermissoes] = useState<Record<string, boolean>>({});
   const conta = useConta();
+  const vagas = useVagas();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [aba, setAba] = useState<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("registro");
   const [busca, setBusca] = useState("");
@@ -184,8 +185,8 @@ export function PainelEquipe() {
                   </div>
                   <span className="rotulo">Papéis</span>
                   {conta.dev && <label className="opcao"><span><CodeXml size={14} style={{ verticalAlign: -2 }} /> Dev (administra o sistema inteiro)</span><input type="checkbox" checked={devPapel} onChange={(e) => setDevPapel(e.target.checked)} /></label>}
-                  {pleno && <label className="opcao"><span><ShieldCheck size={14} style={{ verticalAlign: -2 }} /> Gestor (dono da empresa: pode tudo)</span><input type="checkbox" checked={gestor} onChange={(e) => setGestor(e.target.checked)} /></label>}
-                  {pleno && <label className="opcao"><span><UserCog size={14} style={{ verticalAlign: -2 }} /> Supervisor (líder de equipe: só o que você liberar)</span><input type="checkbox" checked={supervisor} onChange={(e) => setSupervisor(e.target.checked)} /></label>}
+                  {pleno && <OpcaoCargo cargo="gestor" rotulo="Gestor (dono da empresa: pode tudo)" icone={<ShieldCheck size={14} style={{ verticalAlign: -2 }} />} marcado={gestor} tinha={m.papeis.includes("gestor")} vagas={vagas} onMudar={setGestor} />}
+                  {pleno && <OpcaoCargo cargo="supervisor" rotulo="Supervisor (líder de equipe: só o que você liberar)" icone={<UserCog size={14} style={{ verticalAlign: -2 }} />} marcado={supervisor} tinha={m.papeis.includes("supervisor")} vagas={vagas} onMudar={setSupervisor} />}
                   {supervisor && !gestor && pleno && (
                     <div className="permissoes-supervisor">
                       <span className="rotulo">O que este supervisor pode fazer</span>
@@ -195,7 +196,7 @@ export function PainelEquipe() {
                       ))}
                     </div>
                   )}
-                  <label className="opcao"><span><Bike size={14} style={{ verticalAlign: -2 }} /> Motoboy (usa o app e recebe corridas)</span><input type="checkbox" checked={motoboy} onChange={(e) => setMotoboy(e.target.checked)} /></label>
+                  <OpcaoCargo cargo="motoboy" rotulo="Motoboy (usa o app e recebe corridas)" icone={<Bike size={14} style={{ verticalAlign: -2 }} />} marcado={motoboy} tinha={m.papeis.includes("motoboy")} vagas={vagas} onMudar={setMotoboy} />
                   {gestor && motoboy && <p className="dica">Gestor + motoboy tem as ferramentas de administrador e o modo teste no app.</p>}
                   {(gestor || devPapel) && (
                     <label className="campo"><span><Building2 size={13} style={{ verticalAlign: -2 }} /> Também é cliente (entra no site do cliente como este cadastro)</span>

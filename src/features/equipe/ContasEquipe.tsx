@@ -21,7 +21,38 @@ const ERROS: Record<string, string> = {
   nao_bloqueie_a_si_mesmo: "Você não pode bloquear a sua própria conta.",
   membro_em_corrida: "Essa pessoa está com uma corrida em andamento. Espere terminar (ou cancele a corrida) antes.",
   usuario_nao_encontrado: "Conta não encontrada (talvez já tenha sido excluída).",
+  apenas_dev_cria_gestor: "Só o Dev do sistema cria contas de gestor. Peça para ele.",
+  limite_gestores_do_plano: "A empresa já tem o máximo de gestores. Fale com o Dev para liberar mais.",
+  limite_supervisores_do_plano: "A empresa já tem o máximo de supervisores. Fale com o Dev para liberar mais.",
+  limite_motoboys_do_plano: "A empresa já tem o máximo de motoboys do plano. Fale com o Dev para liberar mais.",
 };
+
+export type Vagas = Partial<Record<"gestor" | "supervisor" | "motoboy", { usados: number; limite: number | null; pode: boolean }>>;
+
+/** Quantas vagas de cada cargo a empresa ainda tem (o Dev define). */
+export function useVagas(org?: string | null) {
+  const [vagas, setVagas] = useState<Vagas>({});
+  useEffect(() => {
+    void supabase().rpc("vagas_da_equipe", { p_org: org ?? null }).then(({ data }) => setVagas((data ?? {}) as Vagas));
+  }, [org]);
+  return vagas;
+}
+
+/** Uma caixa de cargo que já vem travada quando não há vaga (quem já tem o cargo pode manter). */
+export function OpcaoCargo({ cargo, rotulo, icone, marcado, tinha, vagas, onMudar }: {
+  cargo: "gestor" | "supervisor" | "motoboy"; rotulo: string; icone: React.ReactNode; marcado: boolean; tinha?: boolean; vagas: Vagas; onMudar: (v: boolean) => void;
+}) {
+  const v = vagas[cargo];
+  const travado = !tinha && !marcado && v?.pode === false;
+  const porque = !v ? null : cargo === "gestor" && v.pode === false && (v.limite == null || v.usados < v.limite) ? "Só o Dev cria gestores"
+    : v.limite != null ? `${v.usados} de ${v.limite} vaga${v.limite === 1 ? "" : "s"} usada${v.usados === 1 ? "" : "s"}` : null;
+  return (
+    <label className={`opcao${travado ? " travada" : ""}`} title={travado ? (porque ?? "Sem vaga") : undefined}>
+      <span>{icone} {rotulo}{porque && <small className={`vaga${v?.pode === false ? " cheia" : ""}`}>{travado && <Lock size={11} aria-hidden />} {porque}</small>}</span>
+      <input type="checkbox" checked={marcado} disabled={travado} onChange={(e) => onMudar(e.target.checked)} />
+    </label>
+  );
+}
 
 /** Chama as rotas do servidor com o token da sessão do gestor. */
 async function chamar(rota: string, corpo: unknown): Promise<{ ok: boolean; erro?: string; id?: string; codigo?: string; restantes?: number }> {
@@ -98,6 +129,8 @@ export function NovaConta({ onFechar, onCriada }: { padraoRepasse?: number; onFe
   const [supervisor, setSupervisor] = useState(false);
   const conta = useConta();
   const pleno = conta.papeis.includes("gestor") || conta.dev;
+  const vagas = useVagas();
+  useEffect(() => { if (vagas.motoboy?.pode === false) setMotoboy(false); }, [vagas.motoboy?.pode]);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [criada, setCriada] = useState<{ id: string } | null>(null);
@@ -137,9 +170,9 @@ export function NovaConta({ onFechar, onCriada }: { padraoRepasse?: number; onFe
         <label className="campo"><span>E-mail</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" /></label>
         <label className="campo"><span>Senha inicial</span><CampoSenha valor={senha} onMudar={setSenha} /></label>
         <span className="rotulo">Papéis</span>
-        <label className="opcao"><span><Bike size={14} style={{ verticalAlign: -2 }} /> Motoboy (usa o app e recebe corridas)</span><input type="checkbox" checked={motoboy} onChange={(e) => setMotoboy(e.target.checked)} /></label>
-        {pleno && <label className="opcao"><span><ShieldCheck size={14} style={{ verticalAlign: -2 }} /> Gestor (dono da empresa: pode tudo)</span><input type="checkbox" checked={gestor} onChange={(e) => setGestor(e.target.checked)} /></label>}
-        {pleno && <label className="opcao"><span><UserCog size={14} style={{ verticalAlign: -2 }} /> Supervisor (líder de equipe: você escolhe o que ele pode)</span><input type="checkbox" checked={supervisor} onChange={(e) => setSupervisor(e.target.checked)} /></label>}
+        <OpcaoCargo cargo="motoboy" rotulo="Motoboy (usa o app e recebe corridas)" icone={<Bike size={14} style={{ verticalAlign: -2 }} />} marcado={motoboy} vagas={vagas} onMudar={setMotoboy} />
+        {pleno && <OpcaoCargo cargo="gestor" rotulo="Gestor (dono da empresa: pode tudo)" icone={<ShieldCheck size={14} style={{ verticalAlign: -2 }} />} marcado={gestor} vagas={vagas} onMudar={setGestor} />}
+        {pleno && <OpcaoCargo cargo="supervisor" rotulo="Supervisor (líder de equipe: você escolhe o que ele pode)" icone={<UserCog size={14} style={{ verticalAlign: -2 }} />} marcado={supervisor} vagas={vagas} onMudar={setSupervisor} />}
       </div>
       {erro && <p className="erro">{erro}</p>}
       <div className="linha-botoes" style={{ marginTop: 18 }}>

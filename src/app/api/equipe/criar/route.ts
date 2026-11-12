@@ -42,6 +42,15 @@ export async function POST(req: Request) {
   const repasse = c.repasse == null ? null : Number(c.repasse);
   if (repasse != null && (Number.isNaN(repasse) || repasse < 0 || repasse > 100)) return Response.json({ erro: "percentual_invalido" }, { status: 400 });
 
+  // só o Dev cria gestor; e cada cargo respeita as vagas da empresa (o Dev define)
+  if (papeis.includes("gestor") && !dev) return Response.json({ erro: "apenas_dev_cria_gestor" }, { status: 403 });
+  if (organizacaoId) {
+    const { data: vagas } = await sbUsuario.rpc("vagas_da_equipe", { p_org: organizacaoId });
+    const v = (vagas ?? {}) as Record<string, { pode?: boolean; limite?: number | null }>;
+    const sem = papeis.find((pp) => v[pp]?.pode === false);
+    if (sem) return Response.json({ erro: `limite_${sem === "gestor" ? "gestores" : sem === "supervisor" ? "supervisores" : "motoboys"}_do_plano` }, { status: 409 });
+  }
+
   const admin = supabaseAdmin();
   const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome } });
   if (error || !data.user) {
@@ -52,7 +61,11 @@ export async function POST(req: Request) {
 
   // perfil nasce pelo gatilho do banco; aqui só definimos nome e papéis
   const p = await admin.from("perfis").upsert({ id, nome, papeis, organizacao_id: organizacaoId, responsavel_id: gestor, ...(empresaId ? { empresa_id: empresaId } : {}) });
-  if (p.error) return Response.json({ erro: "falha_no_perfil", detalhe: p.error.message, id }, { status: 500 });
+  if (p.error) {
+    await admin.auth.admin.deleteUser(id).catch(() => null);
+    const limite = /limite_\w+_do_plano|apenas_dev_cria_gestor/.exec(p.error.message)?.[0];
+    return Response.json({ erro: limite ?? "falha_no_perfil", detalhe: limite ? undefined : p.error.message }, { status: limite ? 409 : 500 });
+  }
   if (papeis.includes("motoboy")) {
     const m = await admin.from("motoboys").upsert({ id, repasse_pct: repasse });
     if (m.error) return Response.json({ erro: "falha_no_motoboy", detalhe: m.error.message, id }, { status: 500 });
