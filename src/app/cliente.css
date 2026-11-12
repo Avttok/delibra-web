@@ -175,3 +175,41 @@ a.chip { text-decoration: none; }
 .passo-pedido:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
 .passos-nav { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 640px) { .passos-pedido { grid-template-columns: repeat(4, auto); overflow-x: auto; } .passo-pedido { white-space: nowrap; } }
+
+/* ---------- cadastro: escolher a empresa por cards ---------- */
+.escolher-empresa { width: min(980px, 94vw); display: grid; gap: 10px; }
+.escolher-empresa h1 { margin: 6px 0 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.05; }
+.empresas-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 8px; }
+.empresa-card { display: grid; gap: 8px; justify-items: start; text-align: left; padding: 18px; border-radius: 22px; border: 1px solid var(--borda); cursor: pointer; color: inherit; font: inherit;
+  border-top: 4px solid var(--cor-empresa); transition: transform .15s ease, border-color .15s ease; }
+.empresa-card:hover { transform: translateY(-2px); border-color: var(--cor-empresa); }
+.empresa-card:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+.empresa-card-logo { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; font-weight: 900;
+  background: var(--cor-empresa) center / contain no-repeat; color: #0b0b0c; }
+.empresa-card strong { font-size: 18px; }
+.empresa-card-numeros { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }
+.empresa-card-numeros span { display: inline-flex; align-items: center; gap: 4px; }
+.empresa-card-numeros svg { color: var(--ouro); }
+@media (prefers-reduced-motion: reduce) { .empresa-card { transition: none; } }
+
+/* ---------- detalhe do pedido ---------- */
+.detalhe-passos { list-style: none; margin: 4px 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.detalhe-passos::before { content: ""; position: absolute; top: 13px; left: 12.5%; right: 12.5%; height: 2px; background: var(--borda); }
+.detalhe-passos li { display: grid; justify-items: center; gap: 6px; font-size: 12.5px; text-align: center; position: relative; color: var(--texto-3, inherit); }
+.detalhe-passos li span { width: 28px; height: 28px; border-radius: 99px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--fundo, #0b0b0d); border: 2px solid var(--borda); position: relative; z-index: 1; }
+.detalhe-passos li.feito { color: var(--texto); }
+.detalhe-passos li.feito span { background: var(--ouro); border-color: var(--ouro); color: #0b0b0c; }
+.detalhe-passos li.atual { color: var(--texto); font-weight: 700; }
+.detalhe-passos li.atual span { border-color: var(--ouro); color: var(--ouro); box-shadow: 0 0 0 5px color-mix(in srgb, var(--ouro) 16%, transparent); }
+.cliente-detalhe .cliente-mapa { border-radius: 20px; overflow: hidden; min-height: 320px; }
+.cliente-paradas li { border-radius: 14px; padding: 10px; transition: background .15s ease; }
+.cliente-paradas li:hover { background: color-mix(in srgb, var(--ouro) 6%, transparent); }
+.cliente-paradas li.feita .pino-mini { background: #22c55e; }
+.cliente-cartao { border-radius: 22px; }
+
+/* ---------- pagamentos e minha conta ---------- */
+.cliente-detalhe table, .cliente-cartao table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cliente-cartao th { text-align: left; font-size: 12px; font-weight: 700; opacity: .65; padding: 8px 6px; border-bottom: 1px solid var(--borda); }
+.cliente-cartao td { padding: 10px 6px; border-bottom: 1px solid color-mix(in srgb, var(--borda) 60%, transparent); }
+.cliente-cartao tr:last-child td { border-bottom: 0; }
+.cliente-pagar { border-radius: 18px; border: 1px solid color-mix(in srgb, #38bdf8 45%, transparent); background: color-mix(in srgb, #38bdf8 8%, transparent); }

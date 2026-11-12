@@ -276,6 +276,18 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
           <h2 className="display" style={{ margin: 0 }}>Pedido #{p.numero}</h2><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}<span className="espaco" />
           <strong className="figura" style={{ fontSize: 24 }}>{p.valor == null && (p as { preco_oculto?: boolean }).preco_oculto ? "Revisando" : moedaBr(p.valor)}</strong>
         </div>
+        {!["cancelado", "recusado"].includes(p.status) && (() => {
+          const passo = ["recebido", "aprovado"].includes(p.status) ? 0 : p.status === "roteirizado" ? 1 : p.status === "em_rota" ? 2 : 3;
+          return (
+            <ol className="detalhe-passos" aria-label="Andamento do pedido">
+              {["Recebido", "Rota pronta", "A caminho", "Entregue"].map((t, i) => (
+                <li key={t} className={i < passo ? "feito" : i === passo ? "atual" : ""} aria-current={i === passo ? "step" : undefined}>
+                  <span>{i < passo ? <CheckCircle2 size={14} aria-hidden /> : i + 1}</span>{t}
+                </li>
+              ))}
+            </ol>
+          );
+        })()}
         <p className="dica" style={{ margin: 0 }}>{STATUS[p.status].dica}{p.recusa_motivo ? ` Motivo: ${p.recusa_motivo}` : ""}</p>
         <div className="cliente-mapa">
           <MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha} rotaPlanejada={ve.has("planejada") ? planejada : null}

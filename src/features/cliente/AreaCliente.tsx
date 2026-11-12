@@ -33,6 +33,12 @@ export function AreaCliente({ children }: { children: ReactNode }) {
     if (q.get("criar") === "1") setCadastrando(true);
     // link da empresa (?empresa=slug): a tela de entrar já abre com o ícone e o nome dela
     const slug = q.get("empresa");
+    // instalar pelo navegador: o atalho leva o nome e o ícone da empresa
+    if (slug) {
+      document.querySelectorAll('link[rel="manifest"]').forEach((l) => l.remove());
+      const l = document.createElement("link"); l.rel = "manifest"; l.href = `/api/manifest?empresa=${encodeURIComponent(slug)}`; document.head.appendChild(l);
+      try { localStorage.setItem("pwex-empresa-site", slug); } catch { /* sem armazenamento */ }
+    }
     if (slug) void supabase().rpc("marca_publica", { p_slug: slug }).then(({ data }) => {
       const m = data as { nome: string; nome_app: string | null; nome_topo?: string | null; logo: string | null; cor: string | null; logo_escala: number | null } | null;
       if (m) definirMarcaEmpresa({ nome: m.nome, nomeApp: m.nome_app, nomeTopo: m.nome_topo, nomes: (m as { nomes?: Record<string, string> }).nomes ?? null, logo: m.logo, cor: m.cor, escala: m.logo_escala });

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { ArrowLeft, Building2, CheckCircle2, UserRound } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, Building2, CheckCircle2, Package, Star, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Logo } from "@/features/marca/Logo";
 import { CampoEndereco } from "@/features/corridas/CampoEndereco";
@@ -25,6 +25,19 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
   const [f, setF] = useState({ nome: "", documento: "", responsavel: "", telefone: "", email: "", senha: "", endereco: "", lat: null as number | null, lng: null as number | null, observacoes: "", site: "" });
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // várias transportadoras: o cliente escolhe por cards (o link ?empresa= já vem escolhido)
+  type EmpresaCard = { slug: string; nome: string; logo: string | null; cor: string | null; modo: string; nota: number | null; avaliacoes: number; entregas: number };
+  const [empresas, setEmpresas] = useState<EmpresaCard[] | null>(null);
+  const [escolhida, setEscolhida] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("empresa");
+    if (q) { setEscolhida(q); setEmpresas([]); return; }
+    void supabase().rpc("empresas_cadastro").then(({ data }) => {
+      const l = (data as EmpresaCard[] | null) ?? [];
+      setEmpresas(l);
+      if (l.length === 1) setEscolhida(l[0].slug);
+    });
+  }, []);
   const [feito, setFeito] = useState<"pendente" | "aprovado" | null>(null);
   const set = (d: Partial<typeof f>) => setF((x) => ({ ...x, ...d }));
   const base = "";
@@ -35,7 +48,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
     if (f.senha.length < 8) return setErro(ERROS.senha_curta);
     setEnviando(true);
     try {
-      const r = await fetch(`${base}/api/cadastro`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, documento: f.documento.replace(/\D/g, ""), empresa: new URLSearchParams(window.location.search).get("empresa") }) });
+      const r = await fetch(`${base}/api/cadastro`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, documento: f.documento.replace(/\D/g, ""), empresa: escolhida ?? new URLSearchParams(window.location.search).get("empresa") }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErro(ERROS[j.erro] ?? `Não deu certo (${j.erro ?? r.status}).`); setEnviando(false); return; }
       await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.senha });
@@ -56,9 +69,36 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
     </div></main>
   );
 
+  if (empresas && empresas.length > 1 && !escolhida) return (
+    <main className="tela-login">
+      <section className="escolher-empresa">
+        <button type="button" className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Já tenho conta</button>
+        <h1 className="display">Escolha quem vai fazer suas entregas</h1>
+        <p className="dica">Você pode pedir a qualquer hora depois de criar a conta.</p>
+        <div className="empresas-cards">
+          {empresas.map((e) => (
+            <button key={e.slug} type="button" className="empresa-card vidro" style={{ ["--cor-empresa" as string]: e.cor ?? "var(--ouro)" }} onClick={() => setEscolhida(e.slug)}>
+              <span className="empresa-card-logo" style={{ backgroundImage: e.logo ? `url("${e.logo}")` : undefined }}>{!e.logo && e.nome.charAt(0)}</span>
+              <strong>{e.nome}</strong>
+              <span className="empresa-card-numeros">
+                {e.nota != null ? <span><Star size={13} aria-hidden /> {e.nota.toLocaleString("pt-BR")} <small>({e.avaliacoes})</small></span> : <span className="dica">Sem avaliações ainda</span>}
+                {e.entregas > 0 && <span><Package size={13} aria-hidden /> {e.entregas.toLocaleString("pt-BR")} entregas</span>}
+              </span>
+              <span className="dica">{e.modo === "instantaneo" ? "Conta liberada na hora" : "A empresa aprova seu cadastro"}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+
   return (
     <main className="tela-login">
       <form className="caixa-login vidro entrar caixa-cadastro" onSubmit={enviar}>
+        {empresas && empresas.length > 1 && escolhida && (
+          <button type="button" className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={() => setEscolhida(null)}>
+            <Building2 size={15} aria-hidden /> {empresas.find((e) => e.slug === escolhida)?.nome} · trocar</button>
+        )}
         <button type="button" className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Já tenho conta</button>
         <Logo />
         <h2 className="display" style={{ margin: 0 }}>Criar conta</h2>
