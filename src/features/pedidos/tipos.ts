@@ -51,6 +51,8 @@ export const COR_PEDIDO: Record<StatusPedido, string> = {
 };
 
 const ERROS: Record<string, string> = {
+  acao_bloqueada: "A plataforma não liberou isso para gestores.",
+  ajuste_bloqueado: "Este ajuste está travado pela plataforma.",
   cliente_sem_agendado: "Esta conta não faz pedidos agendados (libere em Ajustes → Clientes).",
   agendamento_longe_demais: "Data longe demais: escolha um dia mais perto.",
   cliente_sem_urgente: "Esta conta não pode marcar pedido urgente.",

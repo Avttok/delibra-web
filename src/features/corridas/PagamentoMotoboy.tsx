@@ -9,6 +9,7 @@ import { toast } from "@/features/ui/toast";
 import { traduzir } from "@/features/pedidos/tipos";
 import { PARAMETROS, type ValorParametro } from "@/features/configuracoes/definicoes";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
+import { usePermissoes } from "@/features/conta/permissoes";
 import type { CalculoPagamento, Corrida } from "./tipos";
 
 type Regras = Record<string, ValorParametro>;
@@ -129,7 +130,8 @@ export function PagamentoMotoboy({ corrida, conta }: { corrida: Corrida; conta?:
   useEffect(() => { setRegras(c.pag_regras ?? {}); }, [JSON.stringify(c.pag_regras ?? {})]); // eslint-disable-line react-hooks/exhaustive-deps
   const mudou = JSON.stringify(regras) !== JSON.stringify(original);
   const proprias = Object.keys(original).length > 0;
-  const fechada = corrida.status === "cancelada";
+  const perm = usePermissoes();
+  const fechada = corrida.status === "cancelada" || !perm.pode("editar_pagamento_motoboy");
 
   async function rodar(f: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     setOcupado(true);

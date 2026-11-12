@@ -32,6 +32,8 @@ export async function POST(req: Request) {
     sbUsuario.rpc("is_gestor_pleno"), sbUsuario.rpc("pode", { p_acao: "cadastrar" }), sbUsuario.rpc("minha_org"),
   ]);
   if (podeCadastrar !== true) return Response.json({ erro: "sem_permissao" }, { status: 403 });
+  const { data: posso } = await sbUsuario.rpc("posso", { p_acao: "criar_contas" });
+  if (posso === false) return Response.json({ erro: "acao_bloqueada" }, { status: 403 });
   if ((papeis.includes("gestor") || papeis.includes("supervisor")) && pleno !== true) return Response.json({ erro: "apenas_gestor" }, { status: 403 });
   // empresa da conta nova: a de quem chamou; o Dev pode escolher qualquer uma
   const organizacaoId = dev && uuidValido(c.organizacao_id) ? c.organizacao_id : (typeof minhaOrg === "string" ? minhaOrg : null);

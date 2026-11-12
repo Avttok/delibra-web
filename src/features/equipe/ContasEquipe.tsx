@@ -21,6 +21,7 @@ export const ERROS: Record<string, string> = {
   nao_bloqueie_a_si_mesmo: "Você não pode bloquear a sua própria conta.",
   membro_em_corrida: "Essa pessoa está com uma corrida em andamento. Espere terminar (ou cancele a corrida) antes.",
   usuario_nao_encontrado: "Conta não encontrada (talvez já tenha sido excluída).",
+  acao_bloqueada: "A plataforma não liberou isso para gestores.",
   apenas_dev_cria_gestor: "Só o suporte da plataforma cria contas de gestor. Peça para ele.",
   limite_gestores_do_plano: "A empresa já tem o máximo de gestores. Fale com o suporte da plataforma para liberar mais.",
   limite_supervisores_do_plano: "A empresa já tem o máximo de supervisores. Fale com o suporte da plataforma para liberar mais.",

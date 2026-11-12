@@ -1,5 +1,7 @@
 "use client";
 
+import { usePermissoes } from "@/features/conta/permissoes";
+
 import { combina } from "@/features/ui/busca";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bike, Building2, Layers, RotateCcw, Search, Tags } from "lucide-react";
@@ -39,6 +41,8 @@ export function EditorRegras({ params, valores, cfg, estado, onDefinir, filtro }
   filtro?: string;
 }) {
   const conta = useConta();
+  const perm = usePermissoes();
+  params = params.filter((p) => perm.nivel(p.chave) !== "oculto");
   const [area, setArea] = useState<AreaParametro | "todas">("todas");
   const [secao, setSecao] = useState<string | null>(null);
   const [soExc, setSoExc] = useState(false);
@@ -88,7 +92,7 @@ export function EditorRegras({ params, valores, cfg, estado, onDefinir, filtro }
             <p className="dica" style={{ margin: "0 0 6px" }}>{GRUPOS[g].descricao}</p>
             {doGrupo.map((p) => {
               const tem = p.chave in valores;
-              const bloqueado = p.soDev && !conta.dev;
+              const bloqueado = (p.soDev && !conta.dev) || perm.nivel(p.chave) === "ver";
               return (
                 <div key={p.chave} className={`excecao ${tem ? "com" : "sem"}`}>
                   <Parametro p={p} valor={tem ? valores[p.chave] : cfg[p.chave]} estado={estado[p.chave]} mostrarGrupo={false} bloqueado={bloqueado}

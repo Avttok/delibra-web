@@ -10,6 +10,7 @@ import { AparelhosDev, ModulosDev, TarefasDev, type Aparelho, type Tarefa } from
 import { VersaoApp } from "./VersaoApp";
 import { ConversasDev, DevOculto, EmpresasDev, FaturamentoDev } from "./Plataforma";
 import { SaudeDev, UsuariosDev } from "./UsuariosDev";
+import { PermissoesDev } from "./PermissoesDev";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConta, type Papel } from "@/features/conta/conta";
@@ -35,13 +36,14 @@ const PAPEIS_MODULO: { p: Papel; rotulo: string; icone: typeof Bike }[] = [
   { p: "gestor", rotulo: "Gestores", icone: ShieldCheck }, { p: "motoboy", rotulo: "Motoboys", icone: Bike }, { p: "cliente", rotulo: "Clientes", icone: UserRound },
 ];
 
-type Aba = "empresas" | "usuarios" | "saude" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes";
+type Aba = "permissoes" | "empresas" | "usuarios" | "saude" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes";
 const GRUPOS_DEV: { titulo: string; abas: { id: Aba; rotulo: string; icone: typeof Bike }[] }[] = [
   { titulo: "Agora", abas: [
     { id: "sistema", rotulo: "Visão geral", icone: LayoutDashboard }, { id: "saude", rotulo: "Saúde do sistema", icone: Activity },
     { id: "aparelhos", rotulo: "Aparelhos", icone: Smartphone }, { id: "tarefas", rotulo: "Tarefas automáticas", icone: Timer }] },
   { titulo: "Negócio", abas: [
     { id: "empresas", rotulo: "Empresas", icone: Building2 }, { id: "usuarios", rotulo: "Usuários", icone: Users },
+    { id: "permissoes", rotulo: "Permissões dos gestores", icone: ShieldCheck },
     { id: "faturamento", rotulo: "Faturamento", icone: Wallet }, { id: "pagamentos", rotulo: "Pagamentos", icone: Wallet }] },
   { titulo: "Sistema", abas: [
     { id: "modulos", rotulo: "Módulos", icone: ToggleRight }, { id: "integracoes", rotulo: "Integrações", icone: Plug }, { id: "versao", rotulo: "Versão do app", icone: Rocket },
@@ -116,6 +118,7 @@ export function PainelDev() {
           {aba === "pagamentos" && <PagamentosDev />}
           {aba === "conversas" && <ConversasDev />}
           {aba === "usuarios" && <UsuariosDev />}
+          {aba === "permissoes" && <PermissoesDev />}
           {aba === "saude" && <SaudeDev />}
           {aba === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
           {aba === "integracoes" && <IntegracoesDev />}
@@ -147,7 +150,7 @@ export function PainelDev() {
               </table>
             )
           )}
-          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas", "usuarios", "saude", "modulos", "integracoes"].includes(aba) && <p className="dica">Carregando…</p>}
+          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas", "usuarios", "saude", "permissoes", "modulos", "integracoes"].includes(aba) && <p className="dica">Carregando…</p>}
         </div>
       </main>
     </>

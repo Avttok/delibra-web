@@ -18,6 +18,8 @@ export async function POST(req: Request) {
   if (!uuidValido(c.id)) return Response.json({ erro: "usuario_invalido" }, { status: 400 });
   if (!(await podeGerenciar(req, c.id))) return Response.json({ erro: "conta_protegida" }, { status: 403 });
   if (c.id === gestor) return Response.json({ erro: "nao_exclua_a_si_mesmo" }, { status: 400 });
+  const { data: posso } = await sb.rpc("posso", { p_acao: "excluir_contas" });
+  if (posso === false) return Response.json({ erro: "acao_bloqueada" }, { status: 403 });
 
   const { data, error } = await sb.rpc("preparar_exclusao_conta", { p_usuario: c.id, p_senha: c.senha ?? "", p_motivo: c.motivo ?? null });
   if (error) return Response.json({ erro: "falha", detalhe: error.message }, { status: 500 });

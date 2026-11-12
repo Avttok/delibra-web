@@ -10,6 +10,7 @@ import { formatarKm } from "@/features/corridas/tipos";
 import type { CalculoPagamento } from "@/features/corridas/tipos";
 import { ContaMotoboy } from "@/features/corridas/BlocoRota";
 import { EditorCalculos } from "@/features/corridas/PagamentoMotoboy";
+import { usePermissoes } from "@/features/conta/permissoes";
 import { EditarPercurso, encaixarVia, type ViaPercurso } from "@/features/corridas/EditarPercurso";
 import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas";
 import { EditorRegras, fmtRegra } from "@/features/configuracoes/Excecoes";
@@ -152,7 +153,8 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
   const cfg = useConfiguracoes();
   const editavel = !previa && EDITAVEL.includes(r.status);
   // o cálculo do motoboy muda antes e depois do aceite (até a rota ser cancelada ou o holerite fechar)
-  const mudaPagamento = !previa && r.status !== "cancelada";
+  const permPag = usePermissoes();
+  const mudaPagamento = !previa && r.status !== "cancelada" && permPag.pode("editar_pagamento_motoboy");
   const [paradas, setParadas] = useState(r.paradas);
   const [valor, setValor] = useState(r.valor_manual != null ? String(r.valor_manual).replace(".", ",") : "");
   const [regras, setRegras] = useState<Record<string, ValorParametro>>(r.pag_regras ?? {});

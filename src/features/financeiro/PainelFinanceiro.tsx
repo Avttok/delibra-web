@@ -13,6 +13,7 @@ import { ChavesEquipe, MinhasChavesPix, useChavesPix } from "./ChavesPix";
 import { formatarPix } from "@/lib/pix/identificar";
 import { Faturas } from "./Faturas";
 import { Relatorios } from "./Relatorios";
+import { usePermissoes } from "@/features/conta/permissoes";
 import { Folha } from "./Folha";
 
 type Periodo = "hoje" | "7d" | "mes" | "30d" | "90d";
@@ -37,6 +38,7 @@ function inicio(p: Periodo) {
 export function PainelFinanceiro() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const [aba, setAba] = useState<Aba>("resumo");
+  const perm = usePermissoes();
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const { chaves, recarregar: recarregarChaves } = useChavesPix();
   const conta = useConta();
@@ -148,7 +150,7 @@ export function PainelFinanceiro() {
       <main className="conteudo">
         <div className="formulario larga vidro entrar">
           <div className="segmentado segmentado-rolavel">
-            {([["resumo", "Resumo"], ["faturas", "Faturas"], ["folha", "Folha"], ["clientes", "Clientes"], ["extrato", "Extrato"], ["relatorios", "Relatórios"], ["pix", "PIX"]] as [Aba, string][]).map(([k, r]) => (
+            {([["resumo", "Resumo"], ["faturas", "Faturas"], ["folha", "Folha"], ["clientes", "Clientes"], ["extrato", "Extrato"], ["relatorios", "Relatórios"], ["pix", "PIX"]] as [Aba, string][]).filter(([k]) => k !== "relatorios" || perm.pode("exportar_dados")).map(([k, r]) => (
               <button key={k} type="button" className={aba === k ? "ativo" : ""} onClick={() => setAba(k)}>{r}</button>
             ))}
           </div>

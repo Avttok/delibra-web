@@ -1,5 +1,7 @@
 "use client";
 
+import { usePermissoes } from "@/features/conta/permissoes";
+
 import Link from "next/link";
 import { ChamadosPendentes } from "@/features/penalidades/Chamados";
 import { EmergenciasAbertas } from "@/features/penalidades/Emergencias";
@@ -40,6 +42,7 @@ const ABAS = [
 
 /** Protege as páginas do gestor e desenha o cabeçalho com o menu. */
 export function AreaGestor({ children }: { children: ReactNode }) {
+  const perm = usePermissoes();
   const [sessao, setSessao] = useState<Session | null>(null);
   const [nome, setNome] = useState("");
   const [foto, setFoto] = useState<string | null>(null);
@@ -252,7 +255,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         <header className="topo vidro">
           <Link href="/gestor/mapa" aria-label="Delibra, início" className="topo-marca"><Logo />{empresa && !marca?.logo && !marca?.nomeApp && <span className="topo-empresa">{empresa}</span>}</Link>
           <nav className="abas">
-            {ABAS.map((a) => (a.href === "/gestor/clientes" && permSup && permSup.clientes === false ? { ...a, href: "/gestor/equipe" } : a)).filter((a) => (a.href !== "/gestor/carteira" || contextoConta.modulo("carteira")) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
+            {ABAS.map((a) => (a.href === "/gestor/clientes" && permSup && permSup.clientes === false ? { ...a, href: "/gestor/equipe" } : a)).filter((a) => (a.href !== "/gestor/carteira" || (contextoConta.modulo("carteira") && perm.pode("ver_carteira"))) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
               // supervisor: só o que o gestor liberou
               && (!permSup || ((a.href !== "/gestor/carteira" || permSup.financeiro === true) && (a.href !== "/gestor/configuracoes" || permSup.ajustes === true)
                   && (a.href !== "/gestor/mapa" || permSup.mapa !== false)))).map(({ href, rotulo, icone: Icone }) => (

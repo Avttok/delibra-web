@@ -162,6 +162,8 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "despacho_modo", grupo: "despacho", rotulo: "Como a rota chega aos motoboys", descricao: "Planejadas sempre vão ao quadro para reservar (exceto \u201cDireto\u201d).", tipo: "escolha", padrao: "cascata", escopos: ["tipo", "cliente"],
     opcoes: [{ valor: "quadro", rotulo: "Quadro", dica: "Todos veem; o 1º que pegar leva. O melhor fica destacado." }, { valor: "melhor_primeiro", rotulo: "Melhor primeiro", dica: "Alguns segundos só para o melhor; depois vai ao quadro." },
              { valor: "cascata", rotulo: "Cascata", dica: "Um por vez, do mais perto ao mais longe." }, { valor: "direto", rotulo: "Direto", dica: "Espera você escolher o motoboy." }] },
+  { chave: "motoboy_rotas_simultaneas", grupo: "despacho", rotulo: "Rotas ao mesmo tempo por motoboy", descricao: "Quantas rotas (avulsas ou planejadas) um motoboy pode fazer juntas. 1 = uma de cada vez.", tipo: "numero", padrao: 1, unidade: "", min: 1, max: 10, passo: 1, escopos: ["motoboy"] },
+  { chave: "motoboy_rotas_distancia_aviso_km", grupo: "despacho", rotulo: "Avisar se a rota a mais ficar longe", descricao: "Com mais de uma rota: se a nova coleta estiver mais longe que isso das paradas que ele já tem, o app recomenda não pegar (mas deixa).", tipo: "numero", padrao: 5, unidade: "km", min: 0.5, max: 100, passo: 0.5, escopos: ["motoboy"] },
   { chave: "despacho_melhor_segundos", grupo: "despacho", rotulo: "Vez do melhor motoboy", descricao: "No \u201cMelhor primeiro\u201d: quanto tempo só ele vê a rota.", tipo: "numero", padrao: 45, unidade: "s", min: 10, max: 600, escopos: ["tipo", "cliente"] },
   { chave: "fator_rua", grupo: "navegacao", rotulo: "Fator de rua", descricao: "Linha reta × este fator até o mapa calcular a distância por ruas.", tipo: "numero", padrao: 1.3, unidade: "×", min: 1, max: 3, passo: 0.05 },
 
@@ -327,6 +329,7 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "intervalo_economia_s", grupo: "rastreamento", rotulo: "Intervalo no modo economia", descricao: "Quando o motoboy liga a economia de bateria.", tipo: "numero", padrao: 20, unidade: "s", min: 10, max: 600 },
   { chave: "disponivel_envio_min", grupo: "rastreamento", rotulo: "Sinal quando disponível", descricao: "Envio leve enquanto espera corridas.", tipo: "numero", padrao: 3, unidade: "min", min: 1, max: 30 },
   { chave: "disponivel_distancia_m", grupo: "rastreamento", rotulo: "…ou ao se deslocar", descricao: "Envia antes do tempo se andar essa distância.", tipo: "numero", padrao: 300, unidade: "m", min: 50, max: 5000, passo: 50 },
+  { chave: "disponivel_fator", grupo: "rastreamento", rotulo: "Disponível: traçado N vezes mais espaçado", descricao: "Online sem corrida, o app manda a posição como em corrida, só que N vezes mais espaçado (3 = em corrida a cada 20 m, disponível a cada 60 m). 0 = jeito leve antigo (os dois ajustes acima).", tipo: "numero", padrao: 3, unidade: "×", min: 0, max: 20, passo: 1, escopos: ["motoboy"] },
 
   { chave: "teste_admin_ignora_local", grupo: "teste", rotulo: "Admin pode ignorar a localização", descricao: "Em corridas de teste, contas gestor + motoboy podem avançar etapas fora do local.", tipo: "booleano", padrao: true },
   // ---------------------------------------------------------------- cliente: novos controles

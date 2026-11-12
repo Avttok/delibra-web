@@ -13,6 +13,7 @@ import { CatalogoCategorias, CatalogoHorarios, CatalogoTipos, CatalogoZonas } fr
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { CampoRaio } from "@/features/ui/CampoRaio";
+import { usePermissoes } from "@/features/conta/permissoes";
 import { AREAS, GRUPOS, PARAMETROS, ehRaio, igualPadrao, type AreaParametro, type DefParametro, type GrupoParametro, type ValorParametro } from "./definicoes";
 import { CampoNumero } from "@/features/ui/CampoNumero";
 import { CompartilharMotoboys } from "@/features/equipe/CompartilharMotoboys";
@@ -50,7 +51,9 @@ export function PainelConfiguracoes() {
     try { return (new URLSearchParams(window.location.search).get("area") as Pagina) || (localStorage.getItem("pwex-config-pagina") as Pagina) || "clientes"; } catch { return "clientes"; }
   });
   const conta = useConta();
-  const visiveis = PARAMETROS.filter((p) => conta.dev || !p.escondido);
+  const perm = usePermissoes();
+  // o Dev decide o que cada gestor vê e muda (Console Dev → Permissões dos gestores)
+  const visiveis = PARAMETROS.filter((p) => conta.dev || (!p.escondido && perm.nivel(p.chave) !== "oculto"));
   const [busca, setBusca] = useState("");
   const [soMudados, setSoMudados] = useState(false);
   const [estado, setEstado] = useState<Record<string, Estado>>({});
@@ -72,12 +75,12 @@ export function PainelConfiguracoes() {
   );
   const extra = PAGINAS_EXTRAS.find((x) => x.chave === pagina);
   const area = AREAS.find((a) => a.chave === pagina);
-  const gruposDaArea = area ? (Object.keys(GRUPOS) as GrupoParametro[]).filter((g) => GRUPOS[g].area === area.chave) : [];
+  const gruposDaArea = area ? (Object.keys(GRUPOS) as GrupoParametro[]).filter((g) => GRUPOS[g].area === area.chave && visiveis.some((p) => p.grupo === g)) : [];
   const nMudados = (lista: DefParametro[]) => lista.filter((p) => mudou(p, cfg[p.chave])).length;
 
   const linha = (p: DefParametro, comGrupo: boolean) => (
     <Parametro key={p.chave} p={p} valor={cfg[p.chave] ?? p.padrao} estado={estado[p.chave]} mostrarGrupo={comGrupo} onSalvar={(v) => salvar(p, v)}
-      bloqueado={p.soDev && !conta.dev} onPadrao={mudou(p, cfg[p.chave]) && !(p.soDev && !conta.dev) ? () => salvar(p, p.padrao) : undefined} />
+      bloqueado={(p.soDev && !conta.dev) || perm.nivel(p.chave) === "ver"} onPadrao={mudou(p, cfg[p.chave]) && !(p.soDev && !conta.dev) && perm.nivel(p.chave) === "editar" ? () => salvar(p, p.padrao) : undefined} />
   );
 
   return (
@@ -94,6 +97,7 @@ export function PainelConfiguracoes() {
           {AREAS.map((a) => {
             const I = ICONES_AREA[a.chave];
             const params = visiveis.filter((p) => GRUPOS[p.grupo].area === a.chave);
+            if (!params.length) return null;
             const nm = nMudados(params);
             return (
               <button key={a.chave} type="button" className={`config-grupo ${!termo && pagina === a.chave ? "ativo" : ""}`} onClick={() => ir(a.chave)}>

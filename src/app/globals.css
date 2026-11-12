@@ -2161,3 +2161,28 @@ img.avatar, img.chat-avatar { display: block; max-width: none; }
 .relatorios-totais small { font-size: 11px; color: var(--texto-3); }
 .relatorios-totais b { font-size: 18px; font-variant-numeric: tabular-nums; }
 @media (max-width: 860px) { .relatorios-tipos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ===== Lote 43: permissões dos gestores (Dev) ===== */
+.perm-titulo { margin: 8px 0 0; font-size: 15px; }
+.perm-acoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.perm-acao { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--borda); background: var(--vidro-sutil); }
+.perm-acao > span { display: grid; flex: 1; min-width: 0; }
+.perm-acao small, .perm-linha small { color: var(--texto-3); font-size: 11.5px; }
+.perm-acao.nao { border-color: color-mix(in srgb, #ef4444 45%, transparent); background: color-mix(in srgb, #ef4444 6%, transparent); }
+.perm-limpar { border: 0; background: none; color: var(--texto-3); cursor: pointer; display: grid; }
+.perm-areas { display: grid; gap: 8px; }
+.perm-area { border: 1px solid var(--borda); border-radius: 14px; overflow: hidden; }
+.perm-linha { display: flex; align-items: center; gap: 10px; padding: 9px 12px; flex-wrap: wrap; }
+.perm-linha > span { display: grid; flex: 1; min-width: 180px; }
+.perm-linha-area { background: var(--vidro-sutil); }
+.perm-grupo { border-top: 1px solid var(--borda); }
+.perm-grupo .perm-linha { padding-left: 30px; }
+.perm-chave { padding-left: 52px !important; border-top: 1px dashed color-mix(in srgb, var(--borda) 70%, transparent); font-size: 13.5px; }
+.perm-abrir { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 180px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; padding: 0; }
+.perm-abrir > span { display: grid; }
+.perm-seletor { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--campo); border: 1px solid var(--borda); }
+.perm-seletor button { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 8px; border: 0; background: none; color: var(--texto-3); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.perm-seletor button.ativo.nivel-editar { background: color-mix(in srgb, #10b981 18%, transparent); color: #34d399; }
+.perm-seletor button.ativo.nivel-ver { background: color-mix(in srgb, #3b82f6 18%, transparent); color: #60a5fa; }
+.perm-seletor button.ativo.nivel-oculto { background: color-mix(in srgb, #ef4444 16%, transparent); color: #f87171; }
+.perm-seletor button.herdado { opacity: .6; outline: 1px dashed currentColor; outline-offset: -2px; }
