@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  BadgePercent, Building2, CalendarRange, Check, ChevronDown, CodeXml, Eye, EyeOff, Handshake, MessagesSquare, Plus, Receipt, Route, Save, Trash2, Users,
+  BadgePercent, Building2, CalendarRange, Check, ChevronDown, CodeXml, Eye, EyeOff, Handshake, MessagesSquare, Plus, Receipt, Route, Save, Siren, Trash2, Users,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
@@ -69,6 +69,15 @@ export function EmpresasDev() {
   const [sel, setSel] = useState<string | "nova" | null>(null);
   const [foco, setFoco] = useState<string | null>(null);
   const [pessoas, setPessoas] = useState<{ id: string; nome: string; organizacao_id: string | null; papeis: string[] }[]>([]);
+  // de quais empresas o Dev recebe as emergências
+  const [sos, setSos] = useState<string[]>([]);
+  useEffect(() => { void supabase().rpc("dev_emergencia_orgs").then(({ data }) => setSos((data as string[]) ?? [])); }, []);
+  async function trocarSos(id: string) {
+    const { data, error } = await supabase().rpc("dev_emergencia_receber_org", { p_org: id, p_ligar: !sos.includes(id) });
+    if (error) return toast(error.message, "erro");
+    setSos((data as string[]) ?? []);
+    toast(sos.includes(id) ? "Você não recebe mais as emergências desta empresa." : "Você passa a receber as emergências desta empresa.", "ok");
+  }
 
   const carregar = useCallback(async () => {
     const sb = supabase();
@@ -127,6 +136,8 @@ export function EmpresasDev() {
               <span><Building2 size={13} aria-hidden /> {o.clientes ?? 0} clientes</span>
               <span><Route size={13} aria-hidden /> {num(o.rotas_30d)} rotas em 30 dias · {brl(o.faturado_30d)}</span>
               <span><Handshake size={13} aria-hidden /> {ALCANCE[o.compartilhar].rotulo}</span>
+              <button type="button" className={`botao-texto${sos.includes(o.id) ? " ativo" : ""}`} onClick={() => void trocarSos(o.id)} title="Receber no celular as emergências dos motoboys desta empresa">
+                <Siren size={13} aria-hidden /> {sos.includes(o.id) ? "Recebo as emergências" : "Receber emergências"}</button>
             </div>
             {atual?.id === o.id && <FormEmpresa org={o} todas={lista} pessoas={pessoas} onFechar={() => setSel(null)} onSalvo={() => void carregar()} onFocar={() => void focar(o.id)} />}
           </div>
