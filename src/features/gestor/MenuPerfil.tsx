@@ -7,8 +7,9 @@ import { ehPw, useMarcaEmpresa } from "@/features/marca/marcaEmpresa";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Camera, CodeXml, FlaskConical, Heart, KeyRound, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type, History } from "lucide-react";
+import { Camera, CodeXml, FlaskConical, Heart, KeyRound, LogOut, Moon, Palette, Sun, Trash2, UserRoundPen, X, Landmark, Type, History, ShieldCheck } from "lucide-react";
 import { TrocarSenhaModal } from "@/features/conta/TrocarSenha";
+import { DoisPassosModal } from "@/features/conta/DoisPassos";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { supabase } from "@/lib/supabase/client";
 import { ESTILOS, useTema } from "@/features/tema/tema";
@@ -38,6 +39,7 @@ function Avatar({ nome, foto, classe = "" }: { nome: string; foto: string | null
 /** Foto do usuário no topo: abre o menu com perfil, tema, modo teste e sair. */
 export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Props) {
   const cfgM = useConfiguracoes();
+  const [doisPassos, setDoisPassos] = useState(false);
   const [senha, setSenha] = useState(false);
   const marca = useMarcaEmpresa();
   const [aberto, setAberto] = useState(false);
@@ -145,6 +147,11 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
             </div>
           )}
 
+          {cfgM.saas_dois_passos === true && (
+            <button type="button" role="menuitem" className="menu-item" onClick={() => { setAberto(false); setDoisPassos(true); }}>
+              <ShieldCheck size={17} aria-hidden /> Verificação em dois passos
+            </button>
+          )}
           {cfgM.usuario_troca_senha !== false && (
             <button type="button" role="menuitem" className="menu-item" onClick={() => { setAberto(false); setSenha(true); }}>
               <KeyRound size={17} aria-hidden /> Trocar minha senha
@@ -168,6 +175,7 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
           onSalvo={(n, f) => { onPerfilSalvo(n, f); setEditando(false); }} />
       )}
       {senha && <TrocarSenhaModal email={email} onFechar={() => setSenha(false)} />}
+      {doisPassos && <DoisPassosModal onFechar={() => setDoisPassos(false)} />}
     </div>
   );
 }

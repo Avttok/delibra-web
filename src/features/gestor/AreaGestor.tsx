@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChamadosPendentes } from "@/features/penalidades/Chamados";
 import { EmergenciasAbertas } from "@/features/penalidades/Emergencias";
+import { ExigirDoisPassos } from "@/features/conta/DoisPassos";
 import { usePathname, useRouter } from "next/navigation";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -278,6 +279,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             }}
           />
         </header>
+        <ExigirDoisPassos />
         <EmergenciasAbertas />
         <ChamadosPendentes />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
