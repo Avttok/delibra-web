@@ -57,7 +57,7 @@ export function PainelJuntar({ pedidoId, empresaId, regras, onMudar }: {
   return (
     <section className="formulario vidro painel-juntar">
       <div className="titulo-linha">
-        <h3 className="display" style={{ margin: 0 }}><Combine size={18} aria-hidden /> Juntar com outros pedidos</h3>
+        <h3 className="display" style={{ margin: 0 }}><Combine size={18} aria-hidden /> Montagem da rota</h3>
         <Selo k="roteirizar_agrupar" />
       </div>
       <p className="dica" style={{ margin: 0 }}>O que vale para este pedido. Clique para mudar só aqui; a prévia das rotas se refaz.</p>

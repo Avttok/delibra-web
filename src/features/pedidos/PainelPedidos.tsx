@@ -314,6 +314,8 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
           {!finalizado && <button className="botao-texto" disabled={ocupado} onClick={() => acao("recalcular")}><RefreshCw size={15} aria-hidden /> Recalcular</button>}
           {["aprovado", "roteirizado", "em_rota"].includes(p.status) && !pontos.some((x) => x.status === "concluido") &&
             <button className="botao-texto" disabled={ocupado} onClick={() => acao("voltar_revisao")} title="Desfaz a rota enquanto nenhuma coleta/entrega foi feita"><Undo2 size={15} aria-hidden /> Voltar à revisão</button>}
+          {(p.status === "cancelado" || p.status === "recusado") &&
+            <button className="botao-texto" disabled={ocupado} onClick={() => acao("voltar_revisao")} title="O pedido volta a esperar sua revisão"><Undo2 size={15} aria-hidden /> Voltar à revisão</button>}
           {["aprovado", "roteirizado", "em_rota"].includes(p.status) && <Dica titulo="Voltar à revisão" texto="Tira o pedido das rotas (as que ficarem vazias são canceladas, e o motoboy é avisado) para você mudar valor ou regras e aprovar de novo. Só dá enquanto nenhuma coleta ou entrega foi feita." />}
           {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !finalizado && <>
             <button className="botao-texto" title="Confere no Mercado Pago o pagamento online do cliente" onClick={async () => {

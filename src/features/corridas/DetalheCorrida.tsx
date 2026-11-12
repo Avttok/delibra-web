@@ -3,7 +3,7 @@
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { ChamadosDaCorrida } from "@/features/penalidades/Chamados";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CheckCircle2, Clock, CloudOff, FlaskConical, Landmark, LockOpen, MapPinned, Route, Trash2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, CloudOff, FlaskConical, Landmark, LockOpen, MapPinned, RotateCcw, Route, Trash2, XCircle } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
 import { PassarCorrida } from "./PassarCorrida";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -194,6 +194,13 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
     if (!confirm(`Cancelar a corrida ${numeroCorrida(corrida)}?`)) return;
     const { error } = await supabase().rpc("cancelar_corrida", { p_corrida: corrida.id, p_motivo: "Cancelada pelo gestor" });
     if (error) setErro(traduzirErro(error.message));
+  }
+
+  async function reabrir() {
+    if (!confirm(`Voltar a corrida ${numeroCorrida(corrida)} para a revisão?`)) return;
+    const { data, error } = await supabase().rpc("reabrir_corrida", { p_corrida: corrida.id });
+    if (error) return setErro(traduzirErro(error.message));
+    toast((data as { rota?: string } | null)?.rota === "montada" ? "A rota voltou a montada: solte de novo quando quiser." : "Os pedidos desta rota voltaram para a revisão.", "ok");
   }
 
   async function redespachar() {
@@ -390,6 +397,9 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
         {erro && <p className="erro">{erro}</p>}
         {!["concluida", "cancelada"].includes(corrida.status) && (
           <button className="botao-perigo" onClick={cancelar}><XCircle size={16} aria-hidden /> Cancelar corrida</button>
+        )}
+        {corrida.status === "cancelada" && (
+          <button className="botao-vidro" onClick={reabrir}><RotateCcw size={16} aria-hidden /> Voltar para revisão</button>
         )}
         {["aceita", "em_andamento"].includes(corrida.status) ? (
           <p className="dica">Para apagar esta corrida, cancele-a primeiro.</p>

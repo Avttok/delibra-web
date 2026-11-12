@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Dica } from "@/features/ui/Tour";
-import { ChevronLeft, ChevronRight, Copy, Lock, LockOpen, Plus, Trash2, Wallet, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Lock, LockOpen, Plus, Trash2, Wallet, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useModoTeste } from "@/features/teste/modoTeste";
 import { toast } from "@/features/ui/toast";
@@ -18,7 +18,7 @@ interface LinhaFolha {
 }
 interface Holerite {
   status: string; rotas: number; entregas: number; km: number; calculado: number; ajustes_rotas: number; total: number; observacoes: string | null;
-  ajustes: { id: string; descricao: string; valor: number; criado_em: string }[];
+  ajustes: { id: string; descricao: string; valor: number; criado_em: string; visibilidade?: "tudo" | "valor" | "oculto" }[];
   fixos?: { tipo: string; descricao: string; detalhe?: string; valor?: number }[];
   itens: { id: string; numero: number; concluida_em: string; entregas: number; km: number; clientes: string | null; calculo: CalculoPagamento | null; ajuste: number; ajuste_motivo: string | null; valor: number; faturado: number }[];
 }
@@ -43,6 +43,9 @@ function periodo(tipo: Periodo, inicioSemana: number, ref: Date, passo: number):
   const f = new Date(d); f.setDate(f.getDate() + 6);
   return [iso(d), iso(f)];
 }
+
+const ROT_VIS: Record<string, string> = { tudo: "tudo", valor: "só o valor", oculto: "nada" };
+const PROX_VIS: Record<string, string> = { tudo: "valor", valor: "oculto", oculto: "tudo" };
 
 /** Folha de pagamento dos motoboys: período, rotas, cálculo, ajustes, fechar e pagar. */
 export function Folha() {
@@ -109,6 +112,7 @@ function DetalheHolerite({ l, ini, fim, teste, onMudou, onFechar }: { l: LinhaFo
   const [h, setH] = useState<Holerite | null>(null);
   const [aberto, setAberto] = useState<string | null>(null);
   const [desc, setDesc] = useState("");
+  const [vis, setVis] = useState("tudo");
   const [valor, setValor] = useState("");
   const carregar = useCallback(async () => {
     const { data } = await supabase().rpc("holerite", { p_motoboy: l.motoboy_id, p_inicio: ini, p_fim: fim, p_teste: teste });
@@ -164,17 +168,22 @@ function DetalheHolerite({ l, ini, fim, teste, onMudou, onFechar }: { l: LinhaFo
           <div key={i} className="linha-item"><span>{f.descricao}{f.detalhe ? <span className="dica"> · {f.detalhe}</span> : null}</span><strong>{moedaBr(f.valor)}</strong></div>
         ))}</div>
       </>)}
-      <span className="rotulo">Ajustes do período<Dica titulo="Ajustes" texto="Bônus (valor positivo) ou desconto (valor negativo, com −). O motoboy não vê o motivo: o total do ajuste aparece repartido entre as rotas do holerite dele." /></span>
+      <span className="rotulo">Ajustes do período<Dica titulo="Ajustes" texto="Bônus (valor positivo) ou desconto (com −). Em cada ajuste você escolhe o que o motoboy vê: tudo, só o valor (aparece como “Ajuste”) ou nada (não aparece para ele nem no total dele)." /></span>
       {h.ajustes.length === 0 && <p className="dica" style={{ margin: 0 }}>Nenhum (bônus, vale, desconto…).</p>}
       {h.ajustes.map((a) => (
-        <div key={a.id} className="orcamento-linha"><span>{a.descricao}</span><strong>{moedaBr(a.valor)}</strong>
+        <div key={a.id} className="orcamento-linha"><span>{a.descricao}
+          <button type="button" className="selo selo-vis" disabled={fechado} title="Toque para mudar o que o motoboy vê"
+            onClick={() => rpc("ajuste_holerite_visibilidade", { p_id: a.id, p_visibilidade: PROX_VIS[a.visibilidade ?? "tudo"] }, "Visibilidade mudada.")}>
+            {a.visibilidade === "oculto" ? <EyeOff size={11} aria-hidden /> : <Eye size={11} aria-hidden />} Motoboy vê: {ROT_VIS[a.visibilidade ?? "tudo"]}</button></span><strong>{moedaBr(a.valor)}</strong>
           {!fechado && <button className="icone" aria-label="Remover ajuste" onClick={() => rpc("remover_ajuste_holerite", { p_ajuste: a.id }, "Ajuste removido.")}><Trash2 size={13} /></button>}</div>
       ))}
       {!fechado && (
         <div className="pedido-valor">
           <label className="campo" style={{ flex: 2 }}><span>Descrição</span><input placeholder="Ex.: bônus, vale, desconto de avaria" value={desc} onChange={(e) => setDesc(e.target.value)} /></label>
           <label className="campo"><span>Valor (+/−)</span><span className="passo-campo"><span className="unidade">R$</span><input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} /></span></label>
-          <button className="botao-texto" disabled={!desc.trim() || !valor} onClick={async () => { await rpc("ajuste_holerite", { p_motoboy: l.motoboy_id, p_inicio: ini, p_fim: fim, p_descricao: desc, p_valor: Number(valor.replace(/[−–]/g, "-").replace(/R\$|\s/g, "").replace(",", ".")), p_teste: teste }, "Ajuste lançado."); setDesc(""); setValor(""); }}><Plus size={14} aria-hidden /> Lançar</button>
+          <label className="campo"><span>O motoboy vê</span><select value={vis} onChange={(e) => setVis(e.target.value)}>
+            <option value="tudo">Tudo (descrição e valor)</option><option value="valor">Só o valor</option><option value="oculto">Nada</option></select></label>
+          <button className="botao-texto" disabled={!desc.trim() || !valor} onClick={async () => { await rpc("ajuste_holerite", { p_motoboy: l.motoboy_id, p_inicio: ini, p_fim: fim, p_descricao: desc, p_valor: Number(valor.replace(/[−–]/g, "-").replace(/R\$|\s/g, "").replace(",", ".")), p_teste: teste, p_visibilidade: vis }, "Ajuste lançado."); setDesc(""); setValor(""); }}><Plus size={14} aria-hidden /> Lançar</button>
         </div>
       )}
       <div className="linha-botoes">

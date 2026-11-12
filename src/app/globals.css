@@ -1974,3 +1974,4 @@ body.com-mapa-cheio { overflow: hidden; }
 .sub-abas { display: flex; gap: 6px; margin: 8px 12px 0; padding: 4px; border-radius: 16px; background: var(--vidro-sutil); border: 1px solid var(--borda); width: fit-content; max-width: calc(100% - 24px); overflow-x: auto; }
 .sub-abas a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 12px; color: var(--texto-2); text-decoration: none; font-weight: 600; font-size: 14px; white-space: nowrap; }
 .sub-abas a.ativa { color: #0b0b0c; background: var(--ouro); }
+.selo-vis { margin-left: 8px; border: 0; cursor: pointer; color: var(--texto-3); font: inherit; font-size: 11px; display: inline-flex; gap: 4px; align-items: center; }
