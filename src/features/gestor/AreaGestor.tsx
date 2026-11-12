@@ -252,10 +252,10 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         <header className="topo vidro">
           <Link href="/gestor/mapa" aria-label="Delibra, início" className="topo-marca"><Logo />{empresa && !marca?.logo && !marca?.nomeApp && <span className="topo-empresa">{empresa}</span>}</Link>
           <nav className="abas">
-            {ABAS.filter((a) => (a.href !== "/gestor/carteira" || contextoConta.modulo("carteira")) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
+            {ABAS.map((a) => (a.href === "/gestor/clientes" && permSup && permSup.clientes === false ? { ...a, href: "/gestor/equipe" } : a)).filter((a) => (a.href !== "/gestor/carteira" || contextoConta.modulo("carteira")) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
               // supervisor: só o que o gestor liberou
               && (!permSup || ((a.href !== "/gestor/carteira" || permSup.financeiro === true) && (a.href !== "/gestor/configuracoes" || permSup.ajustes === true)
-                  && (a.href !== "/gestor/clientes" || permSup.clientes !== false) && (a.href !== "/gestor/mapa" || permSup.mapa !== false)))).map(({ href, rotulo, icone: Icone }) => (
+                  && (a.href !== "/gestor/mapa" || permSup.mapa !== false)))).map(({ href, rotulo, icone: Icone }) => (
               <Link key={href} href={href} data-tour={href.replace("/gestor/", "aba-")} className={caminho?.startsWith(href) || ((ABAS.find((x) => x.href === href) as { tambem?: string[] } | undefined)?.tambem ?? []).some((t) => caminho?.startsWith(t)) ? "ativa" : ""}>
                 <Icone size={17} aria-hidden /> {rotulo}
                 {href === "/gestor/pedidos" && paraRevisar > 0 && <span className="aba-n" aria-label={`${paraRevisar} para revisar`}>{paraRevisar}</span>}
