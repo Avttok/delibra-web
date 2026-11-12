@@ -188,9 +188,32 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
       </button>
     );
   };
+  // em andamento: blocos por cima do mapa com todos os pontos (toque no bloco abre o pedido)
+  const pinosAtivos: PinoParada[] = ativos.slice(0, 12).flatMap((p) => p.pontos.filter((x) => x.lat != null).map((x, i) => ({
+    chave: `${p.id}-${x.id}`, lat: x.lat, lng: x.lng, tipo: x.tipo, rotulo: i === 0 ? `#${p.numero}` : String(i + 1), concluida: x.status === "concluido",
+  })));
   return (
     <>
-      {ativos.length > 0 && <><h3 className="rotulo">Em andamento</h3><div className="cliente-lista">{ativos.map(linha)}</div></>}
+      {ativos.length > 0 && (
+        <section className="cliente-palco">
+          <div className="cliente-palco-mapa"><MapaCorridas paradas={pinosAtivos} enquadrar={ativos.map((p) => p.id).join()} caminhoAuto={false} legenda={false} /></div>
+          <div className="cliente-palco-blocos">
+            {ativos.map((p) => {
+              const ent = p.pontos.filter((x) => x.tipo === "entrega");
+              const feitas = ent.filter((x) => x.status === "concluido").length;
+              const passo = ["recebido", "aprovado"].includes(p.status) ? 0 : p.status === "roteirizado" ? 1 : p.status === "em_rota" ? 2 : 3;
+              return (
+                <button key={p.id} type="button" className="cliente-bloco vidro" onClick={() => onAbrir(p.id)}>
+                  <span className="cliente-bloco-topo"><strong>#{p.numero}</strong><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}</span>
+                  <span className="cliente-bloco-destino"><MapPinned size={14} aria-hidden /> {ent.length > 1 ? `${ent.length} entregas` : ent[0]?.endereco ?? "Entrega"}</span>
+                  <span className="cliente-bloco-passos" aria-label="Andamento">{[0, 1, 2, 3].map((i) => <i key={i} className={i <= passo ? "feito" : ""} />)}</span>
+                  <span className="dica">{p.tipo === "planejado" ? `Agendado para ${quando(p.quando)}` : STATUS[p.status].dica}{ent.length > 1 ? ` · ${feitas}/${ent.length}` : ""}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       {outros.length > 0 && <><h3 className="rotulo">Histórico</h3><div className="cliente-lista">{outros.map(linha)}</div></>}
     </>
   );

@@ -142,3 +142,23 @@ a.chip { text-decoration: none; }
 .dica-q-botao:hover, .dica-q-botao[aria-expanded="true"] { border-color: var(--ouro); color: var(--ouro); }
 .dica-q-balao { position: absolute; z-index: 50; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 80vw); padding: 12px 14px; border-radius: 14px; border: 1px solid var(--borda-forte); font-size: .86rem; line-height: 1.5; color: var(--texto-2); font-weight: 400; text-transform: none; letter-spacing: normal; white-space: normal; box-shadow: var(--sombra); display: flex; flex-direction: column; gap: 4px; }
 .dica-q-balao strong { color: var(--texto); font-size: .92rem; }
+
+/* ---------- pedidos em andamento: blocos por cima do mapa ---------- */
+.cliente-palco { position: relative; border-radius: 26px; overflow: hidden; border: 1px solid var(--borda); margin-bottom: 18px; min-height: 420px; display: grid; }
+.cliente-palco-mapa { position: absolute; inset: 0; }
+.cliente-palco-mapa > * { height: 100%; }
+.cliente-palco-blocos { position: relative; z-index: 2; align-self: end; display: flex; gap: 10px; overflow-x: auto; padding: 14px; scroll-snap-type: x mandatory; scrollbar-width: none; pointer-events: none; }
+.cliente-palco-blocos::-webkit-scrollbar { display: none; }
+.cliente-bloco { pointer-events: auto; scroll-snap-align: start; flex: 0 0 min(300px, 82vw); display: grid; gap: 8px; text-align: left; padding: 14px 16px; border-radius: 20px;
+  border: 1px solid var(--borda); cursor: pointer; color: inherit; font: inherit; box-shadow: 0 12px 32px rgba(0,0,0,.28); transition: transform .15s ease, border-color .15s ease; }
+.cliente-bloco:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--ouro) 60%, transparent); }
+.cliente-bloco:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+.cliente-bloco-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cliente-bloco-topo strong { font-size: 18px; }
+.cliente-bloco-destino { display: flex; gap: 6px; align-items: center; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cliente-bloco-destino svg { flex: none; color: var(--ouro); }
+.cliente-bloco-passos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cliente-bloco-passos i { height: 5px; border-radius: 99px; background: color-mix(in srgb, currentColor 14%, transparent); }
+.cliente-bloco-passos i.feito { background: var(--ouro); }
+@media (max-width: 640px) { .cliente-palco { min-height: 360px; border-radius: 20px; } }
+@media (prefers-reduced-motion: reduce) { .cliente-bloco { transition: none; } }
