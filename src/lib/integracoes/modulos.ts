@@ -7,13 +7,13 @@
 export type Resultado<T = unknown> = { ok: true; dados: T } | { ok: false; motivo: "nao_conectado" | "erro"; erro?: string };
 
 export const MODULOS = [
-  { chave: "asaas", nome: "Asaas", area: "Pagamentos", variavel: "ASAAS_API_KEY", descricao: "Cobrança com divisão em três (motoboy, empresa e plataforma) e saque por PIX." },
-  { chave: "focus", nome: "Focus NFe", area: "Nota fiscal", variavel: "FOCUS_NFE_TOKEN", descricao: "Emissor principal de nota fiscal de serviço (NFS-e)." },
+  { chave: "asaas", nome: "Asaas", area: "Pagamentos", variavel: "ASAAS_API_KEY", descricao: "Cobrança das faturas (PIX, boleto ou cartão, o cliente escolhe), com a parte da plataforma separada.", extras: ["ASAAS_WALLET_PLATAFORMA (carteira da plataforma, opcional)", "ASAAS_URL (só para testar no sandbox)"] },
+  { chave: "focus", nome: "Focus NFe", area: "Nota fiscal", variavel: "FOCUS_NFE_TOKEN", descricao: "Emissor principal de nota fiscal de serviço (NFS-e).", extras: ["CNPJ de quem emite e código do serviço em Ajustes → Nota fiscal"] },
   { chave: "plugnotas", nome: "PlugNotas", area: "Nota fiscal", variavel: "PLUGNOTAS_TOKEN", descricao: "Emissor alternativo, para quem já usa." },
   { chave: "nfeio", nome: "NFE.io", area: "Nota fiscal", variavel: "NFEIO_TOKEN", descricao: "Emissor alternativo, para quem já usa." },
   { chave: "enotas", nome: "eNotas", area: "Nota fiscal", variavel: "ENOTAS_TOKEN", descricao: "Emissor alternativo, para quem já usa." },
-  { chave: "resend", nome: "Resend", area: "E-mail", variavel: "RESEND_API_KEY", descricao: "Avisos por e-mail, código de dois passos e relatórios." },
-  { chave: "whatsapp", nome: "WhatsApp (Meta)", area: "WhatsApp", variavel: "WHATSAPP_TOKEN", descricao: "Avisos e código da corrida pelo WhatsApp." },
+  { chave: "resend", nome: "Resend", area: "E-mail", variavel: "RESEND_API_KEY", descricao: "Cadastro aprovado, fatura emitida, pedido entregue, devolução e relatórios.", extras: ["EMAIL_REMETENTE (ex.: PW Express <avisos@seudominio.com>)"] },
+  { chave: "whatsapp", nome: "WhatsApp (Meta)", area: "WhatsApp", variavel: "WHATSAPP_TOKEN", descricao: "Link de acompanhar para quem recebe, quando a rota sai.", extras: ["WHATSAPP_NUMERO_ID (id do número na Meta)", "Modelo aprovado com 2 campos (nome e link) em Ajustes → Integrações"] },
 ] as const;
 
 export const conectado = (variavel: string) => Boolean(process.env[variavel]?.trim());
@@ -28,7 +28,7 @@ async function chamar<T>(url: string, init: RequestInit): Promise<Resultado<T>> 
 }
 
 // ---------------------------------------------------------------- Asaas: cobrança com split
-export async function asaasCobrar(p: { clienteId: string; valor: number; vencimento: string; descricao: string; metodo: "PIX" | "CREDIT_CARD" | "BOLETO";
+export async function asaasCobrar(p: { clienteId: string; valor: number; vencimento: string; descricao: string; metodo: "PIX" | "CREDIT_CARD" | "BOLETO" | "UNDEFINED";
   divisao: { walletId: string; percentual?: number; fixo?: number }[]; referencia: string }): Promise<Resultado<{ id: string; invoiceUrl: string }>> {
   const chave = process.env.ASAAS_API_KEY?.trim();
   if (!chave) return { ok: false, motivo: "nao_conectado" };
@@ -37,6 +37,20 @@ export async function asaasCobrar(p: { clienteId: string; valor: number; vencime
     method: "POST", headers: { access_token: chave, "Content-Type": "application/json" },
     body: JSON.stringify({ customer: p.clienteId, billingType: p.metodo, value: p.valor, dueDate: p.vencimento, description: p.descricao, externalReference: p.referencia,
       split: p.divisao.map((d) => ({ walletId: d.walletId, ...(d.percentual != null ? { percentualValue: d.percentual } : { fixedValue: d.fixo }) })) }),
+  });
+}
+
+/** Acha (pelo CPF/CNPJ) ou cria o cliente no Asaas e devolve o id dele. */
+export async function asaasCliente(p: { documento: string; nome: string; email?: string | null; telefone?: string | null }): Promise<Resultado<{ id: string }>> {
+  const chave = process.env.ASAAS_API_KEY?.trim();
+  if (!chave) return { ok: false, motivo: "nao_conectado" };
+  const base = process.env.ASAAS_URL?.trim() || "https://api.asaas.com/v3";
+  const doc = p.documento.replace(/\D/g, "");
+  const achado = await chamar<{ data?: { id: string }[] }>(`${base}/customers?cpfCnpj=${doc}`, { method: "GET", headers: { access_token: chave } });
+  if (achado.ok && achado.dados.data?.[0]?.id) return { ok: true, dados: { id: achado.dados.data[0].id } };
+  return chamar(`${base}/customers`, {
+    method: "POST", headers: { access_token: chave, "Content-Type": "application/json" },
+    body: JSON.stringify({ name: p.nome, cpfCnpj: doc, email: p.email || undefined, mobilePhone: p.telefone?.replace(/\D/g, "") || undefined }),
   });
 }
 

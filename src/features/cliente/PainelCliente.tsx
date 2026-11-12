@@ -29,6 +29,7 @@ import { PacotesPonto, pacotesDoPonto } from "@/features/pedidos/Pacotes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
 import { Icone } from "@/features/ui/icones";
 import { AvaliarPedido, BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 // ------------------------------------------------------------------ dados
 
@@ -91,8 +92,8 @@ export function PainelCliente() {
   const [conta, setConta] = useState<Conta | null | undefined>(undefined);
   const [pedidos, setPedidos] = useState<PedidoC[] | null>(null);
   const [faturas, setFaturas] = useState<FaturaC[]>([]);
-  const [aba, setAba] = useState<Aba>("pedidos");
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [aba, setAba] = useEtapa<Aba>("cli-aba", "pedidos");
+  const [aberto, setAberto] = useEtapa<string | null>("cli-aberto", null);
 
   const carregar = useCallback(async () => {
     const sb = supabase();

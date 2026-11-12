@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { CheckCircle2, Mail, MessageCircle, Plug, Receipt, Wallet } from "lucide-react";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
 
-type Modulo = { chave: string; nome: string; area: string; variavel: string; descricao: string; conectado: boolean };
+type Modulo = { chave: string; nome: string; area: string; variavel: string; descricao: string; conectado: boolean; extras?: string[] };
 const ICONE: Record<string, typeof Wallet> = { Pagamentos: Wallet, "Nota fiscal": Receipt, "E-mail": Mail, WhatsApp: MessageCircle };
 
 /** Dev: módulos prontos e desligados. Conectar = pôr a chave no Vercel e escolher o provedor em Ajustes → Sistema → Integrações. */
@@ -52,7 +52,8 @@ export function IntegracoesDev() {
             <span className="rotulo"><I size={12} aria-hidden /> {a}</span>
             {(lista ?? []).filter((m) => m.area === a).map((m) => (
               <div key={m.chave} className="integracao">
-                <div><strong>{m.nome}</strong><span className="dica">{m.descricao}</span></div>
+                <div><strong>{m.nome}</strong><span className="dica">{m.descricao}</span>
+                  <span className="dica">Variável no Vercel: <code>{m.variavel}</code>{m.extras?.length ? <> · também: {m.extras.join(" · ")}</> : null}</span></div>
                 {m.conectado
                   ? <span className="selo selo-pago"><CheckCircle2 size={11} aria-hidden /> CONECTADO</span>
                   : <span className="selo" title={`Variável no Vercel: ${m.variavel}`}><Plug size={11} aria-hidden /> CONECTAR DEPOIS · {m.variavel}</span>}

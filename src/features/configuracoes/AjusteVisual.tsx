@@ -13,8 +13,8 @@ import { useConfiguracoes } from "./useConfiguracoes";
 type Regras = Record<string, ValorParametro>;
 
 /** Chaves que os editores visuais cobrem (somem da lista comum para não aparecer duas vezes). */
-export const CHAVES_PAGAMENTO = PARAMETROS.filter((p) => ["pag_combinar", "pag_km", "pag_zonas", "pag_entrega", "pag_fixo"].includes(p.grupo)
-  || ["repasse_motoboy_pct", "pag_volta", "pag_volta_valor_km", "pag_volta_pct"].includes(p.chave)).map((p) => p.chave);
+export const CHAVES_PAGAMENTO = PARAMETROS.filter((p) => ["pag_combinar", "pag_km", "pag_zonas", "pag_entrega", "pag_fixo", "pag_periodo"].includes(p.grupo)
+  || ["pag_modo", "repasse_motoboy_pct", "pag_volta", "pag_volta_valor_km", "pag_volta_pct"].includes(p.chave)).map((p) => p.chave);
 export const CHAVES_PRECO = ["preco_base", "preco_km", "preco_distancia_modo", "orcamento_trajeto", "soma_inclui_saida", "soma_inclui_entrega_extra", "preco_coleta_extra",
   "preco_entrega_extra", "preco_pacotes_inclusos", "preco_pacote_extra", "preco_kg_incluso", "preco_kg", "cubagem_fator", "preco_perigoso_pct", "preco_perigoso_fixo",
   "preco_express_pct", "preco_urgente_pct", "zona_combinar", "zona_cliente_exclusiva", "valor_minimo", "arredondamento"];

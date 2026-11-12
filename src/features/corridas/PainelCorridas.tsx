@@ -18,6 +18,7 @@ import { nomeCliente, useCorridas, useEmpresas, useEquipe } from "./dados";
 import { useModoTeste } from "@/features/teste/modoTeste";
 import { ATIVAS, COR_CORRIDA, PLANEJADAS, ROTULO_CORRIDA, formatarKm, hora, numeroCorrida } from "./tipos";
 import { formatarQuando, relativo } from "./planejadas";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 type Visao = { tipo: "lista" } | { tipo: "nova" } | { tipo: "detalhe"; id: string };
 
@@ -28,7 +29,7 @@ export function PainelCorridas() {
   const corridas = useMemo(() => todasCorridas.filter((c) => c.teste === teste), [todasCorridas, teste]);
   const equipe = useEquipe();
   const { empresas } = useEmpresas();
-  const [visao, setVisao] = useState<Visao>({ tipo: "lista" });
+  const [visao, setVisao] = useEtapa<Visao>("rotas-visao", { tipo: "lista" });
   // /gestor/corridas?c=<id> abre direto a rota (links vindos de Pedidos)
   useEffect(() => {
     const c = new URLSearchParams(window.location.search).get("c");

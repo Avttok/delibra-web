@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConta, type Papel } from "@/features/conta/conta";
 import { toast } from "@/features/ui/toast";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 interface ModuloLinha { chave: string; nome: string; descricao: string | null; grupo: string; ligado: boolean; papeis: Papel[] | null; ordem: number }
 interface Painel {
@@ -59,7 +60,7 @@ function ha(iso: string | null) {
 /** Console do Dev: o sistema inteiro à vista, módulos liga/desliga e quem vê cada um. */
 export function PainelDev() {
   const conta = useConta();
-  const [aba, setAba] = useState<Aba>("sistema");
+  const [aba, setAba] = useEtapa<Aba>("dev-aba", "sistema");
   const [oculto, setOculto] = useState(false);
   const lerOculto = useCallback(() => {
     void supabase().auth.getUser().then(({ data: u }) => supabase().from("perfis").select("dev_oculto").eq("id", u.user?.id ?? "").maybeSingle()

@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { COR_STATUS, ROTULO_STATUS, type StatusMotoboy } from "@/features/rastreamento/tipos";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 interface Membro {
   id: string; email: string; nome: string; foto_url: string | null; papeis: string[];
@@ -45,7 +46,7 @@ export function PainelEquipe() {
   const conta = useConta();
   const vagas = useVagas();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const [aba, setAba] = useState<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("registro");
+  const [aba, setAba] = useEtapa<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("eq-aba", "registro");
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const { empresas } = useEmpresas();

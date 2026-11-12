@@ -517,6 +517,7 @@ export const PARAMETROS: DefParametro[] = [
     opcoes: [{ valor: "nenhum", rotulo: "Desligado" }, { valor: "resend", rotulo: "Resend", dica: "Precisa conectar (Dev → Integrações)." }] },
   { chave: "dev_whatsapp_provedor", grupo: "integracoes", rotulo: "WhatsApp", descricao: "", tipo: "escolha", padrao: "nenhum", soDev: true,
     opcoes: [{ valor: "nenhum", rotulo: "Desligado" }, { valor: "meta", rotulo: "WhatsApp da Meta", dica: "Precisa conectar (Dev → Integrações)." }] },
+  { chave: "fatura_cobrar_auto", grupo: "integracoes", rotulo: "Asaas: cobrar a fatura ao emitir", descricao: "Com o Asaas conectado, cada fatura emitida já gera a cobrança (PIX, boleto ou cartão) e o link vai na fatura.", tipo: "booleano", padrao: true },
   { chave: "email_aviso_cadastro", grupo: "integracoes", rotulo: "E-mail: cadastro aprovado", descricao: "Com o e-mail conectado, o cliente recebe um e-mail quando o cadastro dele é aprovado.", tipo: "booleano", padrao: true },
   { chave: "email_aviso_fatura", grupo: "integracoes", rotulo: "E-mail: fatura emitida", descricao: "Com o e-mail conectado, o cliente recebe a fatura por e-mail quando você emite.", tipo: "booleano", padrao: true },
   { chave: "email_aviso_entregue", grupo: "integracoes", rotulo: "E-mail: pedido entregue", descricao: "Com o e-mail conectado, o cliente recebe um e-mail a cada pedido entregue.", tipo: "booleano", padrao: false },

@@ -15,6 +15,7 @@ import { Faturas } from "./Faturas";
 import { Relatorios } from "./Relatorios";
 import { usePermissoes } from "@/features/conta/permissoes";
 import { Folha } from "./Folha";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 type Periodo = "hoje" | "7d" | "mes" | "30d" | "90d";
 const ROTULO: Record<Periodo, string> = { hoje: "Hoje", "7d": "7 dias", mes: "Este mês", "30d": "30 dias", "90d": "90 dias" };
@@ -37,7 +38,7 @@ function inicio(p: Periodo) {
 /** Carteira da gestão: o que entrou, quanto é de cada parte (motoboy e gestão), extrato e chaves PIX. */
 export function PainelFinanceiro() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
-  const [aba, setAba] = useState<Aba>("resumo");
+  const [aba, setAba] = useEtapa<Aba>("fin-aba", "resumo");
   const perm = usePermissoes();
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const { chaves, recarregar: recarregarChaves } = useChavesPix();

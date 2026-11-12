@@ -33,6 +33,7 @@ import { RegrasPedido } from "./RegrasPedido";
 import { Dica } from "@/features/ui/Tour";
 import { Icone } from "@/features/ui/icones";
 import { COR_PEDIDO, ROTULO_PEDIDO, moedaBr, quando, traduzir, type Categoria, type Pedido, type StatusPedido } from "./tipos";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 type Filtro = "revisar" | "andamento" | "entregues" | "fora" | "todos";
 const FILTROS: { k: Filtro; rotulo: string; st: StatusPedido[] | null }[] = [
@@ -55,7 +56,7 @@ export function PainelPedidos() {
   const [filtro, setFiltro] = useState<Filtro>("revisar");
   const [busca, setBusca] = useState("");
   const [tipoF, setTipoF] = useState<"todos" | "agora" | "planejados" | "urgentes" | "pagamento">("todos");
-  const [sel, setSel] = useState<string | null>(null);
+  const [sel, setSel] = useEtapa<string | null>("ped-sel", null);
   // link direto (ex.: cartão do chat): /gestor/pedidos?p=<id>
   useEffect(() => { const q = new URLSearchParams(window.location.search).get("p"); if (q) setSel(q); }, []);
   const [novo, setNovo] = useState(false);

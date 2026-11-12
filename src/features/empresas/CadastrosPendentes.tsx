@@ -7,6 +7,7 @@ import { useRecarregarAoMudar } from "@/features/corridas/dados";
 import { toast } from "@/features/ui/toast";
 import { MapaCorridas } from "@/features/corridas/MapaCorridas";
 import { traduzir } from "@/features/pedidos/tipos";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 interface Cadastro {
   id: string; email: string; nome: string; responsavel: string | null; tipo: "pj" | "pf"; documento: string | null; telefone: string | null;
@@ -18,7 +19,7 @@ const doc = (d: string | null, t: string) => !d ? "sem documento" : t === "pf"
 /** Empresas que se cadastraram pelo site do cliente e esperam a aprovação do gestor. */
 export function CadastrosPendentes({ onAprovado }: { onAprovado: (empresaId: string | null) => void }) {
   const [lista, setLista] = useState<Cadastro[]>([]);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [aberto, setAberto] = useEtapa<string | null>("cad-aberto", null);
   const [express, setExpress] = useState(false);
   const [cobranca, setCobranca] = useState<"" | "pre_pago" | "credito">("");
   const [motivo, setMotivo] = useState("");

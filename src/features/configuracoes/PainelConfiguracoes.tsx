@@ -19,6 +19,7 @@ import { AREAS, GRUPOS, PARAMETROS, ehRaio, igualPadrao, type AreaParametro, typ
 import { CampoNumero } from "@/features/ui/CampoNumero";
 import { CompartilharMotoboys } from "@/features/equipe/CompartilharMotoboys";
 import { useConfiguracoes } from "./useConfiguracoes";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 const ICONES_AREA: Record<AreaParametro, LucideIcon> = {
   clientes: Building2, preco: Tags, operacao: Route, motoboys: Bike, mapa: MapIcon, comunicacao: MessageCircle, sistema: FlaskConical,
@@ -47,7 +48,7 @@ const mudou = (p: DefParametro, v: ValorParametro | undefined) => !igualPadrao(p
  */
 export function PainelConfiguracoes() {
   const cfg = useConfiguracoes();
-  const [pagina, setPagina] = useState<Pagina>(() => {
+  const [pagina, setPagina] = useEtapa<Pagina>("cfg-pagina", () => {
     // link direto (?area=operacao) vence a última página aberta
     try { return (new URLSearchParams(window.location.search).get("area") as Pagina) || (localStorage.getItem("pwex-config-pagina") as Pagina) || "clientes"; } catch { return "clientes"; }
   });

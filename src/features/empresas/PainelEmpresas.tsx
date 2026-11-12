@@ -20,6 +20,7 @@ import { combina } from "@/features/ui/busca";
 import { MapaCorridas } from "@/features/corridas/MapaCorridas";
 import type { Empresa } from "@/features/corridas/tipos";
 import type { DadosCnpj } from "@/lib/cnpj/consulta";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 interface Formulario {
   nome: string;
@@ -141,7 +142,7 @@ export function PainelEmpresas() {
   const [consultando, setConsultando] = useState(false);
   const [localizando, setLocalizando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
-  const [aba, setAba] = useState<"cadastro" | "regras" | "zonas" | "penalidades">("cadastro");
+  const [aba, setAba] = useEtapa<"cadastro" | "regras" | "zonas" | "penalidades">("emp-aba", "cadastro");
 
   const [buscaCli, setBuscaCli] = useState("");
   const [filtroCli, setFiltroCli] = useState("todos");

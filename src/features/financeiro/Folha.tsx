@@ -10,6 +10,7 @@ import { ContaMotoboy } from "@/features/corridas/BlocoRota";
 import type { CalculoPagamento } from "@/features/corridas/tipos";
 import { moedaBr, quando, traduzir } from "@/features/pedidos/tipos";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
+import { useEtapa } from "@/features/ui/useEtapa";
 
 interface LinhaFolha {
   motoboy_id: string; nome: string; foto_url: string | null; rotas: number; entregas: number; km: number; calculado: number; ajustes_rotas: number; ajustes: number;
@@ -110,7 +111,7 @@ export function Folha() {
 
 function DetalheHolerite({ l, ini, fim, teste, onMudou, onFechar }: { l: LinhaFolha; ini: string; fim: string; teste: boolean; onMudou: () => void; onFechar: () => void }) {
   const [h, setH] = useState<Holerite | null>(null);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [aberto, setAberto] = useEtapa<string | null>("folha-aberto", null);
   const [desc, setDesc] = useState("");
   const [vis, setVis] = useState("tudo");
   const [valor, setValor] = useState("");

@@ -108,6 +108,7 @@ insert into public.ajuste_grupos (chave, grupo, area) values
   ('simulador_ligado', 'teste', 'sistema'),
   ('simulador_velocidade_kmh', 'teste', 'sistema'),
   ('voltar_revisao_aceitas', 'pedidos', 'operacao'),
+  ('alerta_parado_min', 'pedidos', 'operacao'),
   ('aviso_gestor_pedido', 'pedidos', 'operacao'),
   ('aviso_gestor_sem_motoboy', 'pedidos', 'operacao'),
   ('aviso_gestor_cadastro', 'pedidos', 'operacao'),
@@ -128,6 +129,8 @@ insert into public.ajuste_grupos (chave, grupo, area) values
   ('perigoso_rota_exclusiva', 'rotas', 'operacao'),
   ('rota_revisao_gestor', 'rotas', 'operacao'),
   ('despacho_modo', 'despacho', 'operacao'),
+  ('motoboy_rotas_simultaneas', 'despacho', 'operacao'),
+  ('motoboy_rotas_distancia_aviso_km', 'despacho', 'operacao'),
   ('despacho_melhor_segundos', 'despacho', 'operacao'),
   ('fator_rua', 'navegacao', 'mapa'),
   ('pag_modo', 'pagamento', 'motoboys'),
@@ -254,6 +257,7 @@ insert into public.ajuste_grupos (chave, grupo, area) values
   ('intervalo_economia_s', 'rastreamento', 'mapa'),
   ('disponivel_envio_min', 'rastreamento', 'mapa'),
   ('disponivel_distancia_m', 'rastreamento', 'mapa'),
+  ('disponivel_fator', 'rastreamento', 'mapa'),
   ('teste_admin_ignora_local', 'teste', 'sistema'),
   ('cliente_pode_agendar', 'cli_pode', 'clientes'),
   ('cliente_pode_urgente', 'cli_pode', 'clientes'),
@@ -402,6 +406,7 @@ insert into public.ajuste_grupos (chave, grupo, area) values
   ('devolucao_taxa', 'integracoes', 'sistema'),
   ('dev_email_provedor', 'integracoes', 'sistema'),
   ('dev_whatsapp_provedor', 'integracoes', 'sistema'),
+  ('fatura_cobrar_auto', 'integracoes', 'sistema'),
   ('email_aviso_cadastro', 'integracoes', 'sistema'),
   ('email_aviso_fatura', 'integracoes', 'sistema'),
   ('email_aviso_entregue', 'integracoes', 'sistema'),
@@ -1466,3 +1471,63 @@ begin
   return (select to_jsonb(x) from public.pedidos x where x.id = p.id);
 end;
 $$;
+
+
+-- ===================================================================== Asaas: cobrança da fatura sai sozinha (quando conectado)
+alter table public.empresas add column if not exists asaas_cliente_id text;
+alter table privado.avisos_externos drop constraint if exists avisos_externos_canal_check;
+alter table privado.avisos_externos add constraint avisos_externos_canal_check check (canal in ('email', 'whatsapp', 'nota', 'cobranca'));
+
+
+create or replace function privado.enfileirar(p_org uuid, p_canal text, p_para text, p_assunto text, p_corpo jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if nullif(trim(coalesce(p_para, '')), '') is null and p_canal <> 'nota' then return; end if;
+  if p_canal = 'email' and privado.cfg_txt('dev_email_provedor', 'nenhum') = 'nenhum' then return; end if;
+  if p_canal = 'whatsapp' and privado.cfg_txt('dev_whatsapp_provedor', 'nenhum') = 'nenhum' then return; end if;
+  if p_canal = 'nota' and privado.cfg_txt('dev_nf_provedor', 'nenhum') = 'nenhum' then return; end if;
+  if p_canal = 'cobranca' and privado.cfg_txt('dev_pag_provedor', 'mercadopago') <> 'asaas' then return; end if;
+  -- a mesma nota nunca sai duas vezes
+  if p_corpo ? 'referencia' and exists (select 1 from privado.avisos_externos where canal = p_canal and corpo ->> 'referencia' = p_corpo ->> 'referencia' and status <> 'erro') then return; end if;
+  insert into privado.avisos_externos (organizacao_id, canal, para, assunto, corpo) values (p_org, p_canal, p_para, p_assunto, coalesce(p_corpo, '{}'));
+end;
+$$;
+
+
+create or replace function privado.aviso_fatura()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare e public.empresas%rowtype;
+begin
+  if new.teste then return new; end if;
+  select * into e from public.empresas where id = new.empresa_id;
+  if new.status = 'emitida' and old.status is distinct from 'emitida' and privado.cfg_org_bool(new.organizacao_id, 'email_aviso_fatura', true) then
+    perform privado.enfileirar(new.organizacao_id, 'email', e.email, 'Fatura #' || new.numero || ' emitida',
+      jsonb_build_object('modelo', 'fatura', 'nome', e.nome, 'numero', new.numero, 'total', new.total, 'vencimento', new.vencimento, 'inicio', new.inicio, 'fim', new.fim));
+  end if;
+  if new.status = 'emitida' and old.status is distinct from 'emitida' and privado.cfg_org_bool(new.organizacao_id, 'fatura_cobrar_auto', true) then
+    perform privado.enfileirar(new.organizacao_id, 'cobranca', coalesce(e.email, ''), 'Cobrança da fatura #' || new.numero,
+      jsonb_build_object('referencia', 'fatura-' || new.id, 'fatura_id', new.id, 'empresa_id', e.id, 'asaas_cliente_id', e.asaas_cliente_id,
+                         'documento', coalesce(e.cnpj, e.cpf), 'nome', e.nome, 'email', e.email, 'telefone', e.telefone,
+                         'valor', new.total, 'valor_dev', coalesce(new.valor_dev, 0), 'vencimento', coalesce(new.vencimento, current_date + 3),
+                         'descricao', 'Fatura #' || new.numero || ' · entregas de ' || to_char(new.inicio, 'DD/MM') || ' a ' || to_char(new.fim, 'DD/MM/YYYY')));
+  end if;
+  if new.status = 'paga' and old.status is distinct from 'paga' and privado.pol_txt('nf_emissao', 'manual', new.empresa_id) = 'pago' then
+    perform privado.enfileirar(new.organizacao_id, 'nota', e.email, 'Nota da fatura #' || new.numero,
+      jsonb_build_object('referencia', 'fatura-' || new.id, 'documento', coalesce(e.cnpj, e.cpf), 'nome', e.nome, 'email', e.email, 'valor', new.total,
+                         'descricao', 'Serviços de entrega de ' || to_char(new.inicio, 'DD/MM/YYYY') || ' a ' || to_char(new.fim, 'DD/MM/YYYY')));
+  end if;
+  return new;
+end;
+$$;
+
+
+create or replace function public.fatura_cobranca_criada(p_fatura uuid, p_empresa uuid, p_cliente_asaas text, p_url text)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if not privado.eh_servico() then raise exception 'apenas_servidor' using errcode = '42501'; end if;
+  if p_empresa is not null and nullif(p_cliente_asaas, '') is not null then update public.empresas set asaas_cliente_id = p_cliente_asaas where id = p_empresa; end if;
+  if p_fatura is not null and nullif(p_url, '') is not null then update public.faturas set pagamento_ref = p_url, pagamento_metodo = coalesce(pagamento_metodo, 'asaas') where id = p_fatura; end if;
+end;
+$$;
+revoke execute on function public.fatura_cobranca_criada(uuid, uuid, text, text) from public, anon, authenticated;
+do $$ begin execute 'grant execute on function public.fatura_cobranca_criada(uuid, uuid, text, text) to service_role'; exception when undefined_object then null; end $$;

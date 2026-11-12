@@ -21,6 +21,9 @@ export const CALCULOS: { modo: string; nome: string; dica: string; icone: Lucide
   { modo: "percentual", nome: "Percentual", dica: "Uma parte do valor da rota.", icone: Percent, chaves: ["repasse_motoboy_pct"] },
   { modo: "por_entrega", nome: "Por entrega", dica: "Cada entrega paga o km dela mais um fixo.", icone: Receipt, grupo: "pag_entrega" },
   { modo: "fixo", nome: "Fixo", dica: "Um valor por rota, entrega e coleta.", icone: Wallet, grupo: "pag_fixo" },
+  { modo: "salario", nome: "Salário fixo", dica: "Um valor por mês, no holerite.", icone: Wallet, chaves: ["pag_salario_mensal", "pag_salario_proporcional", "pag_minimo_periodo"] },
+  { modo: "diaria", nome: "Diária", dica: "Um valor por dia trabalhado, no holerite.", icone: Wallet, chaves: ["pag_diaria_valor"] },
+  { modo: "por_hora", nome: "Por hora", dica: "Um valor por hora em corrida, no holerite.", icone: Wallet, chaves: ["pag_hora_valor"] },
 ];
 const JUNTAR = [{ v: "soma", r: "Somar" }, { v: "media", r: "Média" }, { v: "maior", r: "O maior" }, { v: "menor", r: "O menor" }];
 const EXTRAS = ["pag_acrescimo_pct", "pag_acrescimo_rota", "pag_volta", "pag_volta_valor_km", "pag_volta_pct"];
