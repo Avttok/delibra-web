@@ -85,7 +85,7 @@ export function ApagarTudo() {
               <Bomb size={15} aria-hidden /> Apagar TUDO
             </button>
           </div>
-          <p className="dica" style={{ margin: 0 }}>As contas de acesso (motoboys, gestores, clientes) você apaga em Equipe e em Clientes.</p>
+          <ApagarContas />
         </>
       ) : (
         <>
@@ -162,5 +162,47 @@ function ZerarPedidos() {
         <button className="botao-perigo" disabled={rodando || conf !== "ZERAR"} onClick={zerar}>{rodando ? "Zerando…" : `Zerar ${rot[alvo].toLowerCase()}`}</button>
       </div>
     </section>
+  );
+}
+
+/** Apagar as contas de acesso de uma empresa ou de todas (menos as do Dev), mantendo ou não o histórico. */
+function ApagarContas() {
+  const [orgs, setOrgs] = useState<{ id: string; nome: string }[]>([]);
+  const [org, setOrg] = useState("");
+  const [papel, setPapel] = useState("");
+  const [completo, setCompleto] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [abrir, setAbrir] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  useEffect(() => { void supabase().rpc("dev_organizacoes").then(({ data }) => setOrgs(((data ?? []) as { id: string; nome: string }[]).map((o) => ({ id: o.id, nome: o.nome })))); }, []);
+  async function apagar() {
+    setOcupado(true);
+    const { data: s } = await supabase().auth.getSession();
+    const r = await fetch("/api/dev/apagar-contas", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.session?.access_token ?? ""}` },
+      body: JSON.stringify({ senha, org: org || null, papel: papel || null, completo }) }).then((x) => x.json()).catch(() => ({ erro: "rede" }));
+    setOcupado(false); setSenha("");
+    if (r.erro) return toast(r.erro === "senha_incorreta" ? `Senha incorreta${r.restantes != null ? ` (${r.restantes} tentativa(s))` : ""}.` : r.erro === "muitas_tentativas" ? "Muitas tentativas. Espere 15 minutos." : "Não deu para apagar agora.", "erro");
+    toast(`${r.apagadas} conta(s) apagada(s)${r.falhas ? `, ${r.falhas} com erro` : ""}.`, "ok", { titulo: "Contas apagadas" });
+    setAbrir(false);
+  }
+  return (
+    <div className="apagar-contas">
+      <strong>Contas de acesso</strong>
+      <span className="dica">Motoboys, gestores, supervisores e clientes (as do Dev ficam). Para uma pessoa só, use Usuários.</span>
+      <div className="linha-botoes">
+        <select value={org} onChange={(e) => setOrg(e.target.value)} aria-label="Empresa"><option value="">Todas as empresas</option>{orgs.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select>
+        <select value={papel} onChange={(e) => setPapel(e.target.value)} aria-label="Cargo"><option value="">Todos os cargos</option><option value="motoboy">Motoboys</option><option value="gestor">Gestores</option><option value="supervisor">Supervisores</option><option value="cliente">Clientes</option></select>
+        <label className="opcao" style={{ flex: 1 }}><span>{completo ? "Apagar tudo (e-mail, mensagens, cópias)" : "Manter o histórico (nomes nas rotas e cópia no registro)"}</span>
+          <input type="checkbox" role="switch" checked={completo} onChange={(e) => setCompleto(e.target.checked)} /></label>
+        <button className="botao-perigo" onClick={() => setAbrir(true)}><Trash2 size={15} aria-hidden /> Apagar contas</button>
+      </div>
+      {abrir && (
+        <div className="linha-botoes">
+          <input type="password" placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="current-password" />
+          <button className="botao-perigo forte" disabled={!senha || ocupado} onClick={apagar}>{ocupado ? "Apagando…" : `Apagar ${papel ? "os " + papel + "s" : "as contas"} ${org ? "desta empresa" : "de todas as empresas"}`}</button>
+          <button className="botao-texto" onClick={() => setAbrir(false)}>Cancelar</button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Idade } from "@/features/ui/Idade";
+
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, ArrowDownToLine, ArrowUpFromLine, Bike, Building2, CalendarClock, TriangleAlert, CheckSquare, Clock, FlaskConical, History, Megaphone, Plus, Route, Ruler, Search, Sparkles, Trash2, Users, X, Zap } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
@@ -159,6 +161,7 @@ export function PainelCorridas() {
               <div className="detalhes">
                 <span><Building2 size={12} aria-hidden /> {nomeCliente(c, empresas)}</span>
                 <span><Clock size={12} aria-hidden /> {hora(c.criada_em)}</span>
+                <Idade desde={c.criada_em} aberto={["montada", "aguardando_motoboy", "sem_motoboy"].includes(c.status)} />
                 <span><Ruler size={12} aria-hidden /> {formatarKm(c.distancia_planejada_m)}</span>
                 {entregas.length > 1 && <span><ArrowDownToLine size={12} aria-hidden /> {entregas.length} entregas</span>}
                 {c.motoboy_id && !PLANEJADAS.includes(c.status) && <span><Bike size={12} aria-hidden /> {nome(c.motoboy_id)}</span>}

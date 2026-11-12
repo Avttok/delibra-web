@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const sb = clienteDoUsuario(req);
   if (!gestor || !sb) return Response.json({ erro: "apenas_gestor" }, { status: 403 });
 
-  let c: { id?: string; senha?: string; motivo?: string };
+  let c: { id?: string; senha?: string; motivo?: string; completo?: boolean };
   try { c = await req.json(); } catch { return Response.json({ erro: "json_invalido" }, { status: 400 }); }
   if (!uuidValido(c.id)) return Response.json({ erro: "usuario_invalido" }, { status: 400 });
   if (!(await podeGerenciar(req, c.id))) return Response.json({ erro: "conta_protegida" }, { status: 403 });
@@ -27,6 +27,11 @@ export async function POST(req: Request) {
   if (!r?.ok) return Response.json({ erro: r?.erro ?? "falha", restantes: r?.restantes }, { status: 400 });
 
   const admin = supabaseAdmin();
+  // apagar tudo: some também a cópia guardada, as mensagens e o nome nas rotas
+  if (c.completo) {
+    const rr = await admin.rpc("apagar_rastros_conta", { p_usuario: c.id });
+    if (rr.error) return Response.json({ erro: "falha", detalhe: rr.error.message }, { status: 500 });
+  }
   // fotos de perfil da pessoa
   const { data: fotos } = await admin.storage.from("avatares").list(c.id);
   if (fotos?.length) await admin.storage.from("avatares").remove(fotos.map((f) => `${c.id}/${f.name}`));

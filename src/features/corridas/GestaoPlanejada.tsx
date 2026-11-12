@@ -1,7 +1,9 @@
 "use client";
 
+import { usePermissoes } from "@/features/conta/permissoes";
+
 import { useState } from "react";
-import { CalendarClock, Repeat, Send, TriangleAlert, UserCheck, UserMinus } from "lucide-react";
+import { CalendarClock, Repeat, Send, TriangleAlert, UserCheck, UserMinus, Play } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { traduzirErro, type MembroEquipe } from "./dados";
 import { formatarQuando, paraCampo, relativo } from "./planejadas";
@@ -17,6 +19,7 @@ export function GestaoPlanejada({ corrida, equipe, cfg, agora }: {
   const [motoboy, setMotoboy] = useState("");
   const [novoHorario, setNovoHorario] = useState(() => paraCampo(new Date(corrida.agendada_para ?? Date.now())));
   const [reagendando, setReagendando] = useState(false);
+  const perm = usePermissoes();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -87,6 +90,12 @@ export function GestaoPlanejada({ corrida, equipe, cfg, agora }: {
             <button className="botao-texto" disabled={enviando}
               onClick={() => acao("liberar", {}, `Tirar a reserva de ${reservado?.nome ?? "motoboy"}? A corrida volta a ficar livre para todos.`)}>
               <UserMinus size={15} aria-hidden /> Liberar reserva
+            </button>
+          )}
+          {corrida.motoboy_id && perm.pode("forcar_inicio") && (
+            <button className="botao-ouro" disabled={enviando}
+              onClick={() => acao("iniciar_agora", {}, `Começar agora com ${reservado?.nome ?? "o motoboy reservado"}? A rota vira a corrida dele na hora, sem esperar o horário.`)}>
+              <Play size={15} aria-hidden /> Começar agora
             </button>
           )}
           <button className="botao-texto" disabled={enviando}

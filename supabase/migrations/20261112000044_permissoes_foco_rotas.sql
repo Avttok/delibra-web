@@ -1377,3 +1377,92 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   left join public.motoboys m on m.id = p.id
   where p.id = auth.uid();
 $$;
+
+
+-- ===================================================================== valor cobrado do cliente: prévia com regras ainda não salvas
+create or replace function public.previa_orcamento_pedido(p_pedido uuid, p_regras jsonb default '{}')
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare p public.pedidos%rowtype;
+begin
+  if p_pedido is not null and not public.ve_pedido(p_pedido) then raise exception 'sem_permissao' using errcode = '42501'; end if;
+  if not public.is_gestor() then raise exception 'apenas_gestor' using errcode = '42501'; end if;
+  select * into p from public.pedidos where id = p_pedido;
+  if not found then raise exception 'pedido_nao_encontrado' using errcode = '22023'; end if;
+  return privado.orcar(jsonb_build_object('empresa_id', p.empresa_id, 'tipo', p.tipo, 'tipo_pedido', p.tipo_pedido, 'quando', p.quando, 'urgente', p.urgente,
+           'distancia_m', p.distancia_estimada_m, 'regras', coalesce(p_regras, '{}'),
+           'pontos', (select jsonb_agg(jsonb_build_object('tipo', x.tipo, 'lat', x.lat, 'lng', x.lng, 'dist_coleta_m', x.dist_coleta_m) order by x.ordem) from public.pedido_pontos x where x.pedido_id = p.id),
+           'itens', coalesce((select jsonb_agg(to_jsonb(i)) from public.pedido_itens i where i.pedido_id = p.id), '[]')));
+end;
+$$;
+revoke execute on function public.previa_orcamento_pedido(uuid, jsonb) from public, anon;
+grant execute on function public.previa_orcamento_pedido(uuid, jsonb) to authenticated;
+
+
+create or replace function public.definir_regras_pedido(p_pedido uuid, p_regras jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare p public.pedidos%rowtype;
+begin
+  perform privado.exigir_acao('editar_valor_pedido');
+  -- outra empresa: recusa
+  if p_pedido is not null and not public.ve_pedido(p_pedido) then raise exception 'sem_permissao' using errcode = '42501'; end if;
+  if not public.is_gestor() then raise exception 'apenas_gestor' using errcode = '42501'; end if;
+  select * into p from public.pedidos where id = p_pedido for update;
+  if not found then raise exception 'pedido_nao_encontrado' using errcode = '22023'; end if;
+  update public.pedidos set regras = privado.limpar_regras(p_regras) where id = p.id;
+  perform privado.evento_pedido(p.id, 'regras', jsonb_build_object('regras', privado.limpar_regras(p_regras)));
+  if p.status in ('recebido', 'aprovado') then perform public.revisar_pedido(p.id, 'recalcular'); end if;
+  return (select to_jsonb(x) from public.pedidos x where x.id = p.id);
+end;
+$$;
+
+
+create or replace function public.editar_orcamento(p_pedido uuid, p_linhas jsonb, p_percentuais jsonb default '[]', p_minimo numeric default null, p_motivo text default null)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  p        public.pedidos%rowtype;
+  l        jsonb;
+  v_linhas jsonb := '[]';
+  v_pcts   jsonb := '[]';
+  v_sub    numeric := 0; v_fixos numeric := 0; v_pct numeric := 0;
+  v_val    numeric; v_min numeric; v_total numeric;
+  v_orc    jsonb;
+begin
+  perform privado.exigir_acao('editar_valor_pedido');
+  -- outra empresa: recusa
+  if p_pedido is not null and not public.ve_pedido(p_pedido) then raise exception 'sem_permissao' using errcode = '42501'; end if;
+  if not public.is_gestor() then raise exception 'apenas_gestor' using errcode = '42501'; end if;
+  select * into p from public.pedidos where id = p_pedido for update;
+  if not found then raise exception 'pedido_nao_encontrado' using errcode = '22023'; end if;
+  if p.fatura_id is not null and exists (select 1 from public.faturas f where f.id = p.fatura_id and f.status <> 'rascunho') then
+    raise exception 'pedido_ja_faturado' using errcode = '22023';
+  end if;
+  if p_linhas is null or jsonb_typeof(p_linhas) <> 'array' or jsonb_array_length(p_linhas) > 80 then raise exception 'orcamento_invalido' using errcode = '22023'; end if;
+  for l in select * from jsonb_array_elements(p_linhas) loop
+    if coalesce(trim(l ->> 'rotulo'), '') = '' then continue; end if;
+    v_val := round(coalesce(nullif(l ->> 'valor', '')::numeric, nullif(l ->> 'qtd', '')::numeric * nullif(l ->> 'unit', '')::numeric, 0), 2);
+    v_linhas := v_linhas || (jsonb_strip_nulls(jsonb_build_object('chave', l ->> 'chave', 'rotulo', left(l ->> 'rotulo', 80), 'qtd', nullif(l ->> 'qtd', '')::numeric,
+                  'unit', nullif(l ->> 'unit', '')::numeric, 'unidade', l ->> 'unidade', 'fixo', nullif((l ->> 'fixo')::boolean, false),
+                  'detalhe', case when nullif(l ->> 'qtd', '') is not null and nullif(l ->> 'unit', '') is not null
+                                  then format('%s %s × R$ %s', l ->> 'qtd', coalesce(l ->> 'unidade', ''), l ->> 'unit') else nullif(left(l ->> 'detalhe', 160), '') end))
+                || jsonb_build_object('valor', v_val));
+    if coalesce((l ->> 'fixo')::boolean, false) then v_fixos := v_fixos + v_val; else v_sub := v_sub + v_val; end if;
+  end loop;
+  for l in select * from jsonb_array_elements(coalesce(p_percentuais, '[]')) loop
+    if coalesce(trim(l ->> 'rotulo'), '') = '' or coalesce(nullif(l ->> 'pct', '')::numeric, 0) = 0 then continue; end if;
+    v_pcts := v_pcts || jsonb_build_object('rotulo', left(l ->> 'rotulo', 80), 'pct', (l ->> 'pct')::numeric);
+    v_pct := v_pct + (l ->> 'pct')::numeric;
+  end loop;
+  v_min := greatest(coalesce(p_minimo, (p.orcamento ->> 'minimo')::numeric, 0), 0);
+  v_total := privado.arredondar(greatest(v_sub * (1 + v_pct / 100.0) + v_fixos, v_min, 0));
+  v_orc := coalesce(p.orcamento, '{}') || jsonb_build_object(
+    'linhas', v_linhas, 'percentuais', v_pcts, 'subtotal', round(v_sub + v_fixos, 2), 'acrescimo_pct', v_pct, 'minimo', v_min, 'total', v_total,
+    'editado', true, 'editado_em', now(), 'editado_por', auth.uid(), 'motivo', nullif(trim(p_motivo), ''),
+    'original', coalesce(p.orcamento -> 'original', p.orcamento - 'original'));
+  update public.pedidos set orcamento = v_orc, valor_calculado = v_total, valor = v_total, valor_ajuste = 0,
+         ajuste_motivo = coalesce(nullif(trim(p_motivo), ''), ajuste_motivo), valor_dev = round(v_total * dev_pct / 100, 2)
+   where id = p.id;
+  perform privado.valores_rota(x.corrida_id) from (select distinct corrida_id from public.paradas where pedido_id = p.id) x;
+  perform privado.evento_pedido(p.id, 'orcamento_editado', jsonb_build_object('de', p.valor, 'para', v_total, 'motivo', p_motivo));
+  return (select to_jsonb(x) from public.pedidos x where x.id = p.id);
+end;
+$$;

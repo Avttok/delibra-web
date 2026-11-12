@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Activity, Battery, Bike, Building2, Check, CodeXml, Database, KeyRound, Lock, LockOpen, PlugZap, Power, RefreshCw, Search, ShieldCheck, Timer, UserCog, UserRound, Users, Wifi } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
-import { chamar } from "@/features/equipe/ContasEquipe";
+import { chamar, ExcluirConta } from "@/features/equipe/ContasEquipe";
 
 type Usuario = {
   id: string; nome: string; email: string | null; papeis: string[]; foto: string | null; organizacao_id: string | null; organizacao: string | null; empresa: string | null;
@@ -42,6 +42,9 @@ export function UsuariosDev() {
   useEffect(() => { void supabase().rpc("dev_organizacoes").then(({ data }) => setOrgs(((data ?? []) as { id: string; nome: string }[]).map((o) => ({ id: o.id, nome: o.nome })))); }, []);
   const vis = (lista ?? []).filter((u) => !cargo || u.papeis.includes(cargo));
   const conta = (p: string) => (lista ?? []).filter((u) => u.papeis.includes(p)).length;
+  // separados por empresa (sem empresa e Dev por último)
+  const grupos = Object.entries(vis.reduce<Record<string, Usuario[]>>((m, u) => { const k = u.organizacao ?? (u.papeis.includes("dev") ? "Plataforma (Dev)" : "Sem empresa"); (m[k] ??= []).push(u); return m; }, {}))
+    .sort(([a], [b]) => (a.startsWith("Plataforma") || a === "Sem empresa" ? 1 : 0) - (b.startsWith("Plataforma") || b === "Sem empresa" ? 1 : 0) || a.localeCompare(b));
 
   return (
     <section className="dev-sec">
@@ -57,9 +60,14 @@ export function UsuariosDev() {
           {CARGOS.map((c) => <button key={c.p} type="button" className={cargo === c.p ? "ativo" : ""} onClick={() => setCargo(c.p)}>{c.r} <small>{conta(c.p)}</small></button>)}
         </div>
       </div>
-      <ul className="dev-usuarios">
-        {vis.map((u) => <LinhaUsuario key={u.id} u={u} orgs={orgs} aberto={aberto === u.id} onAbrir={() => setAberto(aberto === u.id ? null : u.id)} onMudou={() => void carregar()} />)}
-      </ul>
+      {grupos.map(([nomeOrg, us]) => (
+        <div key={nomeOrg} className="dev-usuarios-grupo">
+          <h3><Building2 size={14} aria-hidden /> {nomeOrg} <small>{us.length} conta(s)</small></h3>
+          <ul className="dev-usuarios">
+            {us.map((u) => <LinhaUsuario key={u.id} u={u} orgs={orgs} aberto={aberto === u.id} onAbrir={() => setAberto(aberto === u.id ? null : u.id)} onMudou={() => void carregar()} />)}
+          </ul>
+        </div>
+      ))}
       {lista && !vis.length && <p className="vazio">Ninguém com esse filtro.</p>}
     </section>
   );
@@ -130,6 +138,7 @@ function LinhaUsuario({ u, orgs, aberto, onAbrir, onMudou }: { u: Usuario; orgs:
               {online && <button className="botao-texto" disabled={ocupado} onClick={() => rodar(() => rpc("dev_forcar_offline", { p_motoboy: u.id }), "Motoboy ficou offline.")}><Power size={14} aria-hidden /> Deixar offline</button>}
             </div>
             {senha && <pre className="acesso-criado">{`E-mail: ${u.email}\nSenha: ${senha}`}</pre>}
+            {!u.papeis.includes("dev") && <ExcluirConta id={u.id} nome={u.nome} email={u.email ?? ""} onExcluida={onMudou} />}
           </div>
         </div>
       )}

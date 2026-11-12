@@ -265,14 +265,15 @@ export function ExcluirConta({ id, nome, email, onExcluida }: { id: string; nome
   const [entendi, setEntendi] = useState(false);
   const [senha, setSenha] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [completo, setCompleto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const fechar = () => { setAberto(false); setEntendi(false); setSenha(""); setMotivo(""); setErro(null); };
+  const fechar = () => { setAberto(false); setEntendi(false); setSenha(""); setMotivo(""); setErro(null); setCompleto(false); };
 
   async function excluir() {
     setErro(null);
     setEnviando(true);
-    const r = await chamar("/api/equipe/excluir", { id, senha, motivo });
+    const r = await chamar("/api/equipe/excluir", { id, senha, motivo, completo });
     setEnviando(false);
     if (!r.ok) {
       setSenha("");
@@ -296,7 +297,13 @@ export function ExcluirConta({ id, nome, email, onExcluida }: { id: string; nome
             <span><strong>{email}</strong> deixa de existir: não entra mais no app nem no painel e some da equipe. Isso não pode ser desfeito.
               As corridas feitas por essa pessoa continuam no histórico, com o nome guardado.</span>
           </div>
-          <label className="campo"><span>Motivo (opcional, fica no registro)</span><input value={motivo} maxLength={200} onChange={(e) => setMotivo(e.target.value)} /></label>
+          <div className="segmentado escolha-apagar" role="radiogroup" aria-label="Como apagar">
+            <button type="button" role="radio" aria-checked={!completo} className={!completo ? "ativo" : ""} onClick={() => setCompleto(false)}>
+              <strong>Apagar e manter o histórico</strong><small>As rotas continuam com o nome da pessoa e fica uma cópia no registro.</small></button>
+            <button type="button" role="radio" aria-checked={completo} className={completo ? "ativo" : ""} onClick={() => setCompleto(true)}>
+              <strong>Apagar tudo</strong><small>Some o e-mail, a cópia, as mensagens, o jogo e o PIX. Nas rotas fica só “Conta apagada”.</small></button>
+          </div>
+          {!completo && <label className="campo"><span>Motivo (opcional, fica no registro)</span><input value={motivo} maxLength={200} onChange={(e) => setMotivo(e.target.value)} /></label>}
           <label className="opcao"><span>Entendo que a exclusão é definitiva</span><input type="checkbox" checked={entendi} onChange={(e) => setEntendi(e.target.checked)} /></label>
           <label className="campo"><span>Sua senha, para confirmar</span>
             <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)}

@@ -2186,3 +2186,32 @@ img.avatar, img.chat-avatar { display: block; max-width: none; }
 .perm-seletor button.ativo.nivel-ver { background: color-mix(in srgb, #3b82f6 18%, transparent); color: #60a5fa; }
 .perm-seletor button.ativo.nivel-oculto { background: color-mix(in srgb, #ef4444 16%, transparent); color: #f87171; }
 .perm-seletor button.herdado { opacity: .6; outline: 1px dashed currentColor; outline-offset: -2px; }
+.escolha-apagar { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.escolha-apagar button { display: grid; gap: 3px; text-align: left; padding: 10px 12px !important; height: auto !important; white-space: normal; }
+.escolha-apagar small { font-weight: 400; color: var(--texto-3); font-size: 12px; line-height: 1.35; }
+.escolha-apagar button.ativo small { color: inherit; opacity: .8; }
+@media (max-width: 560px) { .escolha-apagar { grid-template-columns: 1fr; } }
+.apagar-contas { display: grid; gap: 8px; padding: 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, #ef4444 40%, var(--borda)); background: color-mix(in srgb, #ef4444 5%, transparent); }
+.dev-usuarios-grupo { display: grid; gap: 6px; }
+.dev-usuarios-grupo h3 { margin: 8px 0 0; font-size: 14px; display: flex; align-items: center; gap: 6px; color: var(--ouro); }
+.dev-usuarios-grupo h3 small { color: var(--texto-3); font-weight: 500; }
+
+/* ===== Lote 43: tela cheia do mapa = só o mapa (some topo, abas, trilho e barras) ===== */
+body.com-mapa-cheio .painel > .topo, body.com-mapa-cheio .sub-abas, body.com-mapa-cheio .rodape, body.com-mapa-cheio .topo .abas,
+body.com-mapa-cheio .pilulas-mapa, body.com-mapa-cheio .toasts-fixos, body.com-mapa-cheio .cliente-area > .topo { display: none !important; }
+/* nada acima do mapa pode prender o "fixed" (desfoque e transformações criam um quadro próprio) */
+body.com-mapa-cheio *:has(.mapa-cheia), body.com-mapa-cheio *:has(.mapa-caixa.mapa-cheia) {
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; transform: none !important; filter: none !important; contain: none !important;
+}
+body.com-mapa-cheio .painel { padding-bottom: 0 !important; }
+.idade { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--texto-3); font-weight: 600; white-space: nowrap; }
+.idade.alerta { color: #fbbf24; background: color-mix(in srgb, #f59e0b 14%, transparent); padding: 1px 7px; border-radius: 99px; }
+
+/* ===== Lote 43: letra da foto de perfil no centro exato do círculo ===== */
+span.avatar, .chat-avatar:not(img), .dev-avatar, span.membro-avatar, span.avatar-grande {
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  padding: 0 !important; text-align: center; text-indent: 0; letter-spacing: 0 !important; word-spacing: 0;
+  text-transform: uppercase; font-variant-numeric: normal; line-height: 1 !important; white-space: nowrap; overflow: hidden;
+  text-box: trim-both cap alphabetic;
+}
+span.avatar::before, span.avatar::after { content: none !important; }

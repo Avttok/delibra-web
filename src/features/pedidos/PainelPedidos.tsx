@@ -16,6 +16,9 @@ import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas"
 import { buscarPercursos } from "@/lib/mapa/percursos";
 import { SelosPonto, type OpcoesDoPonto } from "./OpcoesPonto";
 import { EditarOrcamento } from "./EditarOrcamento";
+import { ValorCliente } from "./ValorCliente";
+import { Idade } from "@/features/ui/Idade";
+import type { ValorParametro } from "@/features/configuracoes/definicoes";
 import { OrcamentoNoMapa } from "./OrcamentoNoMapa";
 import { distanciasColetaEntrega } from "@/features/geo";
 import { RotasDoPedido } from "./RotasDoPedido";
@@ -130,7 +133,7 @@ export function PainelPedidos() {
                   {p.orcamento?.perigoso && <FlaskConical size={13} style={{ color: "var(--vermelho)" }} aria-label="Perigoso" />}
                   <span className="espaco" /><strong>{moedaBr(p.valor)}</strong>
                 </div>
-                <span className="linha-pedido-cliente">{cliente(p)}</span>
+                <span className="linha-pedido-cliente">{cliente(p)} <Idade desde={p.criado_em} aberto={["recebido", "aprovado"].includes(p.status)} /></span>
                 <span className="dica">{p.tipo === "planejado" ? `Para ${quando(p.quando)}` : `Pedido ${quando(p.criado_em)}`} · {ent} entrega{ent === 1 ? "" : "s"}{p.origem === "cliente" ? " · pelo site" : ""}</span>
               </button>
             );
@@ -260,7 +263,14 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
 
       <div className="formulario vidro">
         <h3 className="display" style={{ margin: 0 }}><Wallet size={18} aria-hidden /> Cobrança</h3>
-        {p.orcamento ? <EditarOrcamento key={JSON.stringify(p.orcamento.linhas)} pedidoId={p.id} orc={p.orcamento} bloqueado={["cancelado", "recusado"].includes(p.status)} /> : <p className="dica">Sem orçamento.</p>}
+        <ValorCliente key={`${p.id}-${JSON.stringify(p.orcamento?.linhas ?? [])}`} pedidoId={p.id} orc={p.orcamento} regrasIniciais={regras as Record<string, ValorParametro>}
+          bloqueado={finalizado || ["cancelado", "recusado"].includes(p.status)} onMudou={(r) => setRegras(r)} />
+        {p.orcamento && (
+          <details className="avancado">
+            <summary>Mudar linha a linha</summary>
+            <EditarOrcamento key={JSON.stringify(p.orcamento.linhas)} pedidoId={p.id} orc={p.orcamento} bloqueado={["cancelado", "recusado"].includes(p.status)} />
+          </details>
+        )}
         {["recebido", "aprovado"].includes(p.status) && (
           // distância do preço: pelas ruas (o caminho do motoboy) ou linha reta
           <div className="campo"><span>Distância do preço</span>

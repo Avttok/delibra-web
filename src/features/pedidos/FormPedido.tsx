@@ -39,6 +39,7 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
   const [urgente, setUrgente] = useState(false);
   const [pontos, setPontos] = useState<Ponto[]>(() => [ponto("coleta"), ponto("entrega")]);
   const [itens, setItens] = useState<ItemForm[]>([]);
+  const [paraTodos, setParaTodos] = useState(false);
   const [regras, setRegras] = useState<Record<string, unknown>>({});
   const [obs, setObs] = useState("");
   const [rota, setRota] = useState<Rota | null>(null);
@@ -200,10 +201,15 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
               aoClicar={async (lat, lng) => { const k = escolhendo; if (!k) return; setEscolhendo(null); atualizar(k, { lat, lng }); atualizar(k, { endereco: await geo.enderecoDoPonto(lat, lng) }); }} />
           </div>
           <section className="formulario vidro">
-            <h3 className="display" style={{ margin: 0 }}><Boxes size={18} aria-hidden /> Itens</h3>
-            {itens.length === 0 && <p className="dica" style={{ margin: 0 }}>Toque no tipo do que vai ser levado. Sem itens, o pedido conta como 1 volume sem peso.</p>}
-            <p className="dica" style={{ margin: 0 }}>Cada pacote fica na entrega para onde vai (na lista de endereços). Aqui, os que vão para todas ou ainda sem endereço.</p>
-            <ItensPedido itens={itens} onMudar={setItens} categorias={categorias} pontos={pontos} objetos={objetos} soGerais />
+            {!paraTodos && !itens.some((x) => !x.entrega) ? (
+              <button type="button" className="botao-texto" style={{ justifySelf: "start" }} onClick={() => setParaTodos(true)}>
+                <Boxes size={15} aria-hidden /> Especificar pacote para entregar em todos os pontos de entrega
+              </button>
+            ) : (<>
+              <h3 className="display" style={{ margin: 0 }}><Boxes size={18} aria-hidden /> Para todas as entregas</h3>
+              <p className="dica" style={{ margin: 0 }}>Cada pacote fica na entrega para onde vai (na lista de endereços). Aqui, os que vão para todas ou ainda sem endereço.</p>
+              <ItensPedido itens={itens} onMudar={setItens} categorias={categorias} pontos={pontos} objetos={objetos} soGerais />
+            </>)}
             {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: vai com cuidado especial e, se a regra estiver ligada, em rota própria.</p>}
             <textarea placeholder="Observações para o motoboy" value={obs} onChange={(e) => setObs(e.target.value)} />
           </section>
