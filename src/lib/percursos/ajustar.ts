@@ -168,7 +168,18 @@ async function casarOsrm(pts: PingBruto[], o: Opcoes): Promise<[number, number][
     if (!j) return undefined;
     let pedaco: [number, number][] = [];
     if (j.code === "Ok" && Array.isArray(j.matchings)) {
-      for (const m of j.matchings as { geometry?: { coordinates?: [number, number][] } }[]) for (const [lng, lat] of m.geometry?.coordinates ?? []) pedaco.push([+lat.toFixed(6), +lng.toFixed(6)]);
+      // O OSRM devolve o casamento em pedaços quando não consegue ligar uma parte (e larga os pings dela).
+      // Colar um pedaço no outro faz a linha "pular" em reta; aqui cada ping de fora entra no lugar dele.
+      const ms = j.matchings as { geometry?: { coordinates?: [number, number][] } }[];
+      const tps = (Array.isArray(j.tracepoints) ? j.tracepoints : []) as ({ matchings_index?: number } | null)[];
+      const usados = new Set<number>();
+      parte.forEach((p, k) => {
+        const mi = tps[k]?.matchings_index;
+        if (mi == null || !ms[mi]) { pedaco.push([p[1], p[2]]); return; }
+        if (usados.has(mi)) return;
+        usados.add(mi);
+        for (const [lng, lat] of ms[mi].geometry?.coordinates ?? []) pedaco.push([+lat.toFixed(6), +lng.toFixed(6)]);
+      });
     }
     if (pedaco.length < 2) {
       pedaco = [];
@@ -185,6 +196,36 @@ async function casarOsrm(pts: PingBruto[], o: Opcoes): Promise<[number, number][
   return linha.length >= 2 ? linha : null;
 }
 
+/** Distância (m) de um ponto até o segmento a–b, em plano local (bom para poucos km). */
+function ateSegmento(p: [number, number], a: [number, number], b: [number, number]) {
+  const k = Math.cos((p[0] * Math.PI) / 180) * 111320, m = 110540;
+  const ax = (a[1] - p[1]) * k, ay = (a[0] - p[0]) * m, bx = (b[1] - p[1]) * k, by = (b[0] - p[0]) * m;
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  const t = l2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2)) : 0;
+  return Math.hypot(ax + t * dx, ay + t * dy);
+}
+
+/**
+ * A linha pelas ruas tem que passar perto dos pings. Quando o mapa pula uma parte (casou só o começo
+ * e o fim, ou devolveu pedaços soltos), a linha corta em reta e os pings do meio ficam longe dela:
+ * aí o traçado não vale e o trecho fica com os pings. Um ping solto longe (leitura ruim) é tolerado.
+ */
+export function cobrePings(linha: [number, number][], pts: [number, number][], raio: number): boolean {
+  if (linha.length < 2 || pts.length < 2) return true;
+  const tol = Math.max(60, raio * 2.5);
+  let fora = 0, inicioFora: [number, number] | null = null;
+  for (const p of pts) {
+    let d = Infinity;
+    for (let i = 0; i < linha.length - 1 && d > tol; i++) d = Math.min(d, ateSegmento(p, linha[i], linha[i + 1]));
+    if (d <= tol) { fora = 0; inicioFora = null; continue; }
+    fora++;
+    inicioFora ??= p;
+    // dois ou mais pings seguidos longe da linha, cobrindo mais que um quarteirão: a linha pulou essa parte
+    if (fora >= 2 && metros(inicioFora, p) > 150) return false;
+  }
+  return true;
+}
+
 /** Casa um trecho com as ruas. null = o mapa não respondeu (tenta de novo depois); [] = não deu (fica com os pings). */
 async function casar(pts: PingBruto[], o: Opcoes): Promise<[number, number][] | null> {
   const crus = pts.map((p) => [p[1], p[2]] as [number, number]);
@@ -197,6 +238,8 @@ async function casar(pts: PingBruto[], o: Opcoes): Promise<[number, number][] | 
     const r = await f(pts, o);
     if (r === undefined) { semResposta = true; continue; }
     if (!r) continue;
+    // a linha pulou parte do caminho (reta entre pedaços): tenta o outro provedor
+    if (!cobrePings(r, crus, o.raio)) continue;
     const linha = o.tiraVoltas ? tirarVoltas(r, o.voltaMax) : r;
     // traçado absurdo (desvio enorme perto do que os pings mostram): tenta o outro provedor
     if (comprimento(linha) > real * 2.2 + 600) continue;
@@ -207,7 +250,7 @@ async function casar(pts: PingBruto[], o: Opcoes): Promise<[number, number][] | 
 
 const tamanhoTrecho = (o: Opcoes) => (o.provedor === "valhalla" ? 180 : 50);
 const chaveTrecho = (pts: PingBruto[], o: Opcoes) =>
-  `${pts[0][0]}|${pts[0][5]}|${pts[pts.length - 1][5]}|${pts.length}|v3${o.provedor[0]}${o.perfil[0]}${o.raio}${o.tiraVoltas ? "t" + o.voltaMax : "f"}`;
+  `${pts[0][0]}|${pts[0][5]}|${pts[pts.length - 1][5]}|${pts.length}|v4${o.provedor[0]}${o.perfil[0]}${o.raio}${o.tiraVoltas ? "t" + o.voltaMax : "f"}`;
 
 async function lerOpcoes(sb: SupabaseClient): Promise<Opcoes> {
   try {
