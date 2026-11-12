@@ -382,7 +382,10 @@ function proximoComHora(hora: string, antecedenciaMin: number): string {
   return paraCampo(d);
 }
 
+const PASSOS_PEDIDO = ["Endereços", "Pacotes", "Horário", "Pagamento"];
+
 function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) => void }) {
+  const [passo, setPasso] = useState(0);
   const coletaPadrao = (): Ponto => ponto("coleta", conta.endereco ? { endereco: conta.endereco, lat: conta.lat, lng: conta.lng, instrucoes: conta.instrucoes_coleta ?? "" } : {});
   const [pontos, setPontos] = useState<Ponto[]>(() => [coletaPadrao(), ponto("entrega")]);
   const [itens, setItens] = useState<ItemForm[]>([]);
@@ -539,8 +542,15 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
   return (
     <div className="cliente-novo">
       <div className="cliente-coluna">
+        <nav className="passos-pedido" aria-label="Etapas do pedido">
+          {PASSOS_PEDIDO.map((t, i) => (
+            <button key={t} type="button" className={`passo-pedido${i === passo ? " atual" : i < passo ? " feito" : ""}`} aria-current={i === passo ? "step" : undefined} onClick={() => setPasso(i)}>
+              <span>{i < passo ? <CheckCircle2 size={14} aria-hidden /> : i + 1}</span>{t}
+            </button>
+          ))}
+        </nav>
         {conta.pode_modelos !== false && (modelos.length > 0 || salvarComo != null) && (
-          <div className="cliente-cartao vidro">
+          <div className={`cliente-cartao vidro${passo !== 0 ? " passo-oculto" : ""}`}>
             <span className="rotulo"><Bookmark size={13} aria-hidden /> Meus modelos<Dica titulo="Modelos" texto="Um pedido que se repete, guardado. Toque nele para preencher tudo de novo; dá para mudar o que quiser antes de enviar." /></span>
             <div className="linha-chips modelos">
               {modelos.map((m) => (
@@ -553,7 +563,7 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
           </div>
         )}
 
-        <div className="cliente-cartao vidro">
+        <div className={`cliente-cartao vidro${passo !== 2 ? " passo-oculto" : ""}`}>
           <span className="rotulo">Quando</span>
           <div className="segmentado" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <button type="button" className={!agendar ? "ativo" : ""} disabled={!podeAgora} onClick={() => setAgendar(false)}><Zap size={14} aria-hidden /> Agora</button>
@@ -576,7 +586,7 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
           {conta.pode_urgente !== false && <label className="opcao"><span><Zap size={14} aria-hidden style={{ color: "var(--vermelho)" }} /> Urgente<Dica titulo="Urgente" texto="Passa na frente: a rota sai sozinha, não espera juntar com outros pedidos e chega até motoboys fora do raio deles. Pode custar mais, conforme o combinado com a empresa." /></span><input type="checkbox" role="switch" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} /></label>}
         </div>
 
-        <div className="cliente-cartao vidro">
+        <div className={`cliente-cartao vidro${passo !== 0 && passo !== 1 ? " passo-oculto" : ""}${passo === 1 ? " passo-pacotes" : ""}`}>
           <span className="rotulo">Endereços</span>
           <ListaOrdenavel itens={pontos} chave={(p) => p.chave} onMudar={setPontos} render={(p, i, alca) => (
             <div className={`parada-form ${p.tipo}`}>
@@ -627,12 +637,19 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
           {(conta.max_entregas || conta.max_coletas) ? <p className="dica" style={{ margin: 0 }}>Até {conta.max_entregas ? `${conta.max_entregas} entregas` : ""}{conta.max_entregas && conta.max_coletas ? " e " : ""}{conta.max_coletas ? `${conta.max_coletas} coletas` : ""} por pedido.</p> : null}
         </div>
 
-        <div className="cliente-cartao vidro">
+        <div className={`cliente-cartao vidro${passo !== 1 ? " passo-oculto" : ""}`}>
           <span className="rotulo"><Boxes size={13} aria-hidden /> {nEntregas > 1 ? "O que vai para todas as entregas" : "Outros itens"}<Dica titulo="Itens" texto="Cada pacote fica no endereço para onde vai (em cada entrega, acima). Aqui ficam os itens que vão para todas as entregas ou que você ainda não ligou a um endereço." /></span>
           <ItensPedido itens={itens} onMudar={setItens} categorias={conta.categorias} pontos={pontos} semCategoria={!conta.categoria_obrigatoria} soGerais compacto
             objetos={conta.pode_objetos !== false ? objetos : undefined} onSalvarObjeto={conta.pode_objetos !== false ? salvarObjeto : undefined} onApagarObjeto={apagarObjeto} />
           {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: embale e identifique.</p>}
           {conta.pode_observacoes !== false && <textarea placeholder="Observações (opcional)" value={obs} maxLength={1000} onChange={(e) => setObs(e.target.value)} />}
+        </div>
+        {passo === 3 && <div className="cliente-cartao vidro"><span className="rotulo"><CheckCircle2 size={13} aria-hidden /> Tudo certo?</span>
+          <p className="dica" style={{ margin: 0 }}>Confira o valor e o pagamento ao lado e toque em “Fazer pedido”.</p></div>}
+        <div className="passos-nav">
+          {passo > 0 && <button type="button" className="botao-texto" onClick={() => setPasso(passo - 1)}><ArrowLeft size={15} aria-hidden /> Voltar</button>}
+          <span className="espaco" />
+          {passo < PASSOS_PEDIDO.length - 1 && <button type="button" className="botao-ouro" onClick={() => { setPasso(passo + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Continuar: {PASSOS_PEDIDO[passo + 1]}</button>}
         </div>
       </div>
 

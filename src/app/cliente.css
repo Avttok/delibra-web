@@ -162,3 +162,16 @@ a.chip { text-decoration: none; }
 .cliente-bloco-passos i.feito { background: var(--ouro); }
 @media (max-width: 640px) { .cliente-palco { min-height: 360px; border-radius: 20px; } }
 @media (prefers-reduced-motion: reduce) { .cliente-bloco { transition: none; } }
+
+/* ---------- novo pedido em etapas ---------- */
+.passo-oculto { display: none !important; }
+.passos-pedido { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.passo-pedido { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 14px; border: 1px solid var(--borda); background: none; color: var(--texto-2); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.passo-pedido span { width: 24px; height: 24px; border-radius: 99px; display: grid; place-items: center; flex: none; font-size: 12px; background: color-mix(in srgb, currentColor 12%, transparent); }
+.passo-pedido.atual { color: var(--texto); border-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 10%, transparent); }
+.passo-pedido.atual span { background: var(--ouro); color: #0b0b0c; }
+.passo-pedido.feito { color: var(--texto); }
+.passo-pedido.feito span { color: var(--ouro); background: none; }
+.passo-pedido:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+.passos-nav { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 640px) { .passos-pedido { grid-template-columns: repeat(4, auto); overflow-x: auto; } .passo-pedido { white-space: nowrap; } }
