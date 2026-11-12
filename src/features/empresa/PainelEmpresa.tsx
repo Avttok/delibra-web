@@ -49,7 +49,7 @@ export function PainelEmpresa() {
 
   async function salvar(campos: Record<string, unknown>) {
     const { error } = await supabase().rpc("salvar_minha_organizacao", { p: campos });
-    if (error) return error.message.includes("apenas_gestor") ? "Só o dono da empresa (ou o Dev) muda isto." : error.message;
+    if (error) return error.message.includes("apenas_gestor") ? "Só o dono da empresa muda isto." : error.message;
     const novo = { ...org!, ...(campos as Partial<Org>) };
     setOrg(novo);
     definirMarcaEmpresa({ nome: novo.nome, nomeApp: novo.nome_app, nomeTopo: novo.nome_topo, logo: novo.logo_url, cor: novo.cor, escala: novo.logo_escala, brilhoCor: novo.logo_brilho_cor, brilho: novo.logo_brilho, fonte: novo.fonte_nome });

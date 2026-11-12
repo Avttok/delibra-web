@@ -567,3 +567,57 @@ end;
 $$;
 revoke execute on function public.painel_do_dia() from public, anon;
 grant execute on function public.painel_do_dia() to authenticated;
+
+-- ===================================================================== GPS mais leve no servidor
+-- Pontos de quando o motoboy não estava em rota, depois de N horas, ficam só um a cada X minutos.
+create or replace function privado.afinar_ociosos(p_max int default 50000)
+returns int language plpgsql security definer set search_path = '' as $$
+declare v_h numeric := privado.cfg_num('ping_ocioso_horas', 48); v_min numeric := greatest(privado.cfg_num('ping_ocioso_min', 10), 1); v_n int;
+begin
+  if v_h <= 0 then return 0; end if;
+  with c as (
+    select id, row_number() over (partition by motoboy_id, date_bin(make_interval(mins => v_min::int), registrado_em, timestamptz '2000-01-01') order by registrado_em) rn
+      from public.localizacoes
+     where corrida_id is null and registrado_em < now() - make_interval(hours => v_h::int)
+       and registrado_em > now() - make_interval(hours => v_h::int) - interval '45 days'
+  )
+  delete from public.localizacoes l using (select id from c where rn > 1 limit greatest(p_max, 1)) x where l.id = x.id;
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+revoke execute on function privado.afinar_ociosos(int) from public, anon, authenticated;
+
+create or replace function public.dev_afinar_gps()
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_a int; v_b int;
+begin
+  if not public.is_dev() then raise exception 'apenas_dev' using errcode = '42501'; end if;
+  v_a := privado.afinar_pings(200);
+  v_b := privado.afinar_ociosos(200000);
+  return jsonb_build_object('rotas', v_a, 'fora_de_rota', v_b, 'pings_total', (select count(*) from public.localizacoes));
+end;
+$$;
+revoke execute on function public.dev_afinar_gps() from public, anon;
+grant execute on function public.dev_afinar_gps() to authenticated;
+
+-- Dev: deixa um motoboy offline na hora (aparelho perdido, app travado)
+create or replace function public.dev_forcar_offline(p_motoboy uuid)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_dev() then raise exception 'apenas_dev' using errcode = '42501'; end if;
+  if exists (select 1 from public.corridas where motoboy_id = p_motoboy and status::text in ('aceita', 'em_andamento')) then
+    raise exception 'membro_em_corrida' using errcode = '22023';
+  end if;
+  update public.motoboys set status = 'offline' where id = p_motoboy;
+  return jsonb_build_object('ok', found);
+end;
+$$;
+revoke execute on function public.dev_forcar_offline(uuid) from public, anon;
+grant execute on function public.dev_forcar_offline(uuid) to authenticated;
+
+do $$ begin
+  if exists (select 1 from pg_namespace where nspname = 'cron') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'cron' and p.proname = 'schedule') then
+    perform cron.schedule('pwex-afinar-ociosos', '23 * * * *', 'select privado.afinar_ociosos(50000)');
+  end if;
+end $$;

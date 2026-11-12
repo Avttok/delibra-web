@@ -128,6 +128,11 @@ export function PainelCliente() {
             {" · "}{conta.cobranca === "credito" ? <>Fatura {CICLO[conta.fatura_ciclo] ?? ""}</> : <>Pagamento antes de sair</>}
           </p>
         </div>
+        <div className="cliente-cabeca-numeros" aria-label="Resumo">
+          <span><b>{pedidos.filter((p) => ATIVOS.includes(p.status)).length}</b><small>a caminho</small></span>
+          <span><b>{pedidos.length}</b><small>pedidos</small></span>
+          {conta.ve_faturas !== false && <span><b>{abertas.length}</b><small>{conta.cobranca === "credito" ? "faturas abertas" : "a pagar"}</small></span>}
+        </div>
         <button className="botao-ouro" onClick={() => { setAba("novo"); setAberto(null); }}><PackagePlus size={17} aria-hidden /> Novo pedido</button>
       </div>
       <Tour id="cliente" passos={TOUR_CLIENTE} />

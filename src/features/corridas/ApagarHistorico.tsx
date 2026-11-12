@@ -10,7 +10,7 @@ import type { MembroEquipe } from "./dados";
 const ERROS: Record<string, string> = {
   senha_incorreta: "Senha incorreta.",
   muitas_tentativas: "Muitas senhas erradas. Por segurança, ficou bloqueado por 15 minutos.",
-  apenas_gestor: "Apenas gestores e o Dev podem apagar o histórico.",
+  apenas_gestor: "Apenas gestores podem apagar o histórico.",
   sem_permissao: "Você não pode mexer no histórico dessa conta.",
   nada_para_excluir: "Escolha o que apagar.",
 };

@@ -6,7 +6,7 @@ import { Bike, Check, Copy, Eye, EyeOff, KeyRound, Lock, LockOpen, RefreshCw, Sh
 import { supabase } from "@/lib/supabase/client";
 import { useConta } from "@/features/conta/conta";
 
-const ERROS: Record<string, string> = {
+export const ERROS: Record<string, string> = {
   servidor_sem_chave: "Falta configurar a chave secreta do Supabase na Vercel (variável SUPABASE_SECRET_KEY). Depois de adicionar, faça um novo deploy.",
   apenas_gestor: "Só gestores podem criar contas.",
   email_invalido: "E-mail inválido.",
@@ -21,10 +21,10 @@ const ERROS: Record<string, string> = {
   nao_bloqueie_a_si_mesmo: "Você não pode bloquear a sua própria conta.",
   membro_em_corrida: "Essa pessoa está com uma corrida em andamento. Espere terminar (ou cancele a corrida) antes.",
   usuario_nao_encontrado: "Conta não encontrada (talvez já tenha sido excluída).",
-  apenas_dev_cria_gestor: "Só o Dev do sistema cria contas de gestor. Peça para ele.",
-  limite_gestores_do_plano: "A empresa já tem o máximo de gestores. Fale com o Dev para liberar mais.",
-  limite_supervisores_do_plano: "A empresa já tem o máximo de supervisores. Fale com o Dev para liberar mais.",
-  limite_motoboys_do_plano: "A empresa já tem o máximo de motoboys do plano. Fale com o Dev para liberar mais.",
+  apenas_dev_cria_gestor: "Só o suporte da plataforma cria contas de gestor. Peça para ele.",
+  limite_gestores_do_plano: "A empresa já tem o máximo de gestores. Fale com o suporte da plataforma para liberar mais.",
+  limite_supervisores_do_plano: "A empresa já tem o máximo de supervisores. Fale com o suporte da plataforma para liberar mais.",
+  limite_motoboys_do_plano: "A empresa já tem o máximo de motoboys do plano. Fale com o suporte da plataforma para liberar mais.",
 };
 
 export type Vagas = Partial<Record<"gestor" | "supervisor" | "motoboy", { usados: number; limite: number | null; pode: boolean }>>;
@@ -44,7 +44,7 @@ export function OpcaoCargo({ cargo, rotulo, icone, marcado, tinha, vagas, onMuda
 }) {
   const v = vagas[cargo];
   const travado = !tinha && !marcado && v?.pode === false;
-  const porque = !v ? null : cargo === "gestor" && v.pode === false && (v.limite == null || v.usados < v.limite) ? "Só o Dev cria gestores"
+  const porque = !v ? null : cargo === "gestor" && v.pode === false && (v.limite == null || v.usados < v.limite) ? "Só o suporte da plataforma cria gestores"
     : v.limite != null ? `${v.usados} de ${v.limite} vaga${v.limite === 1 ? "" : "s"} usada${v.usados === 1 ? "" : "s"}` : null;
   return (
     <label className={`opcao${travado ? " travada" : ""}`} title={travado ? (porque ?? "Sem vaga") : undefined}>
@@ -55,7 +55,7 @@ export function OpcaoCargo({ cargo, rotulo, icone, marcado, tinha, vagas, onMuda
 }
 
 /** Chama as rotas do servidor com o token da sessão do gestor. */
-async function chamar(rota: string, corpo: unknown): Promise<{ ok: boolean; erro?: string; id?: string; codigo?: string; restantes?: number }> {
+export async function chamar(rota: string, corpo: unknown): Promise<{ ok: boolean; erro?: string; id?: string; codigo?: string; restantes?: number }> {
   const { data } = await supabase().auth.getSession();
   try {
     const r = await fetch(rota, {

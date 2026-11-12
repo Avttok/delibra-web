@@ -86,7 +86,7 @@ export function PainelEquipe() {
       p_usuario: m.id, p_nome: nome, p_papeis: papeis, p_repasse: null,
     });
     if (error) return setMsg({ ok: false, t: error.message === "nao_remova_seu_proprio_acesso" ? "Você não pode tirar seu próprio acesso." : error.message === "percentual_invalido" ? "Repasse deve ficar entre 0 e 100%."
-      : error.message === "conta_protegida" || error.message === "conta_do_dev_protegida" ? "A conta do Dev só ele mesmo altera." : error.message === "apenas_dev" ? "Só o Dev dá ou tira o cargo Dev."
+      : error.message === "conta_protegida" || error.message === "conta_do_dev_protegida" ? "Essa conta é protegida." : error.message === "apenas_dev" ? "Só o Dev dá ou tira o cargo Dev."
       : error.message === "apenas_gestor" ? "Só o gestor da empresa dá ou tira os cargos Gestor e Supervisor." : error.message });
     if (supervisor && pleno) {
       const p2 = await supabase().rpc("definir_permissoes", { p_usuario: m.id, p_permissoes: permissoes });
@@ -172,7 +172,7 @@ export function PainelEquipe() {
                 : aba === "regras" ? <RegrasDoAlvo key={m.id} escopo="motoboy" alvo={m.id} nome={m.nome || m.email} />
                 : aba === "penalidades" ? <Penalidades key={m.id} alvoTipo="motoboy" alvoId={m.id} nome={m.nome || m.email} />
                 : (m.papeis.includes("dev") && !conta.dev) ? (
-                <p className="dica" style={{ margin: 0 }}><CodeXml size={14} style={{ verticalAlign: -2 }} /> Conta Dev: só o Dev altera esta conta.</p>
+                <p className="dica" style={{ margin: 0 }}><CodeXml size={14} style={{ verticalAlign: -2 }} /> Conta protegida: não dá para alterar.</p>
               ) : (
                 <>
                   <div className="linha-icone">

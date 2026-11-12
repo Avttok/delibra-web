@@ -24,7 +24,7 @@ export interface DefParametro {
   opcoes?: { valor: number | string; rotulo: string; dica?: string }[];
   /** Escopos que aceitam exceção desta regra. */
   escopos?: Escopo[];
-  /** Só o Dev altera. */
+  /** Só a plataforma altera. */
   soDev?: boolean;
   /** Some da tela para quem não é o Dev (assunto entre o Dev e a empresa). */
   escondido?: boolean;
@@ -390,6 +390,8 @@ export const PARAMETROS: DefParametro[] = [
   { chave: "ping_reta_max_m", grupo: "rastreamento", rotulo: "Em reta, no máximo a cada", descricao: "Mesmo sem curva, manda um ponto depois dessa distância.", tipo: "numero", padrao: 200, unidade: "m", min: 20, max: 2000, passo: 10, escopos: ["motoboy"] },
   { chave: "ping_afinar_dias", grupo: "rastreamento", rotulo: "Afinar pontos de rotas antigas", descricao: "Rotas encerradas há mais desse tempo perdem os pontos repetidos e colados (o traçado e os km ficam). 0 = guarda tudo.", tipo: "numero", padrao: 30, unidade: "dias", min: 0, max: 365, passo: 1, soDev: true },
   { chave: "ping_afinar_m", grupo: "rastreamento", rotulo: "Distância mínima ao afinar", descricao: "Ao afinar, pontos mais perto que isso do anterior saem (curvas e paradas longas ficam).", tipo: "numero", padrao: 15, unidade: "m", min: 5, max: 200, passo: 5, soDev: true },
+  { chave: "ping_ocioso_horas", grupo: "rastreamento", rotulo: "Afinar pontos fora de rota", descricao: "Pontos de quando o motoboy não estava em rota, mais velhos que isso, ficam só um a cada intervalo abaixo. 0 = guarda tudo.", tipo: "numero", padrao: 48, unidade: "h", min: 0, max: 720, passo: 6, soDev: true },
+  { chave: "ping_ocioso_min", grupo: "rastreamento", rotulo: "Fora de rota: um ponto a cada", descricao: "Ao afinar os pontos fora de rota, guarda um a cada esse tempo.", tipo: "numero", padrao: 10, unidade: "min", min: 1, max: 120, passo: 1, soDev: true },
   { chave: "ping_envio_s", grupo: "rastreamento", rotulo: "Enviar em lotes a cada", descricao: "As posições são guardadas e enviadas juntas (economiza bateria e internet).", tipo: "numero", padrao: 12, unidade: "s", min: 3, max: 120, passo: 1 },
   { chave: "percurso_provedor", grupo: "percurso", rotulo: "Mapa que traça o percurso", descricao: "", tipo: "escolha", padrao: "valhalla",
     opcoes: [{ valor: "valhalla", rotulo: "Valhalla", dica: "Perfil de moto; evita voltas e curvas sem sentido. Se não responder, usa o OSRM." }, { valor: "osrm", rotulo: "OSRM", dica: "Perfil de carro. Se não responder, usa o Valhalla." }] },

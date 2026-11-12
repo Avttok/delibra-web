@@ -4,11 +4,12 @@ import { IntegracoesDev } from "./Integracoes";
 
 import { useCallback, useEffect, useState } from "react";
 import { PagamentosDev } from "@/features/pagamentos/PagamentosDev";
-import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound, Plug } from "lucide-react";
+import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound, Plug, Activity, Users } from "lucide-react";
 import { ApagarTudo } from "./ApagarTudo";
 import { AparelhosDev, ModulosDev, TarefasDev, type Aparelho, type Tarefa } from "./DevExtras";
 import { VersaoApp } from "./VersaoApp";
 import { ConversasDev, DevOculto, EmpresasDev, FaturamentoDev } from "./Plataforma";
+import { SaudeDev, UsuariosDev } from "./UsuariosDev";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConta, type Papel } from "@/features/conta/conta";
@@ -34,6 +35,19 @@ const PAPEIS_MODULO: { p: Papel; rotulo: string; icone: typeof Bike }[] = [
   { p: "gestor", rotulo: "Gestores", icone: ShieldCheck }, { p: "motoboy", rotulo: "Motoboys", icone: Bike }, { p: "cliente", rotulo: "Clientes", icone: UserRound },
 ];
 
+type Aba = "empresas" | "usuarios" | "saude" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes";
+const GRUPOS_DEV: { titulo: string; abas: { id: Aba; rotulo: string; icone: typeof Bike }[] }[] = [
+  { titulo: "Agora", abas: [
+    { id: "sistema", rotulo: "Visão geral", icone: LayoutDashboard }, { id: "saude", rotulo: "Saúde do sistema", icone: Activity },
+    { id: "aparelhos", rotulo: "Aparelhos", icone: Smartphone }, { id: "tarefas", rotulo: "Tarefas automáticas", icone: Timer }] },
+  { titulo: "Negócio", abas: [
+    { id: "empresas", rotulo: "Empresas", icone: Building2 }, { id: "usuarios", rotulo: "Usuários", icone: Users },
+    { id: "faturamento", rotulo: "Faturamento", icone: Wallet }, { id: "pagamentos", rotulo: "Pagamentos", icone: Wallet }] },
+  { titulo: "Sistema", abas: [
+    { id: "modulos", rotulo: "Módulos", icone: ToggleRight }, { id: "integracoes", rotulo: "Integrações", icone: Plug }, { id: "versao", rotulo: "Versão do app", icone: Rocket },
+    { id: "conversas", rotulo: "Conversas", icone: MessagesSquare }, { id: "registro", rotulo: "Registro", icone: History }, { id: "apagar", rotulo: "Apagar", icone: Eraser }] },
+];
+
 function ha(iso: string | null) {
   if (!iso) return "—";
   const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
@@ -43,7 +57,7 @@ function ha(iso: string | null) {
 /** Console do Dev: o sistema inteiro à vista, módulos liga/desliga e quem vê cada um. */
 export function PainelDev() {
   const conta = useConta();
-  const [aba, setAba] = useState<"empresas" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes">("empresas");
+  const [aba, setAba] = useState<Aba>("sistema");
   const [oculto, setOculto] = useState(false);
   const lerOculto = useCallback(() => {
     void supabase().auth.getUser().then(({ data: u }) => supabase().from("perfis").select("dev_oculto").eq("id", u.user?.id ?? "").maybeSingle()
@@ -79,20 +93,18 @@ export function PainelDev() {
     <>
       <aside className="lateral entrar">
         <CabecaPagina icone={CodeXml} titulo="Console Dev" subtitulo="O sistema inteiro, sem filtro" />
-        <div className="filtro" style={{ alignSelf: "flex-start", flexWrap: "wrap" }}>
-          <button className={aba === "empresas" ? "ativo" : ""} onClick={() => setAba("empresas")}><Building2 size={14} aria-hidden /> Empresas</button>
-          <button className={aba === "faturamento" ? "ativo" : ""} onClick={() => setAba("faturamento")}><Wallet size={14} aria-hidden /> Faturamento</button>
-          <button className={aba === "pagamentos" ? "ativo" : ""} onClick={() => setAba("pagamentos")}><Wallet size={14} aria-hidden /> Pagamentos</button>
-          <button className={aba === "conversas" ? "ativo" : ""} onClick={() => setAba("conversas")}><MessagesSquare size={14} aria-hidden /> Conversas</button>
-          <button className={aba === "sistema" ? "ativo" : ""} onClick={() => setAba("sistema")}><LayoutDashboard size={14} aria-hidden /> Visão geral</button>
-          <button className={aba === "modulos" ? "ativo" : ""} onClick={() => setAba("modulos")}><ToggleRight size={14} aria-hidden /> Módulos</button>
-          <button className={aba === "integracoes" ? "ativo" : ""} onClick={() => setAba("integracoes")}><Plug size={14} aria-hidden /> Integrações</button>
-          <button className={aba === "versao" ? "ativo" : ""} onClick={() => setAba("versao")}><Rocket size={14} aria-hidden /> Versão do app</button>
-          <button className={aba === "aparelhos" ? "ativo" : ""} onClick={() => setAba("aparelhos")}><Smartphone size={14} aria-hidden /> Aparelhos</button>
-          <button className={aba === "tarefas" ? "ativo" : ""} onClick={() => setAba("tarefas")}><Timer size={14} aria-hidden /> Tarefas automáticas</button>
-          <button className={aba === "registro" ? "ativo" : ""} onClick={() => setAba("registro")}><History size={14} aria-hidden /> Registro</button>
-          <button className={aba === "apagar" ? "ativo" : ""} onClick={() => setAba("apagar")}><Eraser size={14} aria-hidden /> Apagar</button>
-        </div>
+        <nav className="dev-nav" aria-label="Áreas do Dev">
+          {GRUPOS_DEV.map((g) => (
+            <div key={g.titulo} className="dev-nav-grupo">
+              <span>{g.titulo}</span>
+              {g.abas.map((a) => (
+                <button key={a.id} type="button" className={aba === a.id ? "ativo" : ""} aria-current={aba === a.id ? "page" : undefined} onClick={() => setAba(a.id)}>
+                  <a.icone size={15} aria-hidden /> {a.rotulo}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
         <button className="botao-texto" onClick={() => void carregar()}>Atualizar números</button>
         <p className="dica">Cada empresa cadastra a própria equipe. A conta do Dev só você mesmo altera.</p>
         {erro && <p className="erro">{erro}</p>}
@@ -103,6 +115,8 @@ export function PainelDev() {
           {aba === "faturamento" && <FaturamentoDev />}
           {aba === "pagamentos" && <PagamentosDev />}
           {aba === "conversas" && <ConversasDev />}
+          {aba === "usuarios" && <UsuariosDev />}
+          {aba === "saude" && <SaudeDev />}
           {aba === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
           {aba === "integracoes" && <IntegracoesDev />}
           {aba === "versao" && <VersaoApp />}
@@ -133,7 +147,7 @@ export function PainelDev() {
               </table>
             )
           )}
-          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas"].includes(aba) && <p className="dica">Carregando…</p>}
+          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas", "usuarios", "saude", "modulos", "integracoes"].includes(aba) && <p className="dica">Carregando…</p>}
         </div>
       </main>
     </>

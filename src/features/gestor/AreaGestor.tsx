@@ -277,6 +277,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             }}
           />
         </header>
+        <div className="painel-principal">
         <ExigirDoisPassos />
         {(["/gestor/pedidos", "/gestor/corridas"].some((t) => caminho?.startsWith(t)) || ["/gestor/clientes", "/gestor/equipe"].some((t) => caminho?.startsWith(t))) && (
           <nav className="sub-abas" aria-label="Seção">
@@ -305,6 +306,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         {ehPw(marca) && <footer className="rodape">
           Um projeto de irmão para irmão! <Heart size={13} aria-label="com amor" className="coracao" fill="currentColor" />
         </footer>}
+        </div>
       </div>
       <Toasts />
       </ProvedorTeste>

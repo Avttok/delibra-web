@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bike, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users } from "lucide-react";
+import { AlertTriangle, Bike, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -110,11 +110,12 @@ export function PainelDoDia() {
             </div>
           </div>
           <Numero icone={Route} rotulo="Rotas feitas" valor={p.concluidas_hoje} dica={comparaOntem(p)} />
-          <Numero icone={PackageCheck} rotulo="Entregas" valor={p.entregas_hoje ?? "—"} dica={`${p.canceladas_hoje ?? 0} rota(s) cancelada(s)`} />
+          <Numero icone={PackageCheck} rotulo="Entregas" valor={p.entregas_hoje ?? "—"} dica="concluídas hoje" />
           <Numero icone={Bike} rotulo="Na rua" valor={p.rotas_ativas} dica={`${p.rotas_esperando} esperando motoboy`} />
           <Numero icone={Users} rotulo="Motoboys" valor={p.motoboys_online} dica={`online · ${p.motoboys_em_rota} em rota`} />
           <Numero icone={ClipboardList} rotulo="Pedidos" valor={p.pedidos_hoje} dica={`${p.para_revisar} para revisar`} />
           <Numero icone={Clock} rotulo="Tempo médio" valor={p.tempo_medio_min != null ? `${p.tempo_medio_min} min` : "—"} dica="do aceite à conclusão" />
+          <Numero icone={XCircle} rotulo="Canceladas" valor={p.canceladas_hoje ?? 0} dica="rotas canceladas hoje" />
           <Numero icone={Star} rotulo="Nota (30 dias)" valor={p.nota_media_30d != null ? p.nota_media_30d.toLocaleString("pt-BR") : "—"} dica={p.nota_media_30d != null ? "média das avaliações" : "sem avaliações ainda"} />
         </div>
 

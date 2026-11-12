@@ -205,7 +205,7 @@ export function Parametro({ p, valor, estado, mostrarGrupo, onSalvar, bloqueado,
 
   const status = (
     <span className="config-status" aria-live="polite">
-      {bloqueado && <span title="Só o Dev altera"><Lock size={13} aria-hidden /> Dev</span>}
+      {bloqueado && <span title="Só a plataforma altera"><Lock size={13} aria-hidden /> Plataforma</span>}
       {estado === "salvo" && <><Check size={14} aria-hidden /> salvo</>}
       {estado === "erro" && <span className="erro"><TriangleAlert size={14} aria-hidden /> erro</span>}
       {onPadrao && !estado && (
