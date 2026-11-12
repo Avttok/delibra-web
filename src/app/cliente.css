@@ -255,3 +255,6 @@ a.chip { text-decoration: none; }
   .cliente-cabeca { grid-template-columns: 1fr; align-items: start; border-radius: 22px; }
   .cliente-cabeca > .botao-ouro { width: 100%; justify-content: center; }
 }
+.cliente-troca { max-width: 220px; min-height: 38px; border-radius: 12px; font-weight: 600; }
+.empresa-card-dist { color: var(--ouro); font-weight: 600; }
+.cliente-cartao .linha-chips .chip.ativo { border-color: var(--ouro); color: var(--ouro); }

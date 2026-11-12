@@ -12,11 +12,12 @@ import { useConta } from "@/features/conta/conta";
 import { ChavesEquipe, MinhasChavesPix, useChavesPix } from "./ChavesPix";
 import { formatarPix } from "@/lib/pix/identificar";
 import { Faturas } from "./Faturas";
+import { Relatorios } from "./Relatorios";
 import { Folha } from "./Folha";
 
 type Periodo = "hoje" | "7d" | "mes" | "30d" | "90d";
 const ROTULO: Record<Periodo, string> = { hoje: "Hoje", "7d": "7 dias", mes: "Este mês", "30d": "30 dias", "90d": "90 dias" };
-type Aba = "resumo" | "faturas" | "folha" | "clientes" | "extrato" | "pix";
+type Aba = "resumo" | "faturas" | "folha" | "clientes" | "extrato" | "relatorios" | "pix";
 
 interface Linha {
   id: string; numero: number; teste: boolean; valor: number | null; valor_motoboy: number | null; valor_gestao: number | null; valor_dev: number | null;
@@ -147,7 +148,7 @@ export function PainelFinanceiro() {
       <main className="conteudo">
         <div className="formulario larga vidro entrar">
           <div className="segmentado segmentado-rolavel">
-            {([["resumo", "Resumo"], ["faturas", "Faturas"], ["folha", "Folha"], ["clientes", "Clientes"], ["extrato", "Extrato"], ["pix", "PIX"]] as [Aba, string][]).map(([k, r]) => (
+            {([["resumo", "Resumo"], ["faturas", "Faturas"], ["folha", "Folha"], ["clientes", "Clientes"], ["extrato", "Extrato"], ["relatorios", "Relatórios"], ["pix", "PIX"]] as [Aba, string][]).map(([k, r]) => (
               <button key={k} type="button" className={aba === k ? "ativo" : ""} onClick={() => setAba(k)}>{r}</button>
             ))}
           </div>
@@ -169,6 +170,7 @@ export function PainelFinanceiro() {
 
           {aba === "faturas" && <Faturas />}
           {aba === "folha" && <Folha />}
+          {aba === "relatorios" && <Relatorios />}
 
           {aba === "clientes" && (
             <div className="dev-rolagem"><table className="tabela"><thead><tr><th>Cliente</th><th>Rotas</th><th>Valor</th><th>Motoboys</th><th>Gestor</th></tr></thead>

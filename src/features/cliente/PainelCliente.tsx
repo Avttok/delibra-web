@@ -1,5 +1,7 @@
 "use client";
 
+import { EmpresasCards, type EmpresaCard } from "./EmpresasCards";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pagar } from "@/features/pagamentos/Pagar";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
@@ -769,6 +771,45 @@ function Faturas({ conta, faturas, pedidos }: { conta: Conta; faturas: FaturaC[]
 
 // ------------------------------------------------------------------ conta
 
+/** Ser cliente de mais de uma transportadora: as minhas e pedir para outra. */
+function OutrasEmpresas() {
+  const [minhas, setMinhas] = useState<{ empresa_id: string; nome: string; cliente: string; slug: string | null; atual: boolean }[] | null>(null);
+  const [todas, setTodas] = useState<EmpresaCard[] | null>(null);
+  const [abrir, setAbrir] = useState(false);
+  const carregar = () => void supabase().rpc("minhas_empresas_cliente").then(({ data }) => setMinhas((data ?? []) as typeof minhas));
+  useEffect(carregar, []);
+  useEffect(() => { if (abrir && !todas) void supabase().rpc("empresas_cadastro").then(({ data }) => setTodas((data ?? []) as EmpresaCard[])); }, [abrir, todas]);
+  async function pedir(slug: string) {
+    const { data, error } = await supabase().rpc("pedir_outra_empresa", { p_slug: slug });
+    if (error) return toast(error.message.includes("ja_cliente") ? "Você já é cliente dessa transportadora." : error.message.includes("ja_pedido") ? "Seu pedido para essa transportadora já está em análise."
+      : error.message.includes("cadastro_desligado") ? "Essa transportadora não está aceitando cadastros agora." : "Não deu para pedir agora.", "erro");
+    toast((data as { status?: string })?.status === "aprovado" ? "Pronto: você já pode pedir para ela (troque no topo)." : "Pedido enviado. Assim que a transportadora aprovar, ela aparece aqui.", "ok");
+    setAbrir(false); carregar();
+  }
+  async function trocar(id: string) {
+    const { error } = await supabase().rpc("trocar_empresa_cliente", { p_empresa: id });
+    if (error) return toast("Não deu para trocar agora.", "erro");
+    window.location.reload();
+  }
+  const ja = new Set((minhas ?? []).map((m) => m.slug).filter(Boolean));
+  return (
+    <div className="cliente-cartao vidro">
+      <h3 className="display" style={{ margin: 0 }}>Transportadoras</h3>
+      <p className="dica" style={{ margin: 0 }}>A mesma conta pode pedir para mais de uma transportadora. Escolha com qual está pedindo agora.</p>
+      <div className="linha-chips">
+        {(minhas ?? []).map((m) => (
+          <button key={m.empresa_id} type="button" className={`chip${m.atual ? " ativo" : ""}`} disabled={m.atual} onClick={() => trocar(m.empresa_id)}>
+            {m.atual ? <BadgeCheck size={13} aria-hidden /> : <Building2 size={13} aria-hidden />} {m.nome}
+          </button>
+        ))}
+      </div>
+      {!abrir ? <button className="botao-texto" style={{ justifySelf: "start" }} onClick={() => setAbrir(true)}><Plus size={15} aria-hidden /> Ser cliente de outra transportadora</button>
+        : todas === null ? <p className="dica">Carregando…</p>
+        : <EmpresasCards empresas={todas.filter((e) => !ja.has(e.slug))} onEscolher={pedir} />}
+    </div>
+  );
+}
+
 function MinhaConta({ conta }: { conta: Conta }) {
   return (
     <>
@@ -783,6 +824,7 @@ function MinhaConta({ conta }: { conta: Conta }) {
         </div>
         <p className="dica" style={{ margin: 0 }}>Para mudar algum dado, fale com a empresa.</p>
       </div>
+      <OutrasEmpresas />
       <CoresDoSite />
       {conta.troca_senha !== false && <TrocarSenha />}
       <div className="bloco vidro linha-botoes">

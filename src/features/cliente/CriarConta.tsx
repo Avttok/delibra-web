@@ -1,7 +1,9 @@
 "use client";
 
+import { EmpresasCards, type EmpresaCard } from "./EmpresasCards";
+
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Building2, CheckCircle2, Package, Star, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Logo } from "@/features/marca/Logo";
 import { CampoEndereco } from "@/features/corridas/CampoEndereco";
@@ -26,7 +28,6 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   // várias transportadoras: o cliente escolhe por cards (o link ?empresa= já vem escolhido)
-  type EmpresaCard = { slug: string; nome: string; logo: string | null; cor: string | null; modo: string; nota: number | null; avaliacoes: number; entregas: number };
   const [empresas, setEmpresas] = useState<EmpresaCard[] | null>(null);
   const [escolhida, setEscolhida] = useState<string | null>(null);
   useEffect(() => {
@@ -75,19 +76,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
         <button type="button" className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Já tenho conta</button>
         <h1 className="display">Escolha quem vai fazer suas entregas</h1>
         <p className="dica">Você pode pedir a qualquer hora depois de criar a conta.</p>
-        <div className="empresas-cards">
-          {empresas.map((e) => (
-            <button key={e.slug} type="button" className="empresa-card vidro" style={{ ["--cor-empresa" as string]: e.cor ?? "var(--ouro)" }} onClick={() => setEscolhida(e.slug)}>
-              <span className="empresa-card-logo" style={{ backgroundImage: e.logo ? `url("${e.logo}")` : undefined }}>{!e.logo && e.nome.charAt(0)}</span>
-              <strong>{e.nome}</strong>
-              <span className="empresa-card-numeros">
-                {e.nota != null ? <span><Star size={13} aria-hidden /> {e.nota.toLocaleString("pt-BR")} <small>({e.avaliacoes})</small></span> : <span className="dica">Sem avaliações ainda</span>}
-                {e.entregas > 0 && <span><Package size={13} aria-hidden /> {e.entregas.toLocaleString("pt-BR")} entregas</span>}
-              </span>
-              <span className="dica">{e.modo === "instantaneo" ? "Conta liberada na hora" : "A empresa aprova seu cadastro"}</span>
-            </button>
-          ))}
-        </div>
+        <EmpresasCards empresas={empresas} onEscolher={setEscolhida} />
       </section>
     </main>
   );

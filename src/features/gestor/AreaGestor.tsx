@@ -283,7 +283,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
           <nav className="sub-abas" aria-label="Seção">
             {(caminho?.startsWith("/gestor/pedidos") || caminho?.startsWith("/gestor/corridas")
               ? [["/gestor/pedidos", "Pedidos", ClipboardList], ["/gestor/corridas", "Rotas", Route]] as const
-              : [["/gestor/clientes", "Clientes", Building2], ["/gestor/equipe", "Equipe", Users]] as const).map(([h, r, I]) => (
+              : [["/gestor/clientes", "Clientes", Building2], ["/gestor/equipe", "Equipe", Users]] as const).filter(([h]) => !(h === "/gestor/clientes" && permSup && permSup.clientes === false)).map(([h, r, I]) => (
               <Link key={h} href={h} className={caminho?.startsWith(h) ? "ativa" : ""}><I size={15} aria-hidden /> {r}{h === "/gestor/pedidos" && paraRevisar > 0 && <span className="aba-n">{paraRevisar}</span>}</Link>
             ))}
           </nav>

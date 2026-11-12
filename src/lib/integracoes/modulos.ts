@@ -57,16 +57,17 @@ export async function emitirNota(provedor: string, n: DadosNota): Promise<Result
   // PlugNotas, NFE.io e eNotas: o formato fica pronto quando alguém pedir para trocar
   const variavel = { plugnotas: "PLUGNOTAS_TOKEN", nfeio: "NFEIO_TOKEN", enotas: "ENOTAS_TOKEN" }[provedor];
   if (!variavel || !conectado(variavel)) return { ok: false, motivo: "nao_conectado" };
-  return { ok: false, motivo: "erro", erro: "Emissor ainda não ligado a este fluxo. Fale com o Dev." };
+  return { ok: false, motivo: "erro", erro: "Emissor ainda não ligado a este fluxo. Fale com o suporte da plataforma." };
 }
 
 // ---------------------------------------------------------------- e-mail (Resend)
-export async function enviarEmail(p: { para: string | string[]; assunto: string; html: string; de?: string }): Promise<Resultado<{ id: string }>> {
+export async function enviarEmail(p: { para: string | string[]; assunto: string; html: string; de?: string; anexos?: { nome: string; conteudo: string }[] }): Promise<Resultado<{ id: string }>> {
   const chave = process.env.RESEND_API_KEY?.trim();
   if (!chave) return { ok: false, motivo: "nao_conectado" };
   return chamar("https://api.resend.com/emails", {
     method: "POST", headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: p.de ?? process.env.EMAIL_REMETENTE ?? "Delibra <avisos@delibra.app>", to: p.para, subject: p.assunto, html: p.html }),
+    body: JSON.stringify({ from: p.de ?? process.env.EMAIL_REMETENTE ?? "Delibra <avisos@delibra.app>", to: p.para, subject: p.assunto, html: p.html,
+      ...(p.anexos?.length ? { attachments: p.anexos.map((a) => ({ filename: a.nome, content: a.conteudo })) } : {}) }),
   });
 }
 

@@ -621,3 +621,403 @@ do $$ begin
     perform cron.schedule('pwex-afinar-ociosos', '23 * * * *', 'select privado.afinar_ociosos(50000)');
   end if;
 end $$;
+
+-- ===================================================================== relatórios (Excel, PDF e e-mail)
+-- Linhas prontas para planilha: rotas, pedidos, motoboys ou clientes no período (só da empresa de quem pede, sem teste).
+create or replace function public.relatorio(p_tipo text, p_de date, p_ate date)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare v_de timestamptz := (p_de::timestamp) at time zone 'America/Sao_Paulo';
+  v_ate timestamptz := ((p_ate + 1)::timestamp) at time zone 'America/Sao_Paulo';
+  v_teste boolean := coalesce((select p.modo_teste from public.perfis p where p.id = auth.uid()), false);
+  r jsonb;
+begin
+  if not public.is_gestor() then raise exception 'apenas_gestor' using errcode = '42501'; end if;
+  if p_de is null or p_ate is null or p_ate < p_de or p_ate - p_de > 400 then raise exception 'periodo_invalido' using errcode = '22023'; end if;
+  if p_tipo = 'rotas' then
+    select coalesce(jsonb_agg(jsonb_build_object(
+        'Rota', c.numero, 'Data', to_char(coalesce(c.concluida_em, c.cancelada_em, c.criada_em) at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI'),
+        'Situação', case c.status::text when 'concluida' then 'Concluída' when 'cancelada' then 'Cancelada' else c.status::text end,
+        'Cliente', coalesce(c.cliente_nome, ''), 'Motoboy', coalesce(public.nome_publico(c.motoboy_id), ''),
+        'Paradas', (select count(*) from public.paradas x where x.corrida_id = c.id),
+        'Km', round(coalesce(c.distancia_real_m, c.distancia_planejada_m, 0) / 1000.0, 1),
+        'Valor', coalesce(c.valor, 0), 'Motoboy recebe', coalesce(c.valor_motoboy, 0), 'Empresa fica', coalesce(c.valor_gestao, 0))
+        order by coalesce(c.concluida_em, c.cancelada_em, c.criada_em)), '[]') into r
+      from public.corridas c
+     where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text in ('concluida', 'cancelada')
+       and coalesce(c.concluida_em, c.cancelada_em) >= v_de and coalesce(c.concluida_em, c.cancelada_em) < v_ate;
+  elsif p_tipo = 'pedidos' then
+    select coalesce(jsonb_agg(jsonb_build_object(
+        'Pedido', p.numero, 'Data', to_char(p.criado_em at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI'),
+        'Cliente', coalesce(e.nome, p.cliente_nome, 'Avulso'), 'Situação', p.status::text, 'Origem', coalesce(p.origem::text, ''),
+        'Km estimado', round(coalesce(p.distancia_estimada_m, 0) / 1000.0, 1), 'Valor', coalesce(p.valor, 0),
+        'Pagamento', coalesce(p.pagamento_status::text, '')) order by p.criado_em), '[]') into r
+      from public.pedidos p left join public.empresas e on e.id = p.empresa_id
+     where public.ve_org(p.organizacao_id) and p.teste = v_teste and p.criado_em >= v_de and p.criado_em < v_ate;
+  elsif p_tipo = 'motoboys' then
+    select coalesce(jsonb_agg(x order by x ->> 'Motoboy'), '[]') into r from (
+      select jsonb_build_object('Motoboy', coalesce(public.nome_publico(c.motoboy_id), ''), 'Rotas', count(*),
+        'Entregas', sum((select count(*) from public.paradas x where x.corrida_id = c.id and x.tipo::text = 'entrega')),
+        'Km', round(sum(coalesce(c.distancia_real_m, c.distancia_planejada_m, 0)) / 1000.0, 1),
+        'Valor das rotas', sum(coalesce(c.valor, 0)), 'A receber', sum(coalesce(c.valor_motoboy, 0))) x
+        from public.corridas c
+       where public.ve_org(c.organizacao_id) and c.teste = v_teste and c.status::text = 'concluida' and c.motoboy_id is not null
+         and c.concluida_em >= v_de and c.concluida_em < v_ate and not public.dev_oculto_para_mim(c.motoboy_id)
+       group by c.motoboy_id) t;
+  elsif p_tipo = 'clientes' then
+    select coalesce(jsonb_agg(x order by (x ->> 'Faturado')::numeric desc), '[]') into r from (
+      select jsonb_build_object('Cliente', coalesce(e.nome, p.cliente_nome, 'Avulso'), 'Pedidos', count(*),
+        'Entregues', count(*) filter (where p.status::text in ('concluido', 'entregue')), 'Cancelados', count(*) filter (where p.status::text in ('cancelado', 'recusado')),
+        'Faturado', sum(coalesce(p.valor, 0)) filter (where p.status::text not in ('cancelado', 'recusado'))) x
+        from public.pedidos p left join public.empresas e on e.id = p.empresa_id
+       where public.ve_org(p.organizacao_id) and p.teste = v_teste and p.criado_em >= v_de and p.criado_em < v_ate
+       group by coalesce(e.nome, p.cliente_nome, 'Avulso')) t;
+  else
+    raise exception 'tipo_invalido' using errcode = '22023';
+  end if;
+  return r;
+end;
+$$;
+revoke execute on function public.relatorio(text, date, date) from public, anon;
+grant execute on function public.relatorio(text, date, date) to authenticated;
+
+-- ===================================================================== cliente em mais de uma empresa
+-- Cada conta de cliente pode ser cliente de várias transportadoras; escolhe com qual está pedindo agora.
+create table if not exists public.cliente_vinculos (
+  usuario_id     uuid not null references public.perfis (id) on delete cascade,
+  empresa_id     uuid not null references public.empresas (id) on delete cascade,
+  organizacao_id uuid references public.organizacoes (id) on delete cascade,
+  criado_em      timestamptz not null default now(),
+  primary key (usuario_id, empresa_id)
+);
+alter table public.cliente_vinculos enable row level security;
+drop policy if exists cliente_vinculos_meus on public.cliente_vinculos;
+create policy cliente_vinculos_meus on public.cliente_vinculos for select to authenticated using (usuario_id = (select auth.uid()) or (select public.is_dev()));
+grant select on public.cliente_vinculos to authenticated;
+
+insert into public.cliente_vinculos (usuario_id, empresa_id, organizacao_id)
+  select p.id, p.empresa_id, e.organizacao_id from public.perfis p join public.empresas e on e.id = p.empresa_id
+   where p.empresa_id is not null and 'cliente' = any (p.papeis)
+  on conflict do nothing;
+
+create or replace function privado.lembrar_vinculo_cliente()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.empresa_id is not null and 'cliente' = any (new.papeis) then
+    insert into public.cliente_vinculos (usuario_id, empresa_id, organizacao_id)
+    values (new.id, new.empresa_id, (select organizacao_id from public.empresas where id = new.empresa_id))
+    on conflict do nothing;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists lembrar_vinculo_cliente on public.perfis;
+create trigger lembrar_vinculo_cliente after insert or update of empresa_id, papeis on public.perfis for each row execute function privado.lembrar_vinculo_cliente();
+
+-- aprovar cadastro: procura o cliente só dentro da transportadora do cadastro, e a conta passa a pedir para ela
+create or replace function privado.aprovar_cadastro(p_id uuid, p_opcoes jsonb default '{}')
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare c public.cadastros_cliente%rowtype; v_emp uuid; v_cobr text;
+begin
+  select * into c from public.cadastros_cliente where id = p_id for update;
+  if not found then raise exception 'cadastro_nao_encontrado' using errcode = '22023'; end if;
+  if c.status = 'aprovado' then return c.empresa_id; end if;
+  if c.organizacao_id is not null then perform set_config('pwex.org', c.organizacao_id::text, true); end if;
+  if c.documento is not null then
+    select id into v_emp from public.empresas
+     where ((c.tipo = 'pj' and cnpj = c.documento) or (c.tipo = 'pf' and cpf = c.documento))
+       and organizacao_id is not distinct from c.organizacao_id limit 1;
+  end if;
+  if v_emp is null then
+    insert into public.empresas (nome, tipo, cnpj, cpf, telefone, email, endereco, lat, lng, modalidade_preco, pode_express, organizacao_id)
+    values (c.nome, c.tipo, case when c.tipo = 'pj' then c.documento end, case when c.tipo = 'pf' then c.documento end,
+            c.telefone, c.email, c.endereco, c.lat, c.lng, 'por_km',
+            coalesce((p_opcoes ->> 'pode_express')::boolean, privado.cfg_bool('cadastro_express_liberado', false)), c.organizacao_id)
+    returning id into v_emp;
+  end if;
+  v_cobr := coalesce(nullif(p_opcoes ->> 'cobranca', ''), privado.cfg_txt('cadastro_cobranca', 'pre_pago'));
+  if v_cobr in ('pre_pago', 'credito') and v_cobr <> privado.cfg_txt('cobranca_modo', 'credito') then
+    insert into public.politicas (escopo, alvo, chave, valor) values ('cliente', v_emp::text, 'cobranca_modo', to_jsonb(v_cobr))
+    on conflict (escopo, alvo, chave) do update set valor = excluded.valor, atualizado_em = now();
+  end if;
+  if c.perfil_id is not null then
+    update public.perfis set empresa_id = v_emp, organizacao_id = coalesce(c.organizacao_id, organizacao_id),
+           papeis = (select array_agg(distinct x) from unnest(papeis || '{cliente}'::public.papel_usuario[]) x),
+           nome = case when coalesce(nome, '') = '' then coalesce(c.responsavel, c.nome) else nome end
+     where id = c.perfil_id and not ('gestor' = any (papeis) or 'motoboy' = any (papeis) or 'supervisor' = any (papeis) or 'dev' = any (papeis));
+    -- conta da equipe que também é cliente: só ganha o vínculo, sem sair da empresa dela
+    insert into public.cliente_vinculos (usuario_id, empresa_id, organizacao_id) values (c.perfil_id, v_emp, c.organizacao_id) on conflict do nothing;
+  end if;
+  update public.cadastros_cliente set status = 'aprovado', empresa_id = v_emp, revisado_por = auth.uid(), revisado_em = now(), motivo = null where id = c.id;
+  return v_emp;
+end;
+$$;
+revoke execute on function privado.aprovar_cadastro(uuid, jsonb) from public, anon, authenticated;
+
+-- as transportadoras de que sou cliente (e qual está valendo agora)
+create or replace function public.minhas_empresas_cliente()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('empresa_id', v.empresa_id, 'cliente', e.nome, 'organizacao_id', v.organizacao_id,
+           'nome', coalesce(o.nome_app, o.nome), 'logo', o.logo_url, 'cor', o.cor, 'slug', o.slug,
+           'atual', v.empresa_id = (select p.empresa_id from public.perfis p where p.id = auth.uid())) order by coalesce(o.nome_app, o.nome)), '[]'::jsonb)
+    from public.cliente_vinculos v join public.empresas e on e.id = v.empresa_id left join public.organizacoes o on o.id = v.organizacao_id
+   where v.usuario_id = auth.uid() and (o.id is null or o.status in ('ativa', 'teste'));
+$$;
+revoke execute on function public.minhas_empresas_cliente() from public, anon;
+grant execute on function public.minhas_empresas_cliente() to authenticated;
+
+create or replace function public.trocar_empresa_cliente(p_empresa uuid)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v public.cliente_vinculos%rowtype;
+begin
+  select * into v from public.cliente_vinculos where usuario_id = auth.uid() and empresa_id = p_empresa;
+  if not found then raise exception 'sem_vinculo' using errcode = '42501'; end if;
+  if exists (select 1 from public.perfis where id = auth.uid() and ('gestor' = any (papeis) or 'motoboy' = any (papeis) or 'supervisor' = any (papeis) or 'dev' = any (papeis))) then
+    raise exception 'conta_da_equipe' using errcode = '22023';
+  end if;
+  update public.perfis set empresa_id = v.empresa_id, organizacao_id = coalesce(v.organizacao_id, organizacao_id) where id = auth.uid();
+  return jsonb_build_object('ok', true);
+end;
+$$;
+revoke execute on function public.trocar_empresa_cliente(uuid) from public, anon;
+grant execute on function public.trocar_empresa_cliente(uuid) to authenticated;
+
+-- já sou cliente de uma: peço para ser de outra (usa os dados do meu cadastro atual)
+create or replace function public.pedir_outra_empresa(p_slug text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_org uuid; e public.empresas%rowtype; v_id uuid; v_modo text;
+begin
+  select o.id into v_org from public.organizacoes o where o.slug = lower(trim(p_slug)) and o.status in ('ativa', 'teste');
+  if v_org is null then raise exception 'empresa_nao_encontrada' using errcode = '22023'; end if;
+  if exists (select 1 from public.cliente_vinculos where usuario_id = auth.uid() and organizacao_id = v_org) then raise exception 'ja_cliente' using errcode = '22023'; end if;
+  if exists (select 1 from public.cadastros_cliente where perfil_id = auth.uid() and organizacao_id = v_org and status = 'pendente') then raise exception 'ja_pedido' using errcode = '22023'; end if;
+  select x.* into e from public.empresas x join public.perfis p on p.empresa_id = x.id where p.id = auth.uid();
+  if not found then raise exception 'sem_cadastro' using errcode = '22023'; end if;
+  perform set_config('pwex.org', v_org::text, true);
+  v_modo := privado.cfg_org_txt(v_org, 'cadastro_cliente_modo', 'aprovacao');
+  if v_modo = 'desligado' then raise exception 'cadastro_desligado' using errcode = '42501'; end if;
+  insert into public.cadastros_cliente (perfil_id, email, nome, responsavel, tipo, documento, telefone, endereco, lat, lng, observacoes, organizacao_id)
+  values (auth.uid(), coalesce(e.email, (select u.email from auth.users u where u.id = auth.uid())), e.nome, null, coalesce(e.tipo, 'pj'),
+          coalesce(e.cnpj, e.cpf), e.telefone, e.endereco, e.lat, e.lng, 'Já é cliente de outra transportadora na Delibra.', v_org)
+  returning id into v_id;
+  if v_modo = 'instantaneo' then perform privado.aprovar_cadastro(v_id); end if;
+  return (select jsonb_build_object('id', c.id, 'status', c.status) from public.cadastros_cliente c where c.id = v_id);
+end;
+$$;
+revoke execute on function public.pedir_outra_empresa(text) from public, anon;
+grant execute on function public.pedir_outra_empresa(text) to authenticated;
+
+-- cards do cadastro: área aproximada de cada transportadora (centro das entregas, ~1 km) para mostrar a distância
+create or replace function public.empresas_cadastro()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'slug', o.slug, 'nome', coalesce(o.nome_app, o.nome), 'logo', o.logo_url, 'cor', o.cor,
+           'modo', privado.cfg_org_txt(o.id, 'cadastro_cliente_modo', 'aprovacao'),
+           'nota', (select round(avg(a.nota)::numeric, 1) from public.avaliacoes a where a.organizacao_id = o.id),
+           'avaliacoes', (select count(*) from public.avaliacoes a where a.organizacao_id = o.id),
+           'entregas', (select count(*) from public.corridas c where c.organizacao_id = o.id and c.status::text = 'concluida' and not c.teste),
+           'lat', (select round(avg(x.lat)::numeric, 2) from (select p.lat from public.paradas p join public.corridas c on c.id = p.corrida_id
+                     where c.organizacao_id = o.id and not c.teste and c.status::text = 'concluida' order by c.concluida_em desc limit 300) x),
+           'lng', (select round(avg(x.lng)::numeric, 2) from (select p.lng from public.paradas p join public.corridas c on c.id = p.corrida_id
+                     where c.organizacao_id = o.id and not c.teste and c.status::text = 'concluida' order by c.concluida_em desc limit 300) x)
+         ) order by coalesce(o.nome_app, o.nome)), '[]'::jsonb)
+    from public.organizacoes o
+   where o.slug is not null and o.status in ('ativa', 'teste')
+     and privado.cfg_org_txt(o.id, 'cadastro_cliente_modo', 'aprovacao') <> 'desligado';
+$$;
+grant execute on function public.empresas_cadastro() to anon, authenticated;
+
+-- ===================================================================== módulos ligados aos fluxos (e-mail, WhatsApp, nota, devolução)
+-- Tudo passa por uma fila: o banco anota o que precisa sair e o site manda pelo provedor conectado.
+-- Sem provedor conectado (Ajustes → Integrações, só o Dev), nada entra na fila.
+create table if not exists privado.avisos_externos (
+  id             bigint generated always as identity primary key,
+  organizacao_id uuid,
+  canal          text not null check (canal in ('email', 'whatsapp', 'nota')),
+  para           text,
+  assunto        text,
+  corpo          jsonb not null default '{}',
+  status         text not null default 'pendente' check (status in ('pendente', 'enviando', 'enviado', 'erro', 'sem_conexao')),
+  tentativas     int not null default 0,
+  erro           text,
+  ref            text,
+  criado_em      timestamptz not null default now(),
+  enviado_em     timestamptz
+);
+create index if not exists avisos_externos_pendentes_idx on privado.avisos_externos (status, criado_em) where status in ('pendente', 'erro');
+
+create or replace function privado.enfileirar(p_org uuid, p_canal text, p_para text, p_assunto text, p_corpo jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if nullif(trim(coalesce(p_para, '')), '') is null and p_canal <> 'nota' then return; end if;
+  if p_canal = 'email' and privado.cfg_txt('dev_email_provedor', 'nenhum') = 'nenhum' then return; end if;
+  if p_canal = 'whatsapp' and privado.cfg_txt('dev_whatsapp_provedor', 'nenhum') = 'nenhum' then return; end if;
+  if p_canal = 'nota' and privado.cfg_txt('dev_nf_provedor', 'nenhum') = 'nenhum' then return; end if;
+  -- a mesma nota nunca sai duas vezes
+  if p_corpo ? 'referencia' and exists (select 1 from privado.avisos_externos where canal = p_canal and corpo ->> 'referencia' = p_corpo ->> 'referencia' and status <> 'erro') then return; end if;
+  insert into privado.avisos_externos (organizacao_id, canal, para, assunto, corpo) values (p_org, p_canal, p_para, p_assunto, coalesce(p_corpo, '{}'));
+end;
+$$;
+
+-- cadastro aprovado → e-mail para o cliente
+create or replace function privado.aviso_cadastro()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.status = 'aprovado' and old.status is distinct from 'aprovado' and privado.cfg_org_bool(new.organizacao_id, 'email_aviso_cadastro', true) then
+    perform privado.enfileirar(new.organizacao_id, 'email', new.email, 'Seu cadastro foi aprovado',
+      jsonb_build_object('modelo', 'cadastro', 'nome', new.nome, 'empresa', (select coalesce(o.nome_app, o.nome) from public.organizacoes o where o.id = new.organizacao_id)));
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists aviso_cadastro on public.cadastros_cliente;
+create trigger aviso_cadastro after update of status on public.cadastros_cliente for each row execute function privado.aviso_cadastro();
+
+-- fatura emitida → e-mail para o cliente; paga → nota (se "quando for paga")
+create or replace function privado.aviso_fatura()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare e public.empresas%rowtype;
+begin
+  if new.teste then return new; end if;
+  select * into e from public.empresas where id = new.empresa_id;
+  if new.status = 'emitida' and old.status is distinct from 'emitida' and privado.cfg_org_bool(new.organizacao_id, 'email_aviso_fatura', true) then
+    perform privado.enfileirar(new.organizacao_id, 'email', e.email, 'Fatura #' || new.numero || ' emitida',
+      jsonb_build_object('modelo', 'fatura', 'nome', e.nome, 'numero', new.numero, 'total', new.total, 'vencimento', new.vencimento, 'inicio', new.inicio, 'fim', new.fim));
+  end if;
+  if new.status = 'paga' and old.status is distinct from 'paga' and privado.pol_txt('nf_emissao', 'manual', new.empresa_id) = 'pago' then
+    perform privado.enfileirar(new.organizacao_id, 'nota', e.email, 'Nota da fatura #' || new.numero,
+      jsonb_build_object('referencia', 'fatura-' || new.id, 'documento', coalesce(e.cnpj, e.cpf), 'nome', e.nome, 'email', e.email, 'valor', new.total,
+                         'descricao', 'Serviços de entrega de ' || to_char(new.inicio, 'DD/MM/YYYY') || ' a ' || to_char(new.fim, 'DD/MM/YYYY')));
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists aviso_fatura on public.faturas;
+create trigger aviso_fatura after update of status on public.faturas for each row execute function privado.aviso_fatura();
+
+-- pedido entregue → e-mail (se ligado) e nota (se "quando for entregue"); pago e cancelado → aviso da devolução
+create or replace function privado.aviso_pedido()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare e public.empresas%rowtype; v_regra text; v_dev numeric;
+begin
+  if new.teste then return new; end if;
+  select * into e from public.empresas where id = new.empresa_id;
+  if new.status::text = 'concluido' and old.status::text is distinct from 'concluido' then
+    if privado.cfg_org_bool(new.organizacao_id, 'email_aviso_entregue', false) then
+      perform privado.enfileirar(new.organizacao_id, 'email', e.email, 'Pedido #' || new.numero || ' entregue', jsonb_build_object('modelo', 'entregue', 'nome', e.nome, 'numero', new.numero));
+    end if;
+    if new.empresa_id is not null and privado.pol_txt('nf_emissao', 'manual', new.empresa_id) = 'entregue' then
+      perform privado.enfileirar(new.organizacao_id, 'nota', e.email, 'Nota do pedido #' || new.numero,
+        jsonb_build_object('referencia', 'pedido-' || new.id, 'documento', coalesce(e.cnpj, e.cpf), 'nome', e.nome, 'email', e.email, 'valor', new.valor, 'descricao', 'Entrega do pedido #' || new.numero));
+    end if;
+  end if;
+  if new.pagamento_status::text = 'pago' and old.pagamento_status::text is distinct from 'pago' and new.empresa_id is not null and privado.pol_txt('nf_emissao', 'manual', new.empresa_id) = 'pago' then
+    perform privado.enfileirar(new.organizacao_id, 'nota', e.email, 'Nota do pedido #' || new.numero,
+      jsonb_build_object('referencia', 'pedido-' || new.id, 'documento', coalesce(e.cnpj, e.cpf), 'nome', e.nome, 'email', e.email, 'valor', new.valor, 'descricao', 'Entrega do pedido #' || new.numero));
+  end if;
+  if new.status::text = 'cancelado' and old.status::text is distinct from 'cancelado' and new.pagamento_status::text = 'pago' then
+    v_regra := privado.pol_txt('devolucao_padrao', 'total', new.empresa_id);
+    v_dev := case v_regra when 'total' then new.valor when 'taxa' then greatest(coalesce(new.valor, 0) - privado.pol_num('devolucao_taxa', 0, new.empresa_id), 0)
+                          when 'nada_coletado' then case when exists (select 1 from public.pedido_pontos x where x.pedido_id = new.id and x.tipo::text = 'coleta' and x.status::text = 'concluido') then 0 else new.valor end
+                          else null end;
+    perform privado.enfileirar(new.organizacao_id, 'email', e.email, 'Pedido #' || new.numero || ' cancelado',
+      jsonb_build_object('modelo', 'devolucao', 'nome', e.nome, 'numero', new.numero, 'valor', new.valor, 'devolver', v_dev, 'regra', v_regra));
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists aviso_pedido on public.pedidos;
+create trigger aviso_pedido after update of status, pagamento_status on public.pedidos for each row execute function privado.aviso_pedido();
+
+-- rota saiu → WhatsApp para quem recebe, com o link de acompanhar (se ligado)
+create or replace function privado.aviso_rota_saiu()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare k record; v_tok text; v_site text := coalesce(nullif(privado.cfg('dev_site_url', '""'::jsonb) #>> '{}', ''), '');
+begin
+  if new.teste or new.status::text <> 'em_andamento' or old.status::text = 'em_andamento' then return new; end if;
+  if not privado.cfg_org_bool(new.organizacao_id, 'whatsapp_aviso_rastreio', false) then return new; end if;
+  for k in select distinct on (pp.id) pp.id ponto, pp.pedido_id, pp.contato_telefone, pp.contato_nome
+             from public.paradas x join public.pedido_pontos pp on pp.pedido_id = x.pedido_id and pp.tipo::text = 'entrega'
+            where x.corrida_id = new.id and x.tipo::text = 'entrega' and nullif(pp.contato_telefone, '') is not null loop
+    select token into v_tok from public.rastreios where pedido_id = k.pedido_id and ponto_id = k.ponto and (expira_em is null or expira_em > now()) limit 1;
+    if v_tok is null then insert into public.rastreios (pedido_id, ponto_id) values (k.pedido_id, k.ponto) returning token into v_tok; end if;
+    perform privado.enfileirar(new.organizacao_id, 'whatsapp', regexp_replace(k.contato_telefone, '[^0-9]', '', 'g'), null,
+      jsonb_build_object('modelo', privado.cfg_org_txt(new.organizacao_id, 'whatsapp_modelo_rastreio', 'rastreio_entrega'),
+                         'variaveis', jsonb_build_array(coalesce(k.contato_nome, ''), v_site || '/r/' || v_tok)));
+  end loop;
+  return new;
+exception when others then
+  raise warning 'aviso_rota_saiu: %', sqlerrm;
+  return new;
+end;
+$$;
+drop trigger if exists aviso_rota_saiu on public.corridas;
+create trigger aviso_rota_saiu after update of status on public.corridas for each row execute function privado.aviso_rota_saiu();
+
+-- o site pega a fila (com o segredo do servidor) e devolve o resultado
+create or replace function public.avisos_externos_pegar(p_limite int default 20)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare r jsonb;
+begin
+  if not privado.eh_servico() then raise exception 'apenas_servidor' using errcode = '42501'; end if;
+  with x as (
+    select id from privado.avisos_externos
+     where (status = 'pendente' or (status = 'erro' and tentativas < 5 and criado_em > now() - interval '2 days')
+            or (status = 'enviando' and criado_em < now() - interval '10 minutes'))
+     order by criado_em limit greatest(least(p_limite, 100), 1) for update skip locked)
+  update privado.avisos_externos a set status = 'enviando', tentativas = a.tentativas + 1 from x where a.id = x.id;
+  select coalesce(jsonb_agg(jsonb_build_object('id', a.id, 'canal', a.canal, 'para', a.para, 'assunto', a.assunto, 'corpo', a.corpo,
+           'empresa', (select coalesce(o.nome_app, o.nome) from public.organizacoes o where o.id = a.organizacao_id),
+           'nf_provedor', privado.cfg_txt('dev_nf_provedor', 'nenhum'), 'nf_cnpj', privado.cfg_org_txt(a.organizacao_id, 'nf_cnpj_prestador', ''),
+           'nf_servico', privado.cfg_org_txt(a.organizacao_id, 'nf_codigo_servico', '')) order by a.id), '[]') into r
+    from privado.avisos_externos a where a.status = 'enviando' and a.enviado_em is null and a.tentativas > 0
+     and a.id in (select id from privado.avisos_externos where status = 'enviando' order by id limit 100);
+  return r;
+end;
+$$;
+create or replace function public.avisos_externos_resultado(p_id bigint, p_status text, p_erro text default null, p_ref text default null)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if not privado.eh_servico() then raise exception 'apenas_servidor' using errcode = '42501'; end if;
+  update privado.avisos_externos set status = case when p_status in ('enviado', 'erro', 'sem_conexao') then p_status else 'erro' end,
+         erro = left(p_erro, 500), ref = left(p_ref, 200), enviado_em = case when p_status = 'enviado' then now() end where id = p_id;
+end;
+$$;
+revoke execute on function public.avisos_externos_pegar(int), public.avisos_externos_resultado(bigint, text, text, text) from public, anon, authenticated;
+do $$ begin
+  execute 'grant execute on function public.avisos_externos_pegar(int), public.avisos_externos_resultado(bigint, text, text, text) to service_role';
+exception when undefined_object then null; end $$;
+
+-- a cada minuto, se tem algo na fila, chama o site
+create or replace function privado.chamar_avisos_externos()
+returns void language plpgsql security definer set search_path = '' as $$
+declare v_url text; v_secret text;
+begin
+  if not exists (select 1 from privado.avisos_externos where status = 'pendente' or (status = 'erro' and tentativas < 5 and criado_em > now() - interval '2 days')) then return; end if;
+  select replace(valor, '/api/push', '/api/avisos/processar') into v_url from privado.config where chave = 'push_url';
+  select valor into v_secret from privado.config where chave = 'push_secret';
+  if v_url is null or v_secret is null then return; end if;
+  perform net.http_post(url := v_url, body := '{}'::jsonb,
+                        headers := jsonb_build_object('Content-Type', 'application/json', 'x-pwex-secret', v_secret), timeout_milliseconds := 20000);
+exception when others then
+  raise warning 'chamar_avisos_externos: %', sqlerrm;
+end;
+$$;
+do $$ begin
+  if exists (select 1 from pg_namespace where nspname = 'cron') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'cron' and p.proname = 'schedule') then
+    perform cron.schedule('pwex-avisos-externos', '* * * * *', 'select privado.chamar_avisos_externos()');
+  end if;
+end $$;
+
+-- Dev: o que saiu (ou não) pela fila
+create or replace function public.dev_avisos_externos(p_limite int default 100)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.is_dev() then raise exception 'apenas_dev' using errcode = '42501'; end if;
+  return (select coalesce(jsonb_agg(jsonb_build_object('id', a.id, 'canal', a.canal, 'para', a.para, 'assunto', a.assunto, 'status', a.status, 'erro', a.erro,
+            'tentativas', a.tentativas, 'criado_em', a.criado_em, 'enviado_em', a.enviado_em,
+            'empresa', (select o.nome from public.organizacoes o where o.id = a.organizacao_id)) order by a.id desc), '[]')
+    from (select * from privado.avisos_externos order by id desc limit least(greatest(p_limite, 1), 500)) a);
+end;
+$$;
+revoke execute on function public.dev_avisos_externos(int) from public, anon;
+grant execute on function public.dev_avisos_externos(int) to authenticated;

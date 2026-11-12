@@ -114,6 +114,7 @@ export function AreaCliente({ children }: { children: ReactNode }) {
         <a href="/" aria-label="Delibra, início"><Logo /></a>
         <span className="espaco" />
         {a.teste && <span className="selo selo-teste"><FlaskConical size={12} aria-hidden /> Teste</span>}
+        {!comoGestor && <TrocarTransportadora />}
         <span className="cliente-ola">Olá, <strong>{(a.nome ?? "").split(" ")[0]}</strong></span>
         <BotaoTema />
         <button className="botao-texto" onClick={() => sair()} title="Sair"><LogOut size={16} aria-hidden /> Sair</button>
@@ -133,5 +134,18 @@ export function AreaCliente({ children }: { children: ReactNode }) {
       </footer>}
       <Toasts />
     </div>
+  );
+}
+
+/** Cliente de mais de uma transportadora: escolhe com qual está pedindo (some quando só tem uma). */
+function TrocarTransportadora() {
+  const [l, setL] = useState<{ empresa_id: string; nome: string; atual: boolean }[]>([]);
+  useEffect(() => { void supabase().rpc("minhas_empresas_cliente").then(({ data }) => setL((data ?? []) as typeof l)); }, []);
+  if (l.length < 2) return null;
+  return (
+    <select className="cliente-troca" aria-label="Transportadora" value={l.find((x) => x.atual)?.empresa_id ?? ""}
+      onChange={async (e) => { const { error } = await supabase().rpc("trocar_empresa_cliente", { p_empresa: e.target.value }); if (!error) window.location.reload(); }}>
+      {l.map((x) => <option key={x.empresa_id} value={x.empresa_id}>{x.nome}</option>)}
+    </select>
   );
 }

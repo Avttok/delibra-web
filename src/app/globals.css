@@ -2145,3 +2145,19 @@ img.avatar, img.chat-avatar { display: block; max-width: none; }
   .painel > .topo { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--vidro-forte); }
 }
 .painel-mini span { align-content: end; }
+
+/* ===== Lote 42: relatórios ===== */
+.relatorios { display: grid; gap: 14px; }
+.relatorios-tipos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.relatorio-tipo { display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--borda); background: var(--vidro-sutil); color: var(--texto-2); font: inherit; cursor: pointer; }
+.relatorio-tipo svg { color: var(--texto-3); }
+.relatorio-tipo strong { color: var(--texto); font-size: 15px; }
+.relatorio-tipo small { font-size: 12px; line-height: 1.35; }
+.relatorio-tipo.ativo { border-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 9%, transparent); }
+.relatorio-tipo.ativo svg { color: var(--ouro); }
+.relatorios-barra, .relatorios-email { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.relatorios-totais { display: flex; gap: 24px; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--borda); }
+.relatorios-totais span { display: grid; gap: 2px; }
+.relatorios-totais small { font-size: 11px; color: var(--texto-3); }
+.relatorios-totais b { font-size: 18px; font-variant-numeric: tabular-nums; }
+@media (max-width: 860px) { .relatorios-tipos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
