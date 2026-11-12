@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { CampoRaio } from "@/features/ui/CampoRaio";
 import { usePermissoes } from "@/features/conta/permissoes";
+import { AjusteVisual, CHAVES_PAGAMENTO, CHAVES_PRECO } from "./AjusteVisual";
 import { AREAS, GRUPOS, PARAMETROS, ehRaio, igualPadrao, type AreaParametro, type DefParametro, type GrupoParametro, type ValorParametro } from "./definicoes";
 import { CampoNumero } from "@/features/ui/CampoNumero";
 import { CompartilharMotoboys } from "@/features/equipe/CompartilharMotoboys";
@@ -152,9 +153,13 @@ export function PainelConfiguracoes() {
                 {gruposDaArea.map((g) => <a key={g} href={`#cfg-${g}`} className="chip">{GRUPOS[g].titulo}</a>)}
                 {PAGINAS_EXTRAS.filter((x) => x.area === area.chave).map((x) => <button key={x.chave} type="button" className="chip" onClick={() => ir(x.chave)}><x.icone size={13} aria-hidden /> {x.titulo}</button>)}
               </nav>
+              {area.chave === "motoboys" && !soMudados && <AjusteVisual tipo="pagamento" />}
+              {area.chave === "preco" && !soMudados && <AjusteVisual tipo="preco" />}
               {gruposDaArea.map((g) => {
-                const lista = filtrar(visiveis.filter((p) => p.grupo === g));
-                if (!lista.length && soMudados) return null;
+                // o que já está no editor visual não aparece de novo na lista
+                const cobertas = soMudados ? [] : area.chave === "motoboys" ? CHAVES_PAGAMENTO : area.chave === "preco" ? CHAVES_PRECO : [];
+                const lista = filtrar(visiveis.filter((p) => p.grupo === g && !cobertas.includes(p.chave)));
+                if (!lista.length && (soMudados || cobertas.length)) return null;
                 return (
                   <section key={g} id={`cfg-${g}`} className="config-secao">
                     <h3><span>{GRUPOS[g].titulo}</span>{nMudados(visiveis.filter((p) => p.grupo === g)) > 0 && <small>{nMudados(visiveis.filter((p) => p.grupo === g))} mudado(s)</small>}</h3>

@@ -62,12 +62,10 @@ function Campo({ chave, regras, cfg, onDefinir }: { chave: string; regras: Regra
 export function ValorCliente({ pedidoId, orc, regrasIniciais, bloqueado, onMudou }: {
   pedidoId: string; orc: Orcamento | null; regrasIniciais: Regras; bloqueado?: boolean; onMudou?: (regras: Regras) => void;
 }) {
-  const cfg = useConfiguracoes() as unknown as Record<string, unknown>;
   const perm = usePermissoes();
   const [regras, setRegras] = useState<Regras>(regrasIniciais);
   const [salvas, setSalvas] = useState<Regras>(regrasIniciais);
   const [previa, setPrevia] = useState<Orcamento | null>(null);
-  const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const mudou = JSON.stringify(regras) !== JSON.stringify(salvas);
   const pode = !bloqueado && perm.pode("editar_valor_pedido");
@@ -79,19 +77,6 @@ export function ValorCliente({ pedidoId, orc, regrasIniciais, bloqueado, onMudou
   }, [JSON.stringify(regras)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const base = (previa ?? orc) as (Orcamento & { linhas: LinhaO[]; percentuais: { rotulo: string; pct: number }[]; total?: number }) | null;
-  const definir = (k: string, v: ValorParametro | null) => setRegras((o) => { const n = { ...o }; if (v == null) delete n[k]; else n[k] = v; return n; });
-  const ligada = (p: (typeof PECAS)[number]) => !p.desliga || !Object.entries(p.desliga).every(([k, v]) => regras[k] === v);
-  const alternar = (p: (typeof PECAS)[number]) => setRegras((o) => {
-    const n = { ...o };
-    if (ligada(p)) Object.assign(n, p.desliga); else Object.keys(p.desliga ?? {}).forEach((k) => delete n[k]);
-    return n;
-  });
-  const valorPeca = (p: (typeof PECAS)[number]) => {
-    const v = (base?.linhas ?? []).filter(p.linha).reduce((s, l) => s + Number(l.valor ?? 0), 0);
-    const pct = (base?.percentuais ?? []).filter((x) => p.pct?.(x.rotulo)).reduce((s, x) => s + Number(x.pct ?? 0), 0);
-    return { v, pct };
-  };
-
   async function salvar(r: Regras) {
     setOcupado(true);
     const { error } = await supabase().rpc("definir_regras_pedido", { p_pedido: pedidoId, p_regras: r });
@@ -115,7 +100,39 @@ export function ValorCliente({ pedidoId, orc, regrasIniciais, bloqueado, onMudou
       </div>
       {pode ? (
         <>
-          <div className="pag-calculos">
+          <EditorPecasPreco regras={regras} onMudar={setRegras} base={base} />
+          <div className="linha-botoes">
+            <button className="botao-ouro" disabled={ocupado || !mudou} onClick={() => salvar(regras)}><Check size={15} aria-hidden /> Salvar preço</button>
+            {mudou && <button className="botao-texto" onClick={() => setRegras(salvas)}>Desfazer</button>}
+            {Object.keys(salvas).length > 0 && <button className="botao-texto" disabled={ocupado} onClick={() => salvar({})}><RotateCcw size={14} aria-hidden /> Padrão</button>}
+          </div>
+          <p className="dica" style={{ margin: 0 }}>Muda só este pedido. O padrão de cada cliente fica no cadastro dele, e o geral em Ajustes → Preço.</p>
+        </>
+      ) : <p className="dica" style={{ margin: 0 }}>{bloqueado ? "Pedido fechado: o preço não muda mais." : "A plataforma não liberou mudar o valor do pedido."}</p>}
+    </div>
+  );
+}
+
+/** As peças do preço (liga, desliga e mexe nos valores). Muda só o objeto [regras]; quem usa decide onde salvar. */
+export function EditorPecasPreco({ regras, onMudar, base }: { regras: Regras; onMudar: (r: Regras) => void; base?: { linhas?: LinhaO[]; percentuais?: { rotulo: string; pct: number }[] } | null }) {
+  const cfg = useConfiguracoes() as unknown as Record<string, unknown>;
+  const [aberto, setAberto] = useState<string | null>(null);
+  const setRegras = (f: (o: Regras) => Regras) => onMudar(f(regras));
+  const definir = (k: string, v: ValorParametro | null) => setRegras((o) => { const n = { ...o }; if (v == null) delete n[k]; else n[k] = v; return n; });
+  const ligada = (p: (typeof PECAS)[number]) => !p.desliga || !Object.entries(p.desliga).every(([k, v]) => regras[k] === v);
+  const alternar = (p: (typeof PECAS)[number]) => setRegras((o) => {
+    const n = { ...o };
+    if (ligada(p)) Object.assign(n, p.desliga); else Object.keys(p.desliga ?? {}).forEach((k) => delete n[k]);
+    return n;
+  });
+  const valorPeca = (p: (typeof PECAS)[number]) => {
+    const v = (base?.linhas ?? []).filter(p.linha).reduce((s, l) => s + Number(l.valor ?? 0), 0);
+    const pct = (base?.percentuais ?? []).filter((x) => p.pct?.(x.rotulo)).reduce((s, x) => s + Number(x.pct ?? 0), 0);
+    return { v, pct };
+  };
+
+  return (
+    <div className="pag-calculos">
             {PECAS.map((p) => {
               const on = ligada(p);
               const { v, pct } = valorPeca(p);
@@ -138,14 +155,5 @@ export function ValorCliente({ pedidoId, orc, regrasIniciais, bloqueado, onMudou
               );
             })}
           </div>
-          <div className="linha-botoes">
-            <button className="botao-ouro" disabled={ocupado || !mudou} onClick={() => salvar(regras)}><Check size={15} aria-hidden /> Salvar preço</button>
-            {mudou && <button className="botao-texto" onClick={() => setRegras(salvas)}>Desfazer</button>}
-            {Object.keys(salvas).length > 0 && <button className="botao-texto" disabled={ocupado} onClick={() => salvar({})}><RotateCcw size={14} aria-hidden /> Padrão</button>}
-          </div>
-          <p className="dica" style={{ margin: 0 }}>Muda só este pedido. O padrão de cada cliente fica no cadastro dele, e o geral em Ajustes → Preço.</p>
-        </>
-      ) : <p className="dica" style={{ margin: 0 }}>{bloqueado ? "Pedido fechado: o preço não muda mais." : "A plataforma não liberou mudar o valor do pedido."}</p>}
-    </div>
   );
 }

@@ -63,7 +63,7 @@ export function EditorCalculos({ regras, onMudar, calc }: { regras: Regras; onMu
   const [aberto, setAberto] = useState<string | null>(null);
   const [extras, setExtras] = useState(false);
   const modosBase = (regras.pag_modos ?? c.pag_modos ?? []) as string[];
-  const modeloUnico = (c.modelo_pagamento as string | undefined) ?? calc?.modo ?? "rota";
+  const modeloUnico = (regras.pag_modo as string | undefined) ?? (c.pag_modo as string | undefined) ?? calc?.modo ?? "rota";
   const modos = modosBase.length ? modosBase : [modeloUnico === "combinado" ? "rota" : modeloUnico];
   const definir = (k: string, v: ValorParametro | null) => { const n = { ...regras }; if (v == null) delete n[k]; else n[k] = v; onMudar(n); };
   const alternar = (m: string) => {

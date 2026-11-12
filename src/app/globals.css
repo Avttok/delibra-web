@@ -2215,3 +2215,7 @@ span.avatar, .chat-avatar:not(img), .dev-avatar, span.membro-avatar, span.avatar
   text-box: trim-both cap alphabetic;
 }
 span.avatar::before, span.avatar::after { content: none !important; }
+.ajuste-visual { display: grid; gap: 10px; padding: 16px; border-radius: 20px; border: 1px solid color-mix(in srgb, var(--ouro) 35%, var(--borda)); background: color-mix(in srgb, var(--ouro) 4%, var(--vidro)); margin-bottom: 14px; }
+.ajuste-visual h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.ajuste-visual h3 svg { color: var(--ouro); }
+.ajuste-visual.travado .pag-calculos { opacity: .7; }
