@@ -31,10 +31,8 @@ export const useSessaoGestor = () => useContext(ContextoSessao);
 const ABAS = [
   { href: "/gestor/inicio", rotulo: "Hoje", icone: LayoutDashboard },
   { href: "/gestor/mapa", rotulo: "Mapa", icone: Map },
-  { href: "/gestor/pedidos", rotulo: "Pedidos", icone: ClipboardList },
-  { href: "/gestor/corridas", rotulo: "Rotas", icone: Route },
-  { href: "/gestor/clientes", rotulo: "Clientes", icone: Building2 },
-  { href: "/gestor/equipe", rotulo: "Equipe", icone: Users },
+  { href: "/gestor/pedidos", rotulo: "Operação", icone: ClipboardList, tambem: ["/gestor/corridas"] },
+  { href: "/gestor/clientes", rotulo: "Pessoas", icone: Users, tambem: ["/gestor/equipe"] },
   { href: "/gestor/chat", rotulo: "Chat", icone: MessagesSquare },
   { href: "/gestor/carteira", rotulo: "Carteira", icone: Wallet },
   { href: "/gestor/configuracoes", rotulo: "Ajustes", icone: Settings2 },
@@ -258,7 +256,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
               // supervisor: só o que o gestor liberou
               && (!permSup || ((a.href !== "/gestor/carteira" || permSup.financeiro === true) && (a.href !== "/gestor/configuracoes" || permSup.ajustes === true)
                   && (a.href !== "/gestor/clientes" || permSup.clientes !== false) && (a.href !== "/gestor/mapa" || permSup.mapa !== false)))).map(({ href, rotulo, icone: Icone }) => (
-              <Link key={href} href={href} data-tour={href.replace("/gestor/", "aba-")} className={caminho?.startsWith(href) ? "ativa" : ""}>
+              <Link key={href} href={href} data-tour={href.replace("/gestor/", "aba-")} className={caminho?.startsWith(href) || ((ABAS.find((x) => x.href === href) as { tambem?: string[] } | undefined)?.tambem ?? []).some((t) => caminho?.startsWith(t)) ? "ativa" : ""}>
                 <Icone size={17} aria-hidden /> {rotulo}
                 {href === "/gestor/pedidos" && paraRevisar > 0 && <span className="aba-n" aria-label={`${paraRevisar} para revisar`}>{paraRevisar}</span>}
               </Link>
@@ -280,6 +278,15 @@ export function AreaGestor({ children }: { children: ReactNode }) {
           />
         </header>
         <ExigirDoisPassos />
+        {(["/gestor/pedidos", "/gestor/corridas"].some((t) => caminho?.startsWith(t)) || ["/gestor/clientes", "/gestor/equipe"].some((t) => caminho?.startsWith(t))) && (
+          <nav className="sub-abas" aria-label="Seção">
+            {(caminho?.startsWith("/gestor/pedidos") || caminho?.startsWith("/gestor/corridas")
+              ? [["/gestor/pedidos", "Pedidos", ClipboardList], ["/gestor/corridas", "Rotas", Route]] as const
+              : [["/gestor/clientes", "Clientes", Building2], ["/gestor/equipe", "Equipe", Users]] as const).map(([h, r, I]) => (
+              <Link key={h} href={h} className={caminho?.startsWith(h) ? "ativa" : ""}><I size={15} aria-hidden /> {r}{h === "/gestor/pedidos" && paraRevisar > 0 && <span className="aba-n">{paraRevisar}</span>}</Link>
+            ))}
+          </nav>
+        )}
         <EmergenciasAbertas />
         <ChamadosPendentes />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
