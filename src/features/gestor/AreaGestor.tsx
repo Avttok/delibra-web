@@ -35,8 +35,8 @@ const ABAS = [
   { href: "/gestor/corridas", rotulo: "Rotas", icone: Route },
   { href: "/gestor/clientes", rotulo: "Clientes", icone: Building2 },
   { href: "/gestor/equipe", rotulo: "Equipe", icone: Users },
-  { href: "/gestor/carteira", rotulo: "Carteira", icone: Wallet },
   { href: "/gestor/chat", rotulo: "Chat", icone: MessagesSquare },
+  { href: "/gestor/carteira", rotulo: "Carteira", icone: Wallet },
   { href: "/gestor/configuracoes", rotulo: "Ajustes", icone: Settings2 },
 ];
 

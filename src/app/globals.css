@@ -1948,3 +1948,26 @@ body.com-mapa-cheio { overflow: hidden; }
   .painel { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
   .toasts { bottom: calc(92px + env(safe-area-inset-bottom)); }
 }
+
+/* =====================================================================
+   Gestor no design do app: cartões mais redondos e com relevo, botões e campos
+   do tamanho do dedo, títulos de seção em texto normal (como no app).
+   ===================================================================== */
+.painel .bloco { border-radius: 22px; padding: 16px; gap: 12px; box-shadow: inset 0 1px 0 var(--reflexo); }
+.painel .bloco > .rotulo:first-child, .painel .lateral > .bloco .rotulo:first-child {
+  text-transform: none; letter-spacing: 0; font-size: 13.5px; font-weight: 750; color: var(--texto); display: inline-flex; align-items: center; gap: 6px; }
+.painel .bloco > .rotulo:first-child svg { color: var(--ouro); }
+.painel .botao-ouro, .painel .botao-texto, .painel .botao-vidro, .painel .botao-perigo { min-height: 42px; border-radius: 14px; }
+.painel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), .painel select, .painel textarea { border-radius: 12px; min-height: 42px; }
+.painel textarea { min-height: 72px; }
+.painel .selo { border-radius: 99px; font-weight: 700; }
+.painel .lateral { border-radius: 26px; }
+.painel .conteudo > .bloco, .painel .conteudo .vidro { border-radius: 22px; }
+.painel .topo { border-radius: 22px; }
+.painel .abas a.ativa { border-radius: 14px; }
+.painel .bloco:focus-within { border-color: color-mix(in srgb, var(--ouro) 35%, var(--borda)); }
+@media (max-width: 860px) {
+  .painel .lateral { margin: 8px; width: auto; border-radius: 22px; }
+  .painel .conteudo { padding: 8px 8px 24px; }
+  .painel .botao-ouro, .painel .botao-texto, .painel .botao-vidro, .painel .botao-perigo { min-height: 46px; }
+}
