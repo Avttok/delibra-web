@@ -1,3 +1,11 @@
+-- Pega de uma vez as tabelas que esta migração muda: as tarefas automáticas esperam alguns segundos
+-- em vez de travar no meio (deadlock) com o sistema rodando.
+do $$ begin
+  perform set_config('lock_timeout', '60s', true);
+  lock table public.perfis, public.motoboys, public.corridas, public.pedidos, public.faturas, public.cadastros_cliente,
+             public.chat_membros, public.chat_mensagens, public.holerite_ajustes, public.empresas, public.organizacoes in access exclusive mode;
+end $$;
+
 -- =====================================================================
 -- Delibra · 0043: holerite (o gestor escolhe o que o motoboy vê), pagamento da rota editável até fechar o holerite,
 --                  limite de gestores por empresa (só o Dev cria gestor), Dev oculto some de tudo, ferramentas do Dev
