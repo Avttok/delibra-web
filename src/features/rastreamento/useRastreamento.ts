@@ -47,11 +47,20 @@ export function useRastreamento(): EstadoRastreamento {
         return (porModo ? q.eq("teste", teste) : q).gte("registrado_em", desde).order("registrado_em", { ascending: true }).limit(MAX_PONTOS);
       };
       // percursos pelo servidor: todos os pings (sem o corte de 1000) e já traçados pelas ruas
-      const [m, p, viaApi] = await Promise.all([
+      // os percursos (traçado pelas ruas) podem demorar: motoboys e nomes aparecem antes, sem esperar
+      const percursos = buscarPercursos({ de: new Date(desde), ate: new Date(Date.now() + 10 * 60_000), teste });
+      const [m, p] = await Promise.all([
         sb.from("motoboys").select(COLUNAS_MOTOBOY),
         sb.from("perfis").select("id,nome,foto_url"),
-        buscarPercursos({ de: new Date(desde), ate: new Date(Date.now() + 10 * 60_000), teste }),
       ]);
+      if (!ativo) return;
+      if (!m.error) setMotoboys(Object.fromEntries((m.data as Motoboy[]).map((x) => [x.id, x])));
+      if (!p.error) {
+        const ps = (p.data ?? []) as { id: string; nome: string; foto_url: string | null }[];
+        setNomes(Object.fromEntries(ps.map((x) => [x.id, x.nome])));
+        setFotos(Object.fromEntries(ps.filter((x) => x.foto_url).map((x) => [x.id, x.foto_url!])));
+      }
+      const viaApi = await percursos;
       let l: { data: Ponto[] | null; error: { message: string } | null };
       if (viaApi) {
         l = { data: viaApi.pings.map((x, i) => ({ id: -i - 1, sessao_id: null, precisao_m: null, velocidade_ms: null, bateria: null, ...x }) as Ponto), error: null };

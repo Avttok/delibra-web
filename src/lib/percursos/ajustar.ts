@@ -21,7 +21,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const OSRM = "https://router.project-osrm.org";
 const VALHALLA = "https://valhalla1.openstreetmap.de";
 const LACUNA_MS = 20 * 60_000;
-const MAX_TRECHOS_NOVOS = 30;
+const MAX_TRECHOS_NOVOS = 12;
 
 /** [motoboy, lat, lng, status, corrida, ms, precisão] — como o banco devolve. */
 export type PingBruto = [string, number, number, string, string | null, number, number];
@@ -213,10 +213,16 @@ function ateSegmento(p: [number, number], a: [number, number], b: [number, numbe
 export function cobrePings(linha: [number, number][], pts: [number, number][], raio: number): boolean {
   if (linha.length < 2 || pts.length < 2) return true;
   const tol = Math.max(60, raio * 2.5);
-  let fora = 0, inicioFora: [number, number] | null = null;
+  let fora = 0, inicioFora: [number, number] | null = null, dica = 0;
+  const n = linha.length - 1;
   for (const p of pts) {
     let d = Infinity;
-    for (let i = 0; i < linha.length - 1 && d > tol; i++) d = Math.min(d, ateSegmento(p, linha[i], linha[i + 1]));
+    // os pings andam junto com a linha: procura a partir de onde o anterior caiu, depois no resto
+    for (let k = 0; k < n && d > tol; k++) {
+      const i = (dica + k) % n;
+      const x = ateSegmento(p, linha[i], linha[i + 1]);
+      if (x < d) { d = x; if (d <= tol) dica = i; }
+    }
     if (d <= tol) { fora = 0; inicioFora = null; continue; }
     fora++;
     inicioFora ??= p;
@@ -297,7 +303,7 @@ export async function montarPercursos(sb: SupabaseClient, dados: { pings?: PingB
   if (faltam.length > MAX_TRECHOS_NOVOS) parcial = true;
   const novos: { chave: string; motoboy: string; caminho: [number, number][] }[] = [];
   const fila = faltam.slice(-MAX_TRECHOS_NOVOS).reverse(); // os mais recentes primeiro (é o que se olha)
-  const prazo = Date.now() + 18_000; // responde a tempo (o app espera até 30 s); o resto fica para a próxima
+  const prazo = Date.now() + 5_000; // responde rápido (a tela espera); o que faltar sai na próxima busca
   await Promise.all(Array.from({ length: 3 }, async () => {
     for (let t = fila.shift(); t; t = fila.shift()) {
       if (Date.now() > prazo) { parcial = true; break; }
