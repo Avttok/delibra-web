@@ -17,14 +17,39 @@ on:
         default: ""
   push:
     branches: [main]
-    paths: ["supabase/migrations/**"]
+    paths: ["supabase/migrations/**", "supabase/testes/**"]
 
 concurrency:
   group: migrar-banco
   cancel-in-progress: false
 
 jobs:
+  # Antes de tocar no banco de produção: aplica todas as migrações num banco vazio e roda o fluxo principal.
+  # Se algo quebrar, a migração não sobe.
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar o psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Testar migrações e fluxo principal
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: teste
+        run: bash supabase/testes/rodar.sh
+
   migrar:
+    needs: testar
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

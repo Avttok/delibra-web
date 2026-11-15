@@ -2219,3 +2219,28 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .ajuste-visual h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; }
 .ajuste-visual h3 svg { color: var(--ouro); }
 .ajuste-visual.travado .pag-calculos { opacity: .7; }
+
+/* ---------------------------------------------------------------- aceite dos termos */
+.aceite-fundo { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; padding: 18px; background: rgb(0 0 0 / 0.62); }
+.aceite-janela { width: min(440px, 100%); padding: 24px; border-radius: 22px; display: grid; gap: 14px; }
+.aceite-janela h2 { margin: 0; font-size: 21px; }
+.aceite-janela p { margin: 0; color: var(--texto-2); line-height: 1.55; }
+.aceite-janela a { color: var(--ouro); }
+.aceite-icone { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, var(--ouro) 16%, transparent); color: var(--ouro); }
+.aceite-marca { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--texto); cursor: pointer; }
+.aceite-marca input { margin-top: 3px; accent-color: var(--ouro); }
+.aceite-erro { color: var(--vermelho, #ef4444) !important; font-size: 13px; }
+
+/* ---------------------------------------------------------------- API da loja */
+.api-loja { display: grid; gap: 14px; }
+.api-loja .bloco { display: grid; gap: 10px; }
+.api-titulo { display: flex; align-items: center; gap: 8px; }
+.api-titulo button { margin-left: auto; }
+.api-nova { border: 1px solid var(--ouro); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: color-mix(in srgb, var(--ouro) 8%, transparent); }
+.api-nova p { margin: 0; font-size: 13px; }
+.api-nova code { word-break: break-all; font-size: 13px; }
+.api-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.api-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.api-lista li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--texto-2); padding: 8px 10px; border-radius: 10px; background: var(--campo, rgb(255 255 255 / 0.04)); }
+.api-lista li.revogada { opacity: 0.55; }
+.botao-ouro.pequeno { padding: 6px 12px; font-size: 13px; min-height: 0; }

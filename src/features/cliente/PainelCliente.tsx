@@ -30,6 +30,7 @@ import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
 import { Icone } from "@/features/ui/icones";
 import { AvaliarPedido, BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 import { useEtapa } from "@/features/ui/useEtapa";
+import { AceiteTermos } from "@/features/conta/AceiteTermos";
 
 // ------------------------------------------------------------------ dados
 
@@ -123,6 +124,7 @@ export function PainelCliente() {
   const abertas = faturas.filter((f) => f.status === "emitida");
   return (
     <div className="cliente-painel entrar">
+      <AceiteTermos origem="cliente" />
       <div className="cliente-cabeca">
         <div>
           <h1 className="display" style={{ margin: 0 }}>{conta.nome}</h1>

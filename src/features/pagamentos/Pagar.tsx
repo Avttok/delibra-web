@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, CreditCard, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import { toast } from "@/features/ui/toast";
 import { comSessao } from "./Recebimentos";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 type Pix = { id: string; qr_code: string; qr_base64: string; expira_em: string; valor: number };
 const moeda = (v: number) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -13,6 +14,7 @@ const moeda = (v: number) => Number(v ?? 0).toLocaleString("pt-BR", { style: "cu
  * poucos segundos) ou cartão na página segura do Mercado Pago.
  */
 export function Pagar({ alvo, id, valor, onPago, onFechar }: { alvo: "pedido" | "fatura"; id: string; valor: number; onPago: () => void; onFechar: () => void }) {
+  useFecharNoVoltar(onFechar);
   const [metodo, setMetodo] = useState<"pix" | "cartao">("pix");
   const [pix, setPix] = useState<Pix | null>(null);
   const [ocupado, setOcupado] = useState(false);

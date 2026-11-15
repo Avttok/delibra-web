@@ -24,6 +24,7 @@ import { Tour, type PassoTour } from "@/features/ui/Tour";
 import { ProvedorConta, type ContextoConta, type CorTema, type Papel } from "@/features/conta/conta";
 import { Toasts, toast } from "@/features/ui/toast";
 import { definirPreferenciaRota } from "@/features/geo";
+import { AceiteTermos } from "@/features/conta/AceiteTermos";
 
 type Acesso = "carregando" | "anonimo" | "negado" | "gestor";
 
@@ -293,6 +294,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         )}
         <EmergenciasAbertas />
         <ChamadosPendentes />
+        <AceiteTermos origem="gestor" />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
           {children}
           {telaDeMapa && (

@@ -293,3 +293,19 @@
 .dlb-rodape { text-align: center; padding: 0 0 32px; font-size: 13px; opacity: .45; }
 @media (max-width: 860px) { .dlb-hero { grid-template-columns: 1fr; } .dlb-recursos { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .dlb-caminho { animation: none; stroke-dashoffset: 0; } .dlb-entrega { animation: none; opacity: 1; } .dlb-moto { display: none; } }
+
+/* ---------------------------------------------------------------- termos, privacidade e API (texto longo) */
+.legal { max-width: 72ch; margin: 0 auto; padding: 40px 22px 64px; line-height: 1.65; color: var(--texto); }
+.legal h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 0 0 6px; }
+.legal h2 { font-size: 19px; margin: 34px 0 8px; color: var(--ouro); }
+.legal h3 { font-size: 16px; margin: 22px 0 6px; }
+.legal p, .legal li { color: var(--texto-2); }
+.legal strong { color: var(--texto); }
+.legal ul { padding-left: 20px; display: grid; gap: 6px; }
+.legal a { color: var(--ouro); }
+.legal-data { font-size: 13px; color: var(--texto-3, var(--texto-2)); margin-bottom: 26px; }
+.legal-contato { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--borda, rgba(255,255,255,.12)); }
+.legal pre { background: color-mix(in srgb, var(--texto) 6%, transparent); border: 1px solid var(--borda, rgba(255,255,255,.12)); border-radius: 12px; padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; color: var(--texto); }
+.legal code { font-size: .92em; }
+.legal table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.legal th, .legal td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borda, rgba(255,255,255,.12)); vertical-align: top; }

@@ -21,6 +21,7 @@ export const ACOES_GESTOR: { chave: string; rotulo: string; dica: string }[] = [
   { chave: "cancelar_rota", rotulo: "Cancelar rotas", dica: "Cancelar uma rota já montada ou em andamento." },
   { chave: "voltar_revisao", rotulo: "Voltar pedidos à revisão", dica: "Desfazer rotas e revisar de novo." },
   { chave: "forcar_inicio", rotulo: "Forçar início de planejada", dica: "Começar uma rota planejada antes da hora." },
+  { chave: "integracao_api", rotulo: "API para lojas", dica: "Gerar chaves de API e webhooks para os clientes." },
   { chave: "chat_apagar", rotulo: "Apagar mensagens de outros", dica: "No chat da equipe." },
   { chave: "mudar_marca", rotulo: "Mudar a marca da empresa", dica: "Nome, logo e cores." },
   { chave: "modo_teste", rotulo: "Usar o modo teste", dica: "Treinar sem mexer no que é real." },

@@ -25,6 +25,9 @@ export function RodapeSite() {
         <Link href="/entrar?criar=1">Criar conta da empresa</Link>
         <Link href="/app">Baixar o app do motoboy</Link>
         <Link href="/suporte">Central de ajuda</Link>
+        <Link href="/desenvolvedores">API para lojas</Link>
+        <Link href="/termos">Termos de uso</Link>
+        <Link href="/privacidade">Privacidade</Link>
       </nav>
       <p>Um projeto de irmão para irmão.</p>
     </footer>

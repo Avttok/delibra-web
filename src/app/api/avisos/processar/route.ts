@@ -1,11 +1,12 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { adminConfigurado, supabaseAdmin } from "@/lib/supabase/admin";
 import { asaasCliente, asaasCobrar, emitirNota, enviarEmail, enviarWhatsapp } from "@/lib/integracoes/modulos";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-type Aviso = { id: number; canal: "email" | "whatsapp" | "nota" | "cobranca"; para: string | null; assunto: string | null; corpo: Record<string, unknown>; empresa: string | null; nf_provedor: string; nf_cnpj: string; nf_servico: string };
+type Aviso = { id: number; canal: "email" | "whatsapp" | "nota" | "cobranca" | "webhook"; para: string | null; assunto: string | null; corpo: Record<string, unknown>; empresa: string | null; nf_provedor: string; nf_cnpj: string; nf_servico: string };
 
 const moeda = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const data = (v: unknown) => (typeof v === "string" ? v.split("-").reverse().join("/") : "");
@@ -46,6 +47,33 @@ async function cobrar(a: Aviso, admin: ReturnType<typeof supabaseAdmin>) {
   return r.ok ? { ok: true, dados: { id: r.dados.id } } : r;
 }
 
+/**
+ * Webhook da loja: POST com o pedido e a assinatura (HMAC-SHA256 de "<t>.<corpo>" com o segredo do webhook),
+ * no cabeçalho X-Delibra-Assinatura: t=<segundos>,v1=<hex>. Resposta 2xx = entregue; o resto tenta de novo (até 5 vezes).
+ */
+async function webhook(a: Aviso, admin: ReturnType<typeof supabaseAdmin>): Promise<{ ok: boolean; motivo?: string; erro?: string; dados?: unknown }> {
+  const id = String(a.corpo.webhook_id ?? "");
+  const { data: segredo } = await admin.rpc("webhook_segredo", { p_webhook: id });
+  if (!segredo || !a.para) return { ok: false, motivo: "erro", erro: "Webhook apagado." };
+  const t = Math.floor(Date.now() / 1000);
+  const corpo = JSON.stringify({ evento: a.corpo.evento, enviado_em: new Date().toISOString(), pedido: a.corpo.pedido });
+  const assinatura = createHmac("sha256", String(segredo)).update(`${t}.${corpo}`).digest("hex");
+  let status = "sem resposta";
+  try {
+    const r = await fetch(a.para, {
+      method: "POST", body: corpo, signal: AbortSignal.timeout(10_000), redirect: "manual",
+      headers: { "content-type": "application/json", "user-agent": "Delibra-Webhook/1", "x-delibra-evento": String(a.corpo.evento ?? ""),
+                 "x-delibra-entrega": String(a.id), "x-delibra-assinatura": `t=${t},v1=${assinatura}` },
+    });
+    status = `HTTP ${r.status}`;
+    await admin.rpc("webhook_resultado", { p_webhook: id, p_status: status });
+    return r.ok ? { ok: true, dados: { id: `${a.id}` } } : { ok: false, motivo: "erro", erro: status };
+  } catch (e) {
+    await admin.rpc("webhook_resultado", { p_webhook: id, p_status: status });
+    return { ok: false, motivo: "erro", erro: e instanceof Error ? e.message.slice(0, 120) : status };
+  }
+}
+
 function segredoValido(recebido: string | null): boolean {
   const esperado = process.env.PUSH_SECRET;
   if (!esperado || !recebido) return false;
@@ -64,11 +92,14 @@ export async function POST(req: Request) {
   const { data: fila, error } = await admin.rpc("avisos_externos_pegar", { p_limite: 20 });
   if (error) return Response.json({ erro: "falha_fila" }, { status: 500 });
   let enviados = 0;
+  const prazo = Date.now() + 45_000; // um webhook lento não derruba o resto: o que sobrar volta para a fila
   for (const a of (fila ?? []) as Aviso[]) {
+    if (Date.now() > prazo) { await admin.rpc("avisos_externos_resultado", { p_id: a.id, p_status: "pendente", p_erro: null, p_ref: null }); continue; }
     let r: { ok: boolean; motivo?: string; erro?: string; dados?: unknown };
     if (a.canal === "email") r = await enviarEmail({ para: a.para!, assunto: a.assunto ?? "Aviso", html: html(a) });
     else if (a.canal === "whatsapp") r = await enviarWhatsapp({ para: a.para!, modelo: String(a.corpo.modelo ?? "rastreio_entrega"), variaveis: (a.corpo.variaveis as string[]) ?? [] });
     else if (a.canal === "cobranca") r = await cobrar(a, admin);
+    else if (a.canal === "webhook") r = await webhook(a, admin);
     else r = !a.nf_cnpj || !a.nf_servico ? { ok: false, motivo: "erro", erro: "Faltam o CNPJ do prestador e o código do serviço (Ajustes → Nota fiscal)." }
       : await emitirNota(a.nf_provedor, { referencia: String(a.corpo.referencia), prestadorCnpj: a.nf_cnpj, codigoServico: a.nf_servico,
           tomador: { documento: String(a.corpo.documento ?? ""), nome: String(a.corpo.nome ?? ""), email: (a.corpo.email as string) ?? undefined },

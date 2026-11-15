@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bike, Check, LockKeyhole, MapPinned, MessagesSquare, Route, Wallet } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { aceitarAoCriar, MarcaTermos } from "@/features/conta/AceiteTermos";
 
 const RECURSOS = [
   { icone: Route, titulo: "Pedido vira rota sozinho", texto: "O cliente pede pelo site; o sistema junta as entregas perto e oferece ao motoboy certo." },
@@ -21,6 +22,7 @@ export function Comecar() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pronto, setPronto] = useState(false);
+  const [aceite, setAceite] = useState(false);
   useEffect(() => { void supabase().rpc("cadastro_empresas_aberto").then(({ data }) => setCad((data as { aberto: boolean; dias: number }) ?? { aberto: false, dias: 0 })); }, []);
   const muda = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
@@ -32,6 +34,7 @@ export function Comecar() {
     setEnviando(false);
     if (!j.ok) return setErro(j.erro ?? "Não deu agora. Tente de novo.");
     await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.senha }).catch(() => null);
+    await aceitarAoCriar("cadastro_empresa");
     setPronto(true);
   }
 
@@ -90,7 +93,8 @@ export function Comecar() {
             <label>Senha<input required type="password" minLength={8} value={f.senha} onChange={muda("senha")} autoComplete="new-password" /></label>
             <input className="dlb-escondido" tabIndex={-1} autoComplete="off" value={f.site} onChange={muda("site")} aria-hidden />
             {erro && <p className="dlb-erro" role="alert">{erro}</p>}
-            <button type="submit" className="dlb-botao" disabled={enviando}>{enviando ? "Criando…" : "Criar minha empresa"}</button>
+            <MarcaTermos marcado={aceite} onMudar={setAceite} />
+            <button type="submit" className="dlb-botao" disabled={enviando || !aceite}>{enviando ? "Criando…" : "Criar minha empresa"}</button>
           </form>
         ) : cad ? (
           <div className="dlb-pronto">

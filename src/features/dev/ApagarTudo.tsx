@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Bomb, ChevronLeft, Eraser, Search, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 interface Categoria { chave: string; nome: string; descricao: string; total: number }
 interface Item { id: string; titulo: string; sub?: string; quando?: string }
@@ -21,6 +22,7 @@ export function ApagarTudo() {
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [busca, setBusca] = useState("");
   const [pedir, setPedir] = useState<{ categoria: string; ids: string[] | null; texto: string } | null>(null);
+  useFecharNoVoltar(() => setPedir(null), pedir != null);
   const [senha, setSenha] = useState("");
   const [apagando, setApagando] = useState(false);
 

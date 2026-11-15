@@ -44,3 +44,26 @@ export function useEtapa<T>(chave: string, inicial: T | (() => T)) {
 
   return [valor, mudar] as const;
 }
+
+/**
+ * Janela aberta = um passo no histórico: o "voltar" do navegador (ou do celular) fecha a janela
+ * em vez de sair da página. Fechada pelo botão, o passo sai do histórico sozinho.
+ */
+export function useFecharNoVoltar(fechar: () => void, ativo = true) {
+  const ref = useRef(fechar);
+  ref.current = fechar;
+  useEffect(() => {
+    if (!ativo) return;
+    const id = Math.random().toString(36).slice(2);
+    let voltou = false;
+    try { window.history.pushState({ ...(window.history.state ?? {}), janela: id }, ""); } catch { return; }
+    const aoVoltar = () => {
+      if ((window.history.state as { janela?: string } | null)?.janela !== id) { voltou = true; ref.current(); }
+    };
+    window.addEventListener("popstate", aoVoltar);
+    return () => {
+      window.removeEventListener("popstate", aoVoltar);
+      if (!voltou && (window.history.state as { janela?: string } | null)?.janela === id) window.history.back();
+    };
+  }, [ativo]);
+}

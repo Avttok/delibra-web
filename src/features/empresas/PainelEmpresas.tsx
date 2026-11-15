@@ -2,7 +2,9 @@
 
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { Penalidades } from "@/features/penalidades/Penalidades";
-import { Gavel } from "lucide-react";
+import { Gavel, Webhook } from "lucide-react";
+import { usePermissoes } from "@/features/conta/permissoes";
+import { ApiDaLoja } from "@/features/empresas/ApiDaLoja";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Building2, CalendarClock, CheckCircle2, CircleDot, CreditCard, ExternalLink, FlaskConical, Inbox, KeyRound, Layers, MapPin, Plus, Save, Search, Star, Trash2, UserPlus, UserRound, Wallet, X } from "lucide-react";
 import { Icone, SeletorIcone } from "@/features/ui/icones";
@@ -142,7 +144,8 @@ export function PainelEmpresas() {
   const [consultando, setConsultando] = useState(false);
   const [localizando, setLocalizando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
-  const [aba, setAba] = useEtapa<"cadastro" | "regras" | "zonas" | "penalidades">("emp-aba", "cadastro");
+  const perm = usePermissoes();
+  const [aba, setAba] = useEtapa<"cadastro" | "regras" | "zonas" | "penalidades" | "api">("emp-aba", "cadastro");
 
   const [buscaCli, setBuscaCli] = useState("");
   const [filtroCli, setFiltroCli] = useState("todos");
@@ -346,10 +349,12 @@ export function PainelEmpresas() {
                 <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={14} aria-hidden /> Regras</button>
                 <button type="button" className={aba === "zonas" ? "ativo" : ""} onClick={() => setAba("zonas")}><CircleDot size={14} aria-hidden /> Zonas</button>
                 <button type="button" className={aba === "penalidades" ? "ativo" : ""} onClick={() => setAba("penalidades")}><Gavel size={14} aria-hidden /> Penalidades</button>
+                {perm.pode("integracao_api") && <button type="button" className={aba === "api" ? "ativo" : ""} onClick={() => setAba("api")}><Webhook size={14} aria-hidden /> API</button>}
               </div>
             )}
             {aba === "regras" && selecionada !== "nova" && <RegrasDoAlvo escopo="cliente" alvo={selecionada} nome={form.nome} />}
             {aba === "zonas" && selecionada !== "nova" && <CatalogoZonas clienteId={selecionada} />}
+            {aba === "api" && selecionada !== "nova" && <ApiDaLoja empresa={selecionada} nome={form.nome} />}
             {aba === "penalidades" && selecionada !== "nova" && <Penalidades alvoTipo="cliente" alvoId={selecionada} nome={form.nome} />}
             {(aba === "cadastro" || selecionada === "nova") && <>
 

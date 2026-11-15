@@ -216,6 +216,31 @@ export function SaudeDev() {
           </>}
         </div>
       </div>
+      <TravamentosApp />
     </section>
+  );
+}
+
+type Travamento = { assinatura: string; tipo: string; mensagem: string | null; tela: string | null; quantas: number; pessoas: number; versoes: string[] | null; ultimo_em: string; pilha: string | null; aparelho: string | null };
+/** Travamentos e erros do app (o app manda sozinho na próxima abertura), dos mais frequentes aos menos. */
+function TravamentosApp() {
+  const [d, setD] = useState<{ total: number; aparelhos: number; lista: Travamento[] } | null>(null);
+  const [aberto, setAberto] = useState<string | null>(null);
+  useEffect(() => { void supabase().rpc("dev_erros_app", { p_dias: 7 }).then(({ data }) => setD((data as typeof d) ?? null)); }, []);
+  if (!d) return null;
+  return (
+    <div className="bloco">
+      <span className="rotulo"><Activity size={12} aria-hidden /> Travamentos do app · 7 dias</span>
+      {d.lista.length === 0 ? <p className="dica">Nenhum travamento. Tudo certo.</p> : <>
+        <p className="dica">{d.total} ocorrências em {d.aparelhos} aparelho(s).</p>
+        <ul className="dev-lista-simples">{d.lista.map((x) => (
+          <li key={x.assinatura} style={{ display: "block", cursor: "pointer" }} onClick={() => setAberto(aberto === x.assinatura ? null : x.assinatura)}>
+            <span><strong className={x.tipo === "travou" ? "erro" : undefined}>{x.quantas}×</strong> {x.mensagem || "Erro sem mensagem"}</span>
+            <small style={{ display: "block" }}>{x.pessoas} pessoa(s) · {x.aparelho ?? "—"} · {x.tela || "—"} · versões {(x.versoes ?? []).join(", ") || "—"} · {ha(x.ultimo_em)}</small>
+            {aberto === x.assinatura && x.pilha && <pre style={{ whiteSpace: "pre-wrap", fontSize: 11, maxHeight: 260, overflow: "auto" }}>{x.pilha.split("\n").slice(0, 25).join("\n")}</pre>}
+          </li>
+        ))}</ul>
+      </>}
+    </div>
   );
 }

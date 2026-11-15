@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Bike, Check, Copy, Eye, EyeOff, KeyRound, Lock, LockOpen, RefreshCw, ShieldCheck, Trash2, UserCog, TriangleAlert, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useConta } from "@/features/conta/conta";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 export const ERROS: Record<string, string> = {
   servidor_sem_chave: "Falta configurar a chave secreta do Supabase na Vercel (variável SUPABASE_SECRET_KEY). Depois de adicionar, faça um novo deploy.",
@@ -102,6 +103,7 @@ function Copiar({ texto }: { texto: string }) {
 }
 
 function Janela({ titulo, onFechar, travado, children }: { titulo: string; onFechar: () => void; travado: boolean; children: React.ReactNode }) {
+  useFecharNoVoltar(() => { if (!travado) onFechar(); });
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && !travado && onFechar();
     window.addEventListener("keydown", esc);

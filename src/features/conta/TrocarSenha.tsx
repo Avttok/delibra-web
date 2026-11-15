@@ -5,9 +5,11 @@ import { createPortal } from "react-dom";
 import { KeyRound, Lock, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 /** Trocar a própria senha (confere a atual antes). Ajustes → usuario_troca_senha. */
 export function TrocarSenhaModal({ email, onFechar }: { email: string; onFechar: () => void }) {
+  useFecharNoVoltar(onFechar);
   const [atual, setAtual] = useState("");
   const [nova, setNova] = useState("");
   const [conf, setConf] = useState("");

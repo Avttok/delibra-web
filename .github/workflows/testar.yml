@@ -1,0 +1,31 @@
+name: Testar banco
+
+# Roda o mesmo teste do "Migrar banco" a cada envio no ramo lote, para achar problema antes de publicar.
+on:
+  push:
+    branches: [lote]
+    paths: ["supabase/**"]
+  workflow_dispatch:
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar o psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Testar migrações e fluxo principal
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: teste
+        run: bash supabase/testes/rodar.sh

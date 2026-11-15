@@ -17,24 +17,35 @@ export interface Registro {
 }
 
 const LACUNA_MS = 20 * 60_000;
+/** Sem sinal: mais de 5 min sem ping e mais de 500 m adiante. Abre outro registro em vez de ligar os dois em reta. Igual no servidor e no app. */
+const SEM_SINAL_MS = 5 * 60_000;
+const SEM_SINAL_M = 500;
+function metrosEntre(la1: number, lo1: number, la2: number, lo2: number) {
+  const r = Math.PI / 180;
+  const h = Math.sin(((la2 - la1) * r) / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(((lo2 - lo1) * r) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
 
 export function separarRegistros(pings: Ping[]): Registro[] {
   const ord = [...pings].sort((a, b) => a.registrado_em.localeCompare(b.registrado_em));
   const out: Registro[] = [];
   let atual: Registro | null = null;
   let anterior = 0;
+  let ultimo: Ping | null = null;
   for (const p of ord) {
     if (p.status === "offline") { atual = null; continue; }
     const tipo = p.status === "em_corrida" ? "corrida" : "procurando";
     const corrida = tipo === "corrida" ? p.corrida_id ?? null : null;
     const t = new Date(p.registrado_em).getTime();
-    if (!atual || atual.tipo !== tipo || atual.corridaId !== corrida || t - anterior > LACUNA_MS) {
+    const semSinal = ultimo != null && t - anterior > SEM_SINAL_MS && metrosEntre(ultimo.lat, ultimo.lng, p.lat, p.lng) > SEM_SINAL_M;
+    if (!atual || atual.tipo !== tipo || atual.corridaId !== corrida || t - anterior > LACUNA_MS || semSinal) {
       atual = { tipo, corridaId: corrida, pontos: [], inicio: p.registrado_em, fim: p.registrado_em };
       out.push(atual);
     }
     atual.pontos.push(p);
     atual.fim = p.registrado_em;
     anterior = t;
+    ultimo = p;
   }
   return out;
 }

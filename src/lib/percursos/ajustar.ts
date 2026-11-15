@@ -21,6 +21,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const OSRM = "https://router.project-osrm.org";
 const VALHALLA = "https://valhalla1.openstreetmap.de";
 const LACUNA_MS = 20 * 60_000;
+/** Sem sinal: mais de 5 min sem ping e mais de 500 m adiante = outro registro (não liga em reta). Igual no app e no site. */
+const SEM_SINAL_MS = 5 * 60_000;
+const SEM_SINAL_M = 500;
 const MAX_TRECHOS_NOVOS = 12;
 
 /** [motoboy, lat, lng, status, corrida, ms, precisão] — como o banco devolve. */
@@ -79,7 +82,9 @@ function registros(pings: PingBruto[]) {
     if (p[3] === "offline") { atual = null; continue; }
     const t = p[3] === "em_corrida" ? "corrida" : "procurando";
     const c = t === "corrida" ? p[4] ?? null : null;
-    if (!atual || tipo !== t || corrida !== c || p[5] - ant > LACUNA_MS) { atual = []; out.push(atual); tipo = t; corrida = c; }
+    const u = atual?.[atual.length - 1];
+    const semSinal = !!u && p[5] - ant > SEM_SINAL_MS && metros([u[1], u[2]], [p[1], p[2]]) > SEM_SINAL_M;
+    if (!atual || tipo !== t || corrida !== c || p[5] - ant > LACUNA_MS || semSinal) { atual = []; out.push(atual); tipo = t; corrida = c; }
     atual.push(p); ant = p[5];
   }
   return out;

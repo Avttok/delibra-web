@@ -19,6 +19,7 @@ import { useModoTeste } from "@/features/teste/modoTeste";
 import { useConta } from "@/features/conta/conta";
 import { SelosCargo } from "@/features/conta/Cargos";
 import { toast } from "@/features/ui/toast";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 interface Props {
   id: string;
@@ -195,6 +196,7 @@ async function prepararFoto(arquivo: File): Promise<Blob> {
 function EditarPerfil({ id, nome, foto, onFechar, onSalvo }: {
   id: string; nome: string; foto: string | null; onFechar: () => void; onSalvo: (nome: string, foto: string | null) => void;
 }) {
+  useFecharNoVoltar(onFechar);
   const [novoNome, setNovoNome] = useState(nome);
   const [arquivo, setArquivo] = useState<Blob | null>(null);
   const [previa, setPrevia] = useState<string | null>(foto);

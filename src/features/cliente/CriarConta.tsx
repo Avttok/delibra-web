@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase/client";
 import { Logo } from "@/features/marca/Logo";
 import { CampoEndereco } from "@/features/corridas/CampoEndereco";
 import { MapaCorridas } from "@/features/corridas/MapaCorridas";
+import { aceitarAoCriar, MarcaTermos } from "@/features/conta/AceiteTermos";
 
 const ERROS: Record<string, string> = {
   email_invalido: "E-mail inválido.", senha_curta: "A senha precisa de pelo menos 8 caracteres.", nome_invalido: "Informe o nome da empresa.",
@@ -43,6 +44,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
   const set = (d: Partial<typeof f>) => setF((x) => ({ ...x, ...d }));
   const base = "";
 
+  const [aceite, setAceite] = useState(false);
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -53,6 +55,7 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setErro(ERROS[j.erro] ?? `Não deu certo (${j.erro ?? r.status}).`); setEnviando(false); return; }
       await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.senha });
+      await aceitarAoCriar("cadastro_cliente");
       setFeito(j.status === "aprovado" ? "aprovado" : "pendente");
     } catch {
       setErro("Sem conexão. Tente de novo.");
@@ -113,7 +116,8 @@ export function CriarConta({ onVoltar, modo }: { onVoltar: () => void; modo: str
         <label className="campo"><span>Senha (mínimo 8)</span><input type="password" required autoComplete="new-password" value={f.senha} onChange={(e) => set({ senha: e.target.value })} /></label>
         <input className="armadilha" tabIndex={-1} autoComplete="off" aria-hidden value={f.site} onChange={(e) => set({ site: e.target.value })} />
         {erro && <p className="erro" style={{ margin: 0 }}>{erro}</p>}
-        <button className="botao-ouro" disabled={enviando}>{enviando ? "Enviando…" : "Criar conta"}</button>
+        <MarcaTermos marcado={aceite} onMudar={setAceite} />
+        <button className="botao-ouro" disabled={enviando || !aceite}>{enviando ? "Enviando…" : "Criar conta"}</button>
       </form>
     </main>
   );

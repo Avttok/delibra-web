@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eraser, Move, RotateCcw, X, ZoomIn } from "lucide-react";
 import { cssFonte } from "@/features/marca/fontes";
 import { AJUSTE_PADRAO, desenharIcone, temTransparencia, type AjusteIcone } from "./editorIcone";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 /**
  * Janela para deixar o ícone bonito antes de salvar: zoom, posição (arrastando), margem e
@@ -15,6 +16,7 @@ export function EditorIcone({ img, cor, nome, escalaInicial, brilhoCorInicial, b
   brilhoCorInicial?: string | null; brilhoInicial?: number | null; fonte?: string | null;
   onCancelar: () => void; onPronto: (png: Blob, escala: number, brilhoCor: string | null, brilho: number) => void;
 }) {
+  useFecharNoVoltar(onCancelar);
   const [escala, setEscala] = useState(Number(escalaInicial) || 1.9);
   const [brilhoCor, setBrilhoCor] = useState<string | null>(brilhoCorInicial ?? null);
   const [forca, setForca] = useState(brilhoInicial ?? 0.55);

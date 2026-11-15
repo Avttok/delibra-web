@@ -5,6 +5,7 @@ import { Bike, CalendarDays, Clock, MapPin, MapPinned, Package2, Route, Ruler, X
 import { supabase } from "@/lib/supabase/client";
 import { CONQUISTAS, ganha, type Stats } from "@/features/equipe/Conquistas";
 import { CARGO } from "./Cargos";
+import { useFecharNoVoltar } from "@/features/ui/useEtapa";
 
 interface Perfil {
   id: string; nome: string; foto: string | null; oculto?: boolean; cargo: keyof typeof CARGO; motoboy: boolean; status?: string | null;
@@ -17,6 +18,7 @@ const STATUS: Record<string, [string, string]> = { disponivel: ["Online", "#22c5
 
 /** Perfil completo de alguém da equipe (abre do chat): números, conquistas, veículo e bairros (cada parte segue os ajustes). */
 export function PerfilPublico({ id, onFechar }: { id: string; onFechar: () => void }) {
+  useFecharNoVoltar(onFechar);
   const [p, setP] = useState<Perfil | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   useEffect(() => {
