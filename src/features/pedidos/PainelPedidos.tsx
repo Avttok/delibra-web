@@ -34,7 +34,7 @@ import { Dica } from "@/features/ui/Tour";
 import { Icone } from "@/features/ui/icones";
 import { COR_PEDIDO, ROTULO_PEDIDO, moedaBr, quando, traduzir, type Categoria, type Pedido, type StatusPedido } from "./tipos";
 import { useEtapa } from "@/features/ui/useEtapa";
-import { nomeParada } from "@/features/modalidades/rotulos";
+import { nomeParada, nomeStatus } from "@/features/modalidades/rotulos";
 import { ExtrasVistos, useCamposProprios } from "@/features/modalidades/CamposExtras";
 
 type Filtro = "revisar" | "andamento" | "entregues" | "fora" | "todos";
@@ -128,7 +128,7 @@ export function PainelPedidos() {
               <button key={p.id} className={`linha-pedido ${sel === p.id ? "ativo" : ""}`} onClick={() => setSel(p.id)}>
                 <div className="linha-pedido-topo">
                   <strong>{p.teste ? "T" : "#"}{p.numero}</strong>
-                  <span className="selo" style={{ color: COR_PEDIDO[p.status] }}>{ROTULO_PEDIDO[p.status]}</span>
+                  <span className="selo" style={{ color: COR_PEDIDO[p.status] }}>{nomeStatus("pedido", p.status, ROTULO_PEDIDO[p.status], p.tipo_pedido)}</span>
                   {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !["cancelado", "recusado", "concluido"].includes(p.status) && <span className="selo" style={{ color: "#38bdf8" }}>Aguardando pagamento</span>}
                   {p.tipo === "planejado" ? <CalendarClock size={13} aria-label="Planejado" /> : <Zap size={13} aria-label="Express" />}
                   {p.pagamento_status === "pago" && <span className="selo selo-pago"><BadgeCheck size={11} aria-hidden /> PAGO</span>}
@@ -219,7 +219,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
             <h2 className="display" style={{ margin: 0 }}>Pedido {p.teste ? "T" : "#"}{p.numero}</h2>
             <p className="dica" style={{ margin: 0 }}>{cliente} · {p.tipo === "planejado" ? `planejado para ${quando(p.quando)}` : "express"} · criado {quando(p.criado_em)}{p.origem === "cliente" ? " pelo cliente" : ""}</p>
           </div>
-          <span className="selo" style={{ color: COR_PEDIDO[p.status] }}>{ROTULO_PEDIDO[p.status]}</span>
+          <span className="selo" style={{ color: COR_PEDIDO[p.status] }}>{nomeStatus("pedido", p.status, ROTULO_PEDIDO[p.status], p.tipo_pedido)}</span>
           <button className="icone" aria-label="Fechar" onClick={onFechar}><X size={16} /></button>
         </div>
         {p.recusa_motivo && <p className="erro" style={{ margin: 0 }}>Recusado: {p.recusa_motivo}</p>}

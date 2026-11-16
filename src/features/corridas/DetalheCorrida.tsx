@@ -25,7 +25,7 @@ import {
   COR_CORRIDA, ROTULO_CORRIDA, ROTULO_PARADA, formatarDuracao, formatarKm, hora, numeroCorrida,
   type Corrida, type Evento, type Oferta,
 } from "./tipos";
-import { nomeParada } from "@/features/modalidades/rotulos";
+import { nomeParada, nomeStatus } from "@/features/modalidades/rotulos";
 import { ExtrasVistos, useCamposProprios } from "@/features/modalidades/CamposExtras";
 
 const ROTULO_EVENTO: Record<string, string> = {
@@ -231,7 +231,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           : <button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>)}
 
         <section className="bloco">
-          <div className="status-grande display" style={{ color: COR_CORRIDA[corrida.status] }}>{ROTULO_CORRIDA[corrida.status]}</div>
+          <div className="status-grande display" style={{ color: COR_CORRIDA[corrida.status] }}>{nomeStatus("rota", corrida.status, ROTULO_CORRIDA[corrida.status], corrida.tipo_pedido)}</div>
           {oferta && (
             <p className="dica">Enviada para <strong>{nome(oferta.motoboy_id)}</strong> ({formatarKm(oferta.distancia_m)} da coleta) · responde em {restante}s</p>
           )}
