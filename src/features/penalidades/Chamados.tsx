@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, Hand, LockOpen, UserX, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
@@ -106,5 +107,71 @@ export function ChamadosDaCorrida({ corridaId, comMotoboy }: { corridaId: string
         </details>
       )}
     </>
+  );
+}
+
+/** Toca um alarme curto em loop (sem arquivo: gerado pelo navegador). Devolve a função que para. */
+function tocarAlarme(): () => void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ac = new Ctx();
+    const bip = () => {
+      for (const [ini, freq] of [[0, 880], [0.22, 1175], [0.44, 880]] as [number, number][]) {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = "square"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, ac.currentTime + ini);
+        g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + ini + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + ini + 0.2);
+        o.connect(g).connect(ac.destination); o.start(ac.currentTime + ini); o.stop(ac.currentTime + ini + 0.21);
+      }
+    };
+    bip();
+    const t = setInterval(bip, 1600);
+    return () => { clearInterval(t); void ac.close(); };
+  } catch { return () => {}; }
+}
+
+/**
+ * Pedido urgente de motoboy (liberar parada ou cancelar rota): em qualquer tela do painel, abre a janela
+ * com Liberar/Negar e toca até alguém responder. Confere a cada 5 s e avisa também pelo navegador.
+ */
+export function ChamadoUrgente() {
+  const [fila, setFila] = useState<Chamado[]>([]);
+  const dispensados = useRef(new Set<string>());
+  const avisados = useRef(new Set<string>());
+  const router = useRouter();
+  const carregar = useCallback(async () => {
+    const { data } = await supabase().rpc("chamados_abertos");
+    setFila(((data as Chamado[] | null) ?? []).filter((c) => c.status === "pendente" && !dispensados.current.has(c.id)));
+  }, []);
+  useEffect(() => { void carregar(); const t = setInterval(carregar, 5_000); return () => clearInterval(t); }, [carregar]);
+  const atual = fila[0];
+  useEffect(() => {
+    if (!atual) return;
+    const parar = tocarAlarme();
+    if (!avisados.current.has(atual.id)) {
+      avisados.current.add(atual.id);
+      try {
+        const texto = ehPular(atual) ? `${atual.motoboy_nome} pede para liberar a parada ${(atual.parada_ordem ?? 0) + 1}` : `${atual.motoboy_nome} pede para cancelar a rota`;
+        if ("Notification" in window && Notification.permission === "granted") new Notification("Motoboy esperando você", { body: `${texto}: ${atual.motivo}`, requireInteraction: true });
+        else if ("Notification" in window && Notification.permission === "default") void Notification.requestPermission();
+      } catch { /* sem notificação do navegador */ }
+    }
+    return parar;
+  }, [atual?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!atual) return null;
+  const dispensar = () => { dispensados.current.add(atual.id); setFila((f) => f.slice(1)); };
+  return (
+    <div className="modal-fundo" role="alertdialog" aria-modal="true" aria-label="Pedido urgente do motoboy">
+      <div className="modal modal-perigo">
+        <button type="button" className="botao-icone modal-fechar" aria-label="Responder depois" onClick={dispensar}><X size={16} aria-hidden /></button>
+        <h2>{ehPular(atual) ? "Liberar parada?" : "Cancelar a rota?"}</h2>
+        <RespostaChamado c={atual} onMudou={() => { dispensar(); void carregar(); }} />
+        <div className="linha-botoes">
+          <button type="button" className="botao-vidro" onClick={() => { dispensar(); router.push(`/gestor/corridas?c=${atual.corrida_id}`); }}>Ver a rota</button>
+          {fila.length > 1 && <span className="dica">Mais {fila.length - 1} esperando depois deste.</span>}
+        </div>
+      </div>
+    </div>
   );
 }

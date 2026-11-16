@@ -13,6 +13,7 @@ export const ACOES_GESTOR: { chave: string; rotulo: string; dica: string }[] = [
   { chave: "editar_cargos", rotulo: "Mudar cargos", dica: "Trocar o cargo de quem já tem conta." },
   { chave: "apagar_historico", rotulo: "Apagar histórico", dica: "Rotas antigas, percursos e pings." },
   { chave: "exportar_dados", rotulo: "Relatórios e planilhas", dica: "Baixar e mandar relatórios por e-mail." },
+  { chave: "editar_pedido", rotulo: "Editar pedido", dica: "Mudar endereços, itens, horário e opções antes de a rota começar." },
   { chave: "editar_valor_pedido", rotulo: "Mudar o valor do pedido", dica: "O que o cliente paga, na revisão e depois." },
   { chave: "editar_pagamento_motoboy", rotulo: "Mudar o pagamento do motoboy", dica: "Cálculos e ajustes de cada rota." },
   { chave: "ajuste_holerite", rotulo: "Lançar ajustes no holerite", dica: "Valores a mais ou a menos na folha." },

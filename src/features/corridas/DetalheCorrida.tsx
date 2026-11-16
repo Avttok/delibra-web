@@ -106,7 +106,7 @@ function useTrilha(corrida: Corrida, ativa: boolean) {
   return pedacos;
 }
 
-function Comprovante({ caminho, rotulo }: { caminho: string; rotulo: string }) {
+export function Comprovante({ caminho, rotulo }: { caminho: string; rotulo: string }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     supabase().storage.from("comprovantes").createSignedUrl(caminho, 3600).then(({ data }) => setUrl(data?.signedUrl ?? null));

@@ -13,6 +13,8 @@ import { moeda } from "@/features/precos/estrategias";
 import { MapaCorridas } from "./MapaCorridas";
 import { useConta } from "@/features/conta/conta";
 import { NovaCorrida } from "./NovaCorrida";
+import { HistoricoRotas } from "./HistoricoRotas";
+import { useFlag } from "@/features/gestor/flags";
 import { DetalheCorrida } from "./DetalheCorrida";
 import { nomeCliente, useCorridas, useEmpresas, useEquipe } from "./dados";
 import { useModoTeste } from "@/features/teste/modoTeste";
@@ -20,7 +22,7 @@ import { ATIVAS, COR_CORRIDA, PLANEJADAS, ROTULO_CORRIDA, formatarKm, hora, nume
 import { formatarQuando, relativo } from "./planejadas";
 import { useEtapa } from "@/features/ui/useEtapa";
 
-type Visao = { tipo: "lista" } | { tipo: "nova" } | { tipo: "detalhe"; id: string };
+type Visao = { tipo: "lista" } | { tipo: "nova" } | { tipo: "historico" } | { tipo: "detalhe"; id: string };
 
 export function PainelCorridas() {
   const { corridas: todasCorridas, ofertas, erro } = useCorridas();
@@ -37,6 +39,8 @@ export function PainelCorridas() {
   }, []);
   const [filtro, setFiltro] = useState<"ativas" | "montadas" | "planejadas" | "concluidas" | "canceladas" | "todas">("ativas");
   const conta = useConta();
+  // rota à mão só se o Dev ligar (o padrão é pedido → rota pelo sistema)
+  const criarRota = useFlag("dev_criar_rota_manual");
   const [selecionando, setSelecionando] = useState(false);
   const [marcadas, setMarcadas] = useState<string[]>([]);
   const [buscaRota, setBuscaRota] = useState("");
@@ -77,6 +81,9 @@ export function PainelCorridas() {
     [corridas],
   );
 
+  if (visao.tipo === "historico") {
+    return <HistoricoRotas onVoltar={() => setVisao({ tipo: "lista" })} onAbrir={(id) => setVisao({ tipo: "detalhe", id })} />;
+  }
   if (visao.tipo === "nova") {
     return <NovaCorrida onVoltar={() => setVisao({ tipo: "lista" })} onCriada={(id) => setVisao({ tipo: "detalhe", id })} />;
   }
@@ -112,7 +119,8 @@ export function PainelCorridas() {
         </div>
         <label className="busca-mini"><Search size={14} aria-hidden /><input placeholder="Nº, motoboy, cliente, endereço…" value={buscaRota} onChange={(e) => setBuscaRota(e.target.value)} /></label>
         <div className="linha-botoes">
-          <button className="botao-ouro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "nova" })}><Plus size={17} aria-hidden /> Corrida avulsa</button>
+          <button className="botao-vidro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "historico" })}><History size={16} aria-hidden /> Histórico de rotas</button>
+          {criarRota && <button className="botao-ouro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "nova" })}><Plus size={17} aria-hidden /> Corrida avulsa</button>}
           {conta.modulo("excluir_corridas") && <button className="botao-texto" onClick={() => (selecionando ? sairSelecao() : setSelecionando(true))} title="Selecionar para apagar">
             {selecionando ? <X size={16} aria-hidden /> : <CheckSquare size={16} aria-hidden />} {selecionando ? "Cancelar" : "Selecionar"}
           </button>}

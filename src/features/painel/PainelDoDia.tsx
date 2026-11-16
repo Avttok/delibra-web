@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Bike, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users, XCircle } from "lucide-react";
+import { AlertTriangle, Bike, ChevronLeft, ChevronRight, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -65,17 +65,22 @@ function Numero({ icone: Ic, rotulo, valor, dica }: { icone: LucideIcon; rotulo:
 export function PainelDoDia() {
   const [p, setP] = useState<Painel | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // outra data: o mesmo painel daquele dia (os números "agora" continuam ao vivo)
+  const hojeIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const [dia, setDia] = useState(hojeIso);
+  const ehHoje = dia === hojeIso();
+  const mover = (n: number) => { const d = new Date(`${dia}T12:00:00`); d.setDate(d.getDate() + n); const iso = d.toISOString().slice(0, 10); if (iso <= hojeIso()) { setP(null); setDia(iso); } };
   useEffect(() => {
     let vivo = true;
     const buscar = async () => {
-      const { data, error } = await supabase().rpc("painel_do_dia");
+      const { data, error } = await supabase().rpc("painel_do_dia", { p_dia: dia });
       if (!vivo) return;
       if (error) setErro("Não deu para carregar o painel agora."); else { setP(data as Painel); setErro(null); }
     };
     void buscar();
     const t = setInterval(buscar, 30_000);
     return () => { vivo = false; clearInterval(t); };
-  }, []);
+  }, [dia]);
 
   const alertas = p ? [
     p.emergencias > 0 && { icone: Siren, texto: `${p.emergencias} emergência${p.emergencias > 1 ? "s" : ""} aberta${p.emergencias > 1 ? "s" : ""}`, href: "/gestor/mapa", forte: true },
@@ -87,7 +92,13 @@ export function PainelDoDia() {
   ].filter(Boolean) as { icone: typeof Siren; texto: string; href: string; forte: boolean }[] : [];
   return (
     <section className="conteudo painel-dia">
-      <CabecaPagina icone={LayoutDashboard} titulo="Hoje" subtitulo={new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} />
+      <CabecaPagina icone={LayoutDashboard} titulo={ehHoje ? "Hoje" : "Dia"} subtitulo={new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: ehHoje ? undefined : "numeric" })} />
+      <div className="linha-botoes painel-datas">
+        <button type="button" className="botao-vidro pequeno" onClick={() => mover(-1)} aria-label="Dia anterior"><ChevronLeft size={15} aria-hidden /></button>
+        <input type="date" value={dia} max={hojeIso()} onChange={(e) => { if (e.target.value) { setP(null); setDia(e.target.value); } }} aria-label="Escolher o dia" />
+        <button type="button" className="botao-vidro pequeno" onClick={() => mover(1)} disabled={ehHoje} aria-label="Próximo dia"><ChevronRight size={15} aria-hidden /></button>
+        {!ehHoje && <button type="button" className="botao-texto pequeno" onClick={() => { setP(null); setDia(hojeIso()); }}>Voltar para hoje</button>}
+      </div>
       {erro && <p className="erro">{erro}</p>}
       {!p && !erro && <p className="dica">Carregando…</p>}
       {p && <>
@@ -101,7 +112,7 @@ export function PainelDoDia() {
 
         <div className="painel-numeros">
           <div className="painel-numero destaque">
-            <span className="rotulo"><CircleDollarSign size={12} aria-hidden /> Faturado hoje</span>
+            <span className="rotulo"><CircleDollarSign size={12} aria-hidden /> {ehHoje ? "Faturado hoje" : "Faturado no dia"}</span>
             <strong className="figura texto-grad">{moeda(p.faturamento_hoje)}</strong>
             <div className="painel-mini">
               <span><small>Empresa</small><b>{moeda(p.gestao_hoje)}</b></span>
@@ -110,12 +121,12 @@ export function PainelDoDia() {
             </div>
           </div>
           <Numero icone={Route} rotulo="Rotas feitas" valor={p.concluidas_hoje} dica={comparaOntem(p)} />
-          <Numero icone={PackageCheck} rotulo="Entregas" valor={p.entregas_hoje ?? "—"} dica="concluídas hoje" />
+          <Numero icone={PackageCheck} rotulo="Entregas" valor={p.entregas_hoje ?? "—"} dica={ehHoje ? "concluídas hoje" : "concluídas no dia"} />
           <Numero icone={Bike} rotulo="Na rua" valor={p.rotas_ativas} dica={`${p.rotas_esperando} esperando motoboy`} />
           <Numero icone={Users} rotulo="Motoboys" valor={p.motoboys_online} dica={`online · ${p.motoboys_em_rota} em rota`} />
           <Numero icone={ClipboardList} rotulo="Pedidos" valor={p.pedidos_hoje} dica={`${p.para_revisar} para revisar`} />
           <Numero icone={Clock} rotulo="Tempo médio" valor={p.tempo_medio_min != null ? `${p.tempo_medio_min} min` : "—"} dica="do aceite à conclusão" />
-          <Numero icone={XCircle} rotulo="Canceladas" valor={p.canceladas_hoje ?? 0} dica="rotas canceladas hoje" />
+          <Numero icone={XCircle} rotulo="Canceladas" valor={p.canceladas_hoje ?? 0} dica={ehHoje ? "rotas canceladas hoje" : "rotas canceladas no dia"} />
           <Numero icone={Star} rotulo="Nota (30 dias)" valor={p.nota_media_30d != null ? p.nota_media_30d.toLocaleString("pt-BR") : "—"} dica={p.nota_media_30d != null ? "média das avaliações" : "sem avaliações ainda"} />
         </div>
 

@@ -53,4 +53,15 @@ saida=$(psql -q -d $DB -f lote46.sql 2>&1 | grep -E "OK |FALHA")
 echo "$saida" | sed 's/^.*\(OK\|FALHA\)/\1/'
 ok=$(echo "$saida" | grep -c "OK ")
 if echo "$saida" | grep -q FALHA || [ "$ok" -lt 8 ]; then echo "::error::Teste do lote 46 falhou ($ok de 8 ok)."; psql -q -d $DB -f lote46.sql 2>&1 | grep ERROR | head; exit 1; fi
+
+# lote 47: cascata, só pedidos, editar pedido, Hoje por data, histórico
+psql -q -d postgres -c "drop database if exists $DB" -c "create database $DB" >/dev/null
+psql -q -d $DB -f stub.sql >/dev/null 2>&1
+for f in ../migrations/*.sql; do
+  sed -e '/create extension if not exists \(pg_cron\|pg_net\|postgis\)/d' -e 's/extensions.geography(Point, 4326)/extensions.geography/' -e '/using gist/d' "$f" | psql -q -d $DB >/dev/null 2>&1
+done
+saida=$(psql -q -d $DB -f lote47.sql 2>&1 | grep -E "OK |FALHA")
+echo "$saida" | sed 's/^.*\(OK\|FALHA\)/\1/'
+ok=$(echo "$saida" | grep -c "OK ")
+if echo "$saida" | grep -q FALHA || [ "$ok" -lt 10 ]; then echo "::error::Teste do lote 47 falhou ($ok de 10 ok)."; psql -q -d $DB -f lote47.sql 2>&1 | grep ERROR | grep -v "t60\|t77\|t80\|t81" | head; exit 1; fi
 echo "Tudo certo: pode publicar."

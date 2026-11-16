@@ -3,7 +3,8 @@
 import { usePermissoes } from "@/features/conta/permissoes";
 
 import Link from "next/link";
-import { ChamadosPendentes } from "@/features/penalidades/Chamados";
+import { ChamadoUrgente, ChamadosPendentes } from "@/features/penalidades/Chamados";
+import { definirFlags } from "./flags";
 import { EmergenciasAbertas } from "@/features/penalidades/Emergencias";
 import { ExigirDoisPassos } from "@/features/conta/DoisPassos";
 import { usePathname, useRouter } from "next/navigation";
@@ -108,6 +109,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
       setPapeis(d?.papeis ?? []);
       setCorTema(d?.dev && d?.cor_tema === "vermelho" ? "vermelho" : "ouro");
       setModulos(d?.modulos ?? {});
+      definirFlags((d as { configuracoes?: Record<string, unknown> } | null)?.configuracoes);
       aplicarRotulos((d as { rotulos?: Record<string, string> } | null)?.rotulos);
       setNome(d?.nome ?? "");
       setFoto(d?.foto_url ?? null);
@@ -296,6 +298,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         )}
         <EmergenciasAbertas />
         <ChamadosPendentes />
+        <ChamadoUrgente />
         <AceiteTermos origem="gestor" />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
           {children}

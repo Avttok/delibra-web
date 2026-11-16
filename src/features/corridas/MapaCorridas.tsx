@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Crosshair, Maximize2, Minus, Plus, X } from "lucide-react";
+import { Crosshair, Eye, EyeOff, Maximize2, Minus, Plus, X } from "lucide-react";
 import { maplibregl } from "@/lib/mapa/maplibre";
 import { useMapa } from "@/lib/mapa/useMapa";
 import { corOuro } from "@/lib/mapa/cores";
 import { decodificarPolyline } from "@/lib/geo/polyline";
 import { geo } from "@/features/geo";
 import { COR_STATUS, type StatusMotoboy } from "@/features/rastreamento/tipos";
+import { useFlag } from "@/features/gestor/flags";
 
 export interface PinoParada {
   chave: string;
@@ -138,7 +139,8 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
     m.addLayer({
       id: "plano", type: "line", source: "plano",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": corOuro(), "line-width": 3, "line-dasharray": [1.5, 2], "line-opacity": 0.35 },
+      // branca e fosca: o dourado fica só para o que o motoboy fez de verdade
+      paint: { "line-color": "#f5f5f4", "line-width": 3.5, "line-opacity": 0.5 },
     });
     // a fazer: tracejado claro com contorno escuro (aparece no mapa claro e no escuro)
     m.addLayer({
@@ -333,6 +335,18 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
     document.body.classList.add("com-mapa-cheio");
     return () => { window.removeEventListener("keydown", esc); document.body.classList.remove("com-mapa-cheio"); };
   }, [cheio, mapa]); // eslint-disable-line react-hooks/exhaustive-deps
+  // rota planejada (linhas brancas): cada pessoa mostra ou esconde; o padrão vem de Ajustes → Mapa
+  const padraoPlano = useFlag("mapa_rota_planejada", true);
+  const [verPlano, setVerPlano] = useState(true);
+  useEffect(() => {
+    try { const v = localStorage.getItem("pwex-ver-plano"); setVerPlano(v == null ? padraoPlano : v === "1"); } catch { setVerPlano(padraoPlano); }
+  }, [padraoPlano]);
+  const trocarPlano = (v: boolean) => { setVerPlano(v); try { localStorage.setItem("pwex-ver-plano", v ? "1" : "0"); } catch { /* sem armazenamento */ } };
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || !pronto) return;
+    for (const id of ["plano", "rota", "rota-contorno"]) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", verPlano ? "visible" : "none");
+  }, [mapa, pronto, verPlano]);
   function enquadrarTudo() {
     const m = mapa.current;
     if (!m) return;
@@ -343,6 +357,7 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
   }
 
   const comFeito = trilha.length >= 2, comAFazer = aFazer.length > 0;
+  const temPlano = Boolean(rotaPlanejada) || comAFazer;
   return (
     <div ref={container} className={`mapa${cheio ? " mapa-cheia" : ""}`}>
       {maximizavel && (
@@ -361,10 +376,16 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
         </div>
       )}
       {cheio && painelCheio && <div className="mapa-cheia-painel vidro">{painelCheio}</div>}
+      {temPlano && (
+        <button type="button" className={`mapa-botao mapa-botao-plano${verPlano ? " ativo" : ""}`} aria-pressed={verPlano}
+          title={verPlano ? "Esconder a rota planejada" : "Mostrar a rota planejada"} onClick={() => trocarPlano(!verPlano)}>
+          {verPlano ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}
+        </button>
+      )}
       {legenda && comFeito && (
         <div className="mapa-legenda" aria-label="Legenda do mapa">
           <span><i className="feito" /> Feito</span>
-          {comAFazer && <span><i className="afazer" /> A fazer</span>}
+          {comAFazer && verPlano && <span><i className="afazer" /> A fazer</span>}
         </div>
       )}
     </div>
