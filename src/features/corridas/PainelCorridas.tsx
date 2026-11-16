@@ -14,7 +14,7 @@ import { moeda } from "@/features/precos/estrategias";
 import { MapaCorridas } from "./MapaCorridas";
 import { useConta } from "@/features/conta/conta";
 import { NovaCorrida } from "./NovaCorrida";
-import { HistoricoRotas } from "./HistoricoRotas";
+import { FichaRota, HistoricoRotas } from "./HistoricoRotas";
 import { useFlag } from "@/features/gestor/flags";
 import { DetalheCorrida } from "./DetalheCorrida";
 import { nomeCliente, useCorridas, useEmpresas, useEquipe } from "./dados";
@@ -26,7 +26,7 @@ import { useEtapa } from "@/features/ui/useEtapa";
 type Visao = { tipo: "lista" } | { tipo: "nova" } | { tipo: "historico" } | { tipo: "detalhe"; id: string };
 
 export function PainelCorridas() {
-  const { corridas: todasCorridas, ofertas, erro } = useCorridas();
+  const { corridas: todasCorridas, ofertas, erro, carregou } = useCorridas();
   // modo teste: só corridas de teste; fora dele, só as reais
   const { teste } = useModoTeste();
   const corridas = useMemo(() => todasCorridas.filter((c) => c.teste === teste), [todasCorridas, teste]);
@@ -101,6 +101,14 @@ export function PainelCorridas() {
         />
       );
     }
+    // rota antiga (fora dos últimos 30 dias carregados): abre a ficha completa dela
+    if (carregou) return (
+      <>
+        <aside className="lateral entrar"><button className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={() => setVisao({ tipo: "lista" })}>← Rotas</button>
+          <p className="dica">Rota fora dos últimos 30 dias: tudo dela ao lado.</p></aside>
+        <main className="conteudo"><FichaRota id={visao.id} onAbrir={() => {}} onTrocar={(id) => setVisao({ tipo: "detalhe", id })} /></main>
+      </>
+    );
   }
 
   return (

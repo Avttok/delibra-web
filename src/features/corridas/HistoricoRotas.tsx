@@ -139,7 +139,7 @@ export function HistoricoRotas({ onVoltar, onAbrir }: { onVoltar: () => void; on
   );
 }
 
-function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id: string) => void; onTrocar: (id: string) => void }) {
+export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id: string) => void; onTrocar: (id: string) => void }) {
   const [f, setF] = useState<Ficha | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pedacos, setPedacos] = useState<[number, number][][]>([]);

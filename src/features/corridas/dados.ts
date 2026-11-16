@@ -45,6 +45,7 @@ export function useCorridas() {
   const [corridas, setCorridas] = useState<Corrida[]>([]);
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [carregou, setCarregou] = useState(false);
 
   useRecarregarAoMudar(["corridas", "paradas", "ofertas"], async () => {
     const sb = supabase();
@@ -58,9 +59,10 @@ export function useCorridas() {
     setCorridas(lista);
     setOfertas(o.data as Oferta[]);
     setErro(null);
+    setCarregou(true);
   }, "corridas");
 
-  return { corridas, ofertas, erro };
+  return { corridas, ofertas, erro, carregou };
 }
 
 export function useEquipe() {

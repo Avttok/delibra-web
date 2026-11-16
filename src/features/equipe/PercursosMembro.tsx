@@ -59,8 +59,10 @@ export function PercursosMembro({ id, teste }: { id: string; teste: boolean }) {
   useEffect(() => {
     const ids = [...new Set(registros.map((r) => r.corridaId).filter(Boolean))] as string[];
     if (!ids.length) return;
-    supabase().from("corridas").select("id,numero,teste").in("id", ids).then(({ data }) =>
-      setNumeros(Object.fromEntries((data ?? []).map((c) => [c.id, `${c.teste ? "T" : "#"}${c.numero}`]))));
+    // cada percurso ligado à rota e aos pedidos que ela levou
+    supabase().rpc("rotas_resumo", { p_ids: ids }).then(({ data }) =>
+      setNumeros(Object.fromEntries(Object.entries((data ?? {}) as Record<string, { numero: number; teste: boolean; pedidos: { numero: number }[] }>)
+        .map(([k, c]) => [k, `${c.teste ? "T" : "#"}${c.numero}${c.pedidos.length ? ` · pedido ${c.pedidos.map((x) => `#${x.numero}`).join(", ")}` : ""}`]))));
   }, [registros]);
 
   useEffect(() => {
@@ -92,6 +94,7 @@ export function PercursosMembro({ id, teste }: { id: string; teste: boolean }) {
               {r.tipo === "corrida" ? <Package size={14} aria-hidden /> : <Search size={14} aria-hidden />}
               <span>{r.tipo === "corrida" ? `Corrida ${r.corridaId ? numeros[r.corridaId] ?? "" : ""}` : "Procurando corrida"}</span>
               <span className="dica">{hora(r.inicio)}–{hora(r.fim)} · {km(r).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km</span>
+              {r.corridaId && <a className="link" href={`/gestor/corridas?c=${r.corridaId}`} onClick={(e) => e.stopPropagation()}>Ver a rota</a>}
             </button>
           ))}
           <p className="dica" style={{ margin: 0 }}>Total: {registros.reduce((s, r) => s + km(r), 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km · {registros.filter((r) => r.tipo === "corrida").length} em corrida</p>
