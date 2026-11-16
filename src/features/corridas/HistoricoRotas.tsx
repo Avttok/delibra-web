@@ -139,7 +139,7 @@ export function HistoricoRotas({ onVoltar, onAbrir }: { onVoltar: () => void; on
   );
 }
 
-export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id: string) => void; onTrocar: (id: string) => void }) {
+export function FichaRota({ id, onAbrir, onTrocar, compacta }: { id: string; onAbrir: (id: string) => void; onTrocar: (id: string) => void; /** dentro do detalhe da rota: só pedidos, valores e ocorrências */ compacta?: boolean }) {
   const [f, setF] = useState<Ficha | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pedacos, setPedacos] = useState<[number, number][][]>([]);
@@ -156,7 +156,8 @@ export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id:
   const planejada = typeof r.rota_planejada === "string" ? r.rota_planejada : null;
   const minutos = r.concluida_em && r.aceita_em ? Math.round((new Date(r.concluida_em).getTime() - new Date(r.aceita_em).getTime()) / 60000) : null;
   return (
-    <div className="hist-ficha entrar">
+    <div className={`hist-ficha entrar${compacta ? " compacta" : ""}`}>
+      {!compacta && <>
       <section className="formulario vidro hist-cabeca">
         <div className="hist-linha1">
           <h2 className="display" style={{ margin: 0 }}>Rota {numeroCorrida(r)}</h2>
@@ -209,6 +210,7 @@ export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id:
           ))}
         </ol>
       </section>
+      </>}
 
       {f.pedidos.length > 0 && (
         <section className="formulario vidro">
@@ -254,7 +256,7 @@ export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id:
             {f.chamados.map((h, i) => <span key={i} className="dica">{h.tipo === "pular" ? "Liberar parada" : "Cancelar"} · {h.status} · “{h.motivo}”{h.resposta ? ` → ${h.resposta}` : ""}</span>)}
           </>}
         </section>
-        <section className="formulario vidro">
+        {!compacta && <section className="formulario vidro">
           <h3 className="display" style={{ margin: 0 }}><Clock size={17} aria-hidden /> O que aconteceu</h3>
           <ol className="linha-tempo">
             {f.eventos.map((e, i) => (
@@ -263,8 +265,63 @@ export function FichaRota({ id, onAbrir, onTrocar }: { id: string; onAbrir: (id:
             ))}
             {f.ofertas.length > 0 && <li><small>Ofertas</small><span>{f.ofertas.map((o) => `${o.motoboy ?? "?"} (${o.status})`).join(", ")}</span></li>}
           </ol>
-        </section>
+        </section>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * As rotas de um cliente ou de um motoboy, dentro do cadastro dele: últimos 90 dias, e cada rota abre a ficha completa
+ * por cima (sem sair do cadastro).
+ */
+export function RotasDe({ cliente, motoboy }: { cliente?: string; motoboy?: string }) {
+  const { teste } = useModoTeste();
+  const [lista, setLista] = useState<ItemHist[] | null>(null);
+  const [sel, setSel] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  useEffect(() => {
+    let vivo = true;
+    const t = setTimeout(async () => {
+      const { data } = await supabase().rpc("historico_rotas", { p: { de: diasAtras(90), ate: hoje(), cliente: cliente ?? null, motoboy: motoboy ?? null, status: null, busca: busca.trim() || null, teste, limite: 100 } });
+      if (vivo) setLista((data as ItemHist[] | null) ?? []);
+    }, 250);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [cliente, motoboy, busca, teste]);
+  const feitas = (lista ?? []).filter((x) => x.status === "concluida");
+  return (
+    <div className="rotas-de">
+      <div className="hist-resumo">
+        <div><strong>{feitas.length}</strong><span>concluídas (90 dias)</span></div>
+        <div><strong>{feitas.reduce((s, x) => s + x.feitas, 0)}</strong><span>paradas feitas</span></div>
+        <div><strong>{feitas.reduce((s, x) => s + Number(x.km ?? 0), 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</strong><span>km</span></div>
+        <div><strong>{moedaBr(feitas.reduce((s, x) => s + Number((motoboy ? x.valor_motoboy : x.valor) ?? 0), 0))}</strong><span>{motoboy ? "para o motoboy" : "faturado"}</span></div>
+      </div>
+      <label className="busca-mini"><Search size={14} aria-hidden /><input placeholder="Nº da rota ou do pedido, endereço…" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
+      {lista == null ? <p className="dica">Carregando…</p> : lista.length === 0 ? <p className="vazio">Nenhuma rota nos últimos 90 dias.</p> : (
+        <ul className="hist-lista">
+          {lista.map((x) => (
+            <li key={x.id}>
+              <button type="button" className="hist-item" onClick={() => setSel(x.id)}>
+                <span className="hist-linha1"><strong>{numeroCorrida(x)}</strong>
+                  <span className="selo" style={{ color: COR_CORRIDA[x.status] }}>{nomeStatus("rota", x.status, ROTULO_CORRIDA[x.status], x.tipo_pedido)}</span>
+                  <span className="espaco" /><small>{dataHora(x.quando)}</small></span>
+                <span className="hist-linha2">{(motoboy ? x.cliente : x.motoboy) ?? "—"}</span>
+                <span className="hist-linha3">{x.feitas}/{x.entregas} entregas · {x.km.toLocaleString("pt-BR")} km{x.pedidos.length > 0 && ` · pedido ${x.pedidos.map((n) => `#${n}`).join(", ")}`}
+                  {(motoboy ? x.valor_motoboy : x.valor) != null && <strong> · {moedaBr(Number(motoboy ? x.valor_motoboy : x.valor))}</strong>}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {sel && (
+        <div className="modal-fundo" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
+          <div className="modal modal-ficha">
+            <button type="button" className="botao-icone modal-fechar" aria-label="Fechar" onClick={() => setSel(null)}>×</button>
+            <FichaRota id={sel} onAbrir={(id) => { window.location.href = `/gestor/corridas?c=${id}`; }} onTrocar={setSel} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

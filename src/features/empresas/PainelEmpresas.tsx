@@ -1,8 +1,10 @@
 "use client";
 
+import { RotasDe } from "@/features/corridas/HistoricoRotas";
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { Penalidades } from "@/features/penalidades/Penalidades";
-import { Gavel, Webhook } from "lucide-react";
+import { Gavel, Route, Webhook } from "lucide-react";
 import { usePermissoes } from "@/features/conta/permissoes";
 import { ApiDaLoja } from "@/features/empresas/ApiDaLoja";
 import { useEffect, useState } from "react";
@@ -146,7 +148,7 @@ export function PainelEmpresas() {
   const [localizando, setLocalizando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const perm = usePermissoes();
-  const [aba, setAba] = useEtapa<"cadastro" | "regras" | "zonas" | "penalidades" | "api">("emp-aba", "cadastro");
+  const [aba, setAba] = useEtapa<"cadastro" | "regras" | "rotas" | "zonas" | "penalidades" | "api">("emp-aba", "cadastro");
 
   const [buscaCli, setBuscaCli] = useState("");
   const [filtroCli, setFiltroCli] = useState("todos");
@@ -303,7 +305,9 @@ export function PainelEmpresas() {
   return (
     <>
       <aside className="lateral entrar">
-        <CabecaPagina icone={Building2} titulo="Clientes" subtitulo={empresas.length === 1 ? "1 cliente cadastrado" : `${empresas.length} clientes cadastrados`} />
+        <CabecaPagina icone={Building2} titulo="Clientes" subtitulo={empresas.length === 1 ? "1 cliente cadastrado" : `${empresas.length} clientes cadastrados`}>
+          <AjustesRapidos titulo="Ajustes dos clientes" grupos={["cli_cadastro", "cli_pode", "cli_ve", "faturas", "avaliacoes", "rastreio", "notafiscal"]} />
+        </CabecaPagina>
         <button className="botao-ouro" onClick={() => setSelecionada("nova")}><Plus size={17} aria-hidden /> Novo cliente</button>
         <CadastrosPendentes onAprovado={(id) => { recarregar(); if (id) setSelecionada(id); }} />
         {empresas.length > 0 && <>
@@ -348,12 +352,14 @@ export function PainelEmpresas() {
               <div className="segmentado segmentado-rolavel" style={{ maxWidth: 520 }}>
                 <button type="button" className={aba === "cadastro" ? "ativo" : ""} onClick={() => setAba("cadastro")}><Building2 size={14} aria-hidden /> Cadastro</button>
                 <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={14} aria-hidden /> Regras</button>
+                <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Route size={14} aria-hidden /> Rotas</button>
                 <button type="button" className={aba === "zonas" ? "ativo" : ""} onClick={() => setAba("zonas")}><CircleDot size={14} aria-hidden /> Zonas</button>
                 <button type="button" className={aba === "penalidades" ? "ativo" : ""} onClick={() => setAba("penalidades")}><Gavel size={14} aria-hidden /> Penalidades</button>
                 {perm.pode("integracao_api") && <button type="button" className={aba === "api" ? "ativo" : ""} onClick={() => setAba("api")}><Webhook size={14} aria-hidden /> API</button>}
               </div>
             )}
             {aba === "regras" && selecionada !== "nova" && <RegrasDoAlvo escopo="cliente" alvo={selecionada} nome={form.nome} />}
+            {aba === "rotas" && selecionada !== "nova" && <RotasDe key={selecionada} cliente={selecionada} />}
             {aba === "zonas" && selecionada !== "nova" && <CatalogoZonas clienteId={selecionada} />}
             {aba === "api" && selecionada !== "nova" && <ApiDaLoja empresa={selecionada} nome={form.nome} />}
             {aba === "penalidades" && selecionada !== "nova" && <Penalidades alvoTipo="cliente" alvoId={selecionada} nome={form.nome} />}

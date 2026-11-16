@@ -2293,3 +2293,5 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .painel-datas { align-items: center; } .painel-datas input[type=date] { width: auto; }
 .destinos-entrega { display: flex; flex-wrap: wrap; gap: 6px; } .chip.destino small { color: var(--texto-3); margin-left: 4px; } .chip.destino.ativo small { color: inherit; } .chip.destino button:disabled { opacity: .45; }
 .modal-ajustes { max-width: 640px; display: grid; gap: 10px; } .ajustes-rapidos-botao { margin-left: auto; }
+.hist-ficha.compacta .hist-duas { grid-template-columns: 1fr; } .hist-ficha.compacta .formulario { padding: 14px; } .abas-detalhe { display: flex; flex-wrap: wrap; gap: 4px; } .abas-detalhe button { display: inline-flex; align-items: center; gap: 5px; }
+.rotas-de { display: grid; gap: 10px; } .modal-ficha { max-width: 980px; }

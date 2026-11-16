@@ -1,9 +1,11 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
+import { FichaRota } from "./HistoricoRotas";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { ChamadosDaCorrida } from "@/features/penalidades/Chamados";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CheckCircle2, Clock, CloudOff, FlaskConical, Landmark, LockOpen, MapPinned, RotateCcw, Route, Trash2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, CloudOff, FlaskConical, Landmark, LockOpen, MapPinned, RotateCcw, Receipt, Route, Trash2, XCircle } from "lucide-react";
 import { ExcluirCorridas } from "./ExcluirCorridas";
 import { PassarCorrida } from "./PassarCorrida";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
@@ -172,6 +174,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const motoboy = equipe.find((m) => m.id === corrida.motoboy_id);
   const ativa = ["aceita", "em_andamento"].includes(corrida.status);
   const pedacos = useTrilha(corrida, ativa);
+  const [abaDet, setAbaDet] = useState<"agora" | "paradas" | "pedidos" | "tempo">("agora");
   const trilha = useMemo(() => pedacos.flat(), [pedacos]);
   const pacotes = usePacotes(corrida.paradas.map((p) => p.pedido_id).filter((x): x is string => Boolean(x)));
   const pacotesDe = (p: (typeof corrida.paradas)[number]) => {
@@ -223,9 +226,19 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           <button className="botao-texto" onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Rotas</button>
           {corrida.teste && <span className="selo" style={{ color: "#a78bfa" }}><FlaskConical size={11} aria-hidden /> TESTE</span>}
         </div>
-        <CabecaPagina icone={Route} titulo={`${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`} subtitulo={`${nomeCliente(corrida, empresas)} · criada às ${hora(corrida.criada_em)}`} />
+        <CabecaPagina icone={Route} titulo={`${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`} subtitulo={`${nomeCliente(corrida, empresas)} · criada às ${hora(corrida.criada_em)}`}>
+          <AjustesRapidos titulo="Ajustes das rotas" grupos={["rotas", "despacho", "local", "pular", "offline", "comprovantes", "pagamento", "chamados"]} />
+        </CabecaPagina>
         <BotaoCompartilhar anexo={{ tipo: "rota", id: corrida.id, titulo: `${corrida.origem === "roteirizador" ? "Rota" : "Corrida"} ${numeroCorrida(corrida)}`, sub: `${nomeCliente(corrida, empresas)} · ${corrida.paradas.filter((p) => p.tipo === "entrega").length} entrega(s)` }} />
 
+        {/* abas: o que importa agora, as paradas, os pedidos e valores, e o que aconteceu (tudo sem sair da rota) */}
+        <div className="abas abas-detalhe" role="tablist">
+          {([["agora", "Agora", Route], ["paradas", `Paradas (${corrida.paradas.length})`, MapPinned], ["pedidos", "Pedidos e valores", Receipt], ["tempo", "Linha do tempo", Clock]] as const).map(([k, r, I]) => (
+            <button key={k} type="button" role="tab" aria-selected={abaDet === k} className={abaDet === k ? "ativo" : ""} onClick={() => setAbaDet(k)}><I size={13} aria-hidden /> {r}</button>
+          ))}
+        </div>
+
+        {abaDet === "agora" && <>
         {!["concluida", "cancelada"].includes(corrida.status) && corrida.paradas.length >= 2 && (editandoPercurso
           ? (mapaCheio ? <p className="dica">Editando na tela cheia do mapa.</p> : painelPercurso)
           : <button type="button" className="botao-texto" onClick={() => setEditandoPercurso(true)}><Route size={15} aria-hidden /> Editar percurso</button>)}
@@ -304,12 +317,18 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           </section>
         )}
 
+        {corrida.observacoes && (
+          <section className="bloco"><span className="rotulo">Observações</span><p>{corrida.observacoes}</p></section>
+        )}
+        </>}
+
         {corrida.aguardando_confirmacao && (
           <section className="bloco aviso-bloco">
             <span className="rotulo"><CloudOff size={13} aria-hidden /> Aguardando confirmação</span>
             <p className="dica">O motoboy ficou sem sinal e a rota fechou sozinha pela previsão. Quando o app dele voltar, as etapas chegam com a hora certa.</p>
           </section>
         )}
+        {abaDet === "paradas" && <>
         <section className="bloco">
           <span className="rotulo">Paradas · clique para ver no mapa</span>
           {corrida.paradas.map((p) => (
@@ -379,11 +398,11 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
           </section>
         )}
 
-        {corrida.observacoes && (
-          <section className="bloco"><span className="rotulo">Observações</span><p>{corrida.observacoes}</p></section>
-        )}
+        </>}
 
-        <section className="bloco">
+        {abaDet === "pedidos" && <FichaRota id={corrida.id} compacta onAbrir={() => {}} onTrocar={() => {}} />}
+
+        {abaDet === "tempo" && <section className="bloco">
           <span className="rotulo">Linha do tempo</span>
           <ol className="timeline">
             {eventos.map((e) => (
@@ -399,7 +418,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
               </li>
             ))}
           </ol>
-        </section>
+        </section>}
 
         {erro && <p className="erro">{erro}</p>}
         {!["concluida", "cancelada"].includes(corrida.status) && (

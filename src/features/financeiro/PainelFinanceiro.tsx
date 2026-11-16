@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Bike, Copy, Download, Landmark, Search, TrendingUp, Wallet } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
@@ -115,7 +116,9 @@ export function PainelFinanceiro() {
   return (
     <>
       <aside className="lateral entrar">
-        <CabecaPagina icone={Wallet} titulo="Carteira" subtitulo={teste ? "Números das rotas de teste" : "Rotas concluídas no período"} />
+        <CabecaPagina icone={Wallet} titulo="Carteira" subtitulo={teste ? "Números das rotas de teste" : "Rotas concluídas no período"}>
+          <AjustesRapidos titulo="Ajustes de pagamento e cobrança" grupos={["pagamento", "pag_combinar", "pag_zonas", "pag_km", "pag_entrega", "pag_fixo", "pag_periodo", "mb_ve", "faturas", "integracoes"]} />
+        </CabecaPagina>
         <div className="filtro filtro-rolavel">
           {(Object.keys(ROTULO) as Periodo[]).map((p) => (
             <button key={p} className={periodo === p ? "ativo" : ""} onClick={() => setPeriodo(p)}>{ROTULO[p]}</button>

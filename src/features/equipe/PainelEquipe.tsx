@@ -1,8 +1,10 @@
 "use client";
 
+import { RotasDe } from "@/features/corridas/HistoricoRotas";
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
 import { Penalidades } from "@/features/penalidades/Penalidades";
-import { Gavel } from "lucide-react";
+import { Gavel, Package } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bike, Building2, FlaskConical, History, Layers, Lock, PencilLine, Route, Save, Search, ShieldCheck, Trophy, UserPlus, UserRound, Users } from "lucide-react";
 import { ConquistasMembro } from "./Conquistas";
@@ -48,7 +50,7 @@ export function PainelEquipe() {
   const conta = useConta();
   const vagas = useVagas();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const [aba, setAba] = useEtapa<"registro" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("eq-aba", "registro");
+  const [aba, setAba] = useEtapa<"registro" | "rotas" | "percursos" | "veiculo" | "medalhas" | "regras" | "penalidades" | "editar">("eq-aba", "registro");
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const { empresas } = useEmpresas();
@@ -103,7 +105,9 @@ export function PainelEquipe() {
   return (
     <>
       <aside className="lateral entrar">
-        <CabecaPagina icone={Users} titulo="Equipe" subtitulo={lista.length === 1 ? "1 pessoa" : `${lista.length} pessoas`} />
+        <CabecaPagina icone={Users} titulo="Equipe" subtitulo={lista.length === 1 ? "1 pessoa" : `${lista.length} pessoas`}>
+          <AjustesRapidos titulo="Ajustes da equipe e dos motoboys" grupos={["perfil", "app_motoboy", "mb_ve", "veiculo", "penalidades", "emergencia", "jogo", "regiao"]} />
+        </CabecaPagina>
         {conta.modulo("criar_contas") && <button className="botao-ouro" onClick={() => setCriando(true)}><UserPlus size={17} aria-hidden /> Nova conta</button>}
         {criando && (
           <NovaConta padraoRepasse={Number(cfg.repasse_motoboy_pct)} onFechar={() => setCriando(false)}
@@ -162,6 +166,7 @@ export function PainelEquipe() {
               <div className="segmentado segmentado-rolavel">
                 <button type="button" className={aba === "registro" ? "ativo" : ""} onClick={() => setAba("registro")}><History size={15} aria-hidden /> Registro</button>
                 {m.papeis.includes("motoboy") && conta.modulo("trilhas_mapa") && <button type="button" className={aba === "percursos" ? "ativo" : ""} onClick={() => setAba("percursos")}><Route size={15} aria-hidden /> Percursos</button>}
+                {m.papeis.includes("motoboy") && <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Package size={15} aria-hidden /> Rotas</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "veiculo" ? "ativo" : ""} onClick={() => setAba("veiculo")}><Bike size={15} aria-hidden /> Veículo</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "medalhas" ? "ativo" : ""} onClick={() => setAba("medalhas")}><Trophy size={15} aria-hidden /> Medalhas</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={15} aria-hidden /> Regras</button>}
@@ -170,6 +175,7 @@ export function PainelEquipe() {
               </div>
 
               {aba === "registro" ? <RegistroMembro key={m.id} id={m.id} /> : aba === "percursos" ? <PercursosMembro key={m.id} id={m.id} teste={Boolean(m.modo_teste)} />
+                : aba === "rotas" ? <RotasDe key={m.id} motoboy={m.id} />
                 : aba === "veiculo" ? <VeiculoMembro key={m.id} id={m.id} />
                 : aba === "medalhas" ? <ConquistasMembro key={m.id} id={m.id} />
                 : aba === "regras" ? <RegrasDoAlvo key={m.id} escopo="motoboy" alvo={m.id} nome={m.nome || m.email} />
