@@ -42,4 +42,15 @@ saida=$(psql -q -d $DB -f modalidades.sql 2>&1 | grep -E "OK |FALHA")
 echo "$saida" | sed 's/^.*\(OK\|FALHA\)/\1/'
 ok=$(echo "$saida" | grep -c "OK ")
 if echo "$saida" | grep -q FALHA || [ "$ok" -lt 13 ]; then echo "::error::Teste do motor de modalidades falhou ($ok de 13 ok)."; exit 1; fi
+
+# lote 46: fuso por empresa, ofertas resistentes, campos na chegada
+psql -q -d postgres -c "drop database if exists $DB" -c "create database $DB" >/dev/null
+psql -q -d $DB -f stub.sql >/dev/null 2>&1
+for f in ../migrations/*.sql; do
+  sed -e '/create extension if not exists \(pg_cron\|pg_net\|postgis\)/d' -e 's/extensions.geography(Point, 4326)/extensions.geography/' -e '/using gist/d' "$f" | psql -q -d $DB >/dev/null 2>&1
+done
+saida=$(psql -q -d $DB -f lote46.sql 2>&1 | grep -E "OK |FALHA")
+echo "$saida" | sed 's/^.*\(OK\|FALHA\)/\1/'
+ok=$(echo "$saida" | grep -c "OK ")
+if echo "$saida" | grep -q FALHA || [ "$ok" -lt 8 ]; then echo "::error::Teste do lote 46 falhou ($ok de 8 ok)."; psql -q -d $DB -f lote46.sql 2>&1 | grep ERROR | head; exit 1; fi
 echo "Tudo certo: pode publicar."

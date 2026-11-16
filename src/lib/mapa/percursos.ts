@@ -54,7 +54,7 @@ export function separarRegistros(pings: Ping[]): Registro[] {
 
 type PingBruto = [string, number, number, string, string | null, number, number];
 export interface Ajuste { ate: number; caminho: [number, number][] }
-export interface Percursos { pings: (Ping & { motoboy_id: string })[]; ajustes: Record<string, Ajuste>; linha: [number, number][]; parcial: boolean }
+export interface Percursos { pings: (Ping & { motoboy_id: string })[]; ajustes: Record<string, Ajuste>; linha: [number, number][]; linhas: [number, number][][]; parcial: boolean }
 
 /**
  * Busca os percursos já traçados por cima das ruas (/api/percursos). Com `corrida`, a trilha inteira dela.
@@ -70,10 +70,10 @@ export async function buscarPercursos(p: { de?: Date; ate?: Date; motoboy?: stri
       body: JSON.stringify({ de: p.de?.toISOString(), ate: p.ate?.toISOString(), motoboy: p.motoboy, teste: p.teste, corrida: p.corrida }),
     });
     if (!r.ok) return null;
-    const j = (await r.json()) as { pings: PingBruto[]; ajustes: Record<string, Ajuste>; linha: [number, number][]; parcial: boolean };
+    const j = (await r.json()) as { pings: PingBruto[]; ajustes: Record<string, Ajuste>; linha: [number, number][]; linhas?: [number, number][][]; parcial: boolean };
     return {
       pings: j.pings.map((x) => ({ motoboy_id: x[0], lat: x[1], lng: x[2], status: x[3], corrida_id: x[4], registrado_em: new Date(x[5]).toISOString() })),
-      ajustes: j.ajustes ?? {}, linha: j.linha ?? [], parcial: Boolean(j.parcial),
+      ajustes: j.ajustes ?? {}, linha: j.linha ?? [], linhas: j.linhas ?? (j.linha?.length ? [j.linha] : []), parcial: Boolean(j.parcial),
     };
   } catch { return null; }
 }

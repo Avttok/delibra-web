@@ -36,6 +36,8 @@ export interface RespostaPercursos {
   ajustes: Record<string, Ajuste>;
   /** Linha única (lat, lng) de tudo, na ordem: útil para a trilha de uma corrida. */
   linha: [number, number][];
+  /** A mesma linha em pedaços (um por registro): entre um e outro o GPS ficou sem sinal, então não se liga com reta. */
+  linhas: [number, number][][];
   /** Faltou ajustar algum trecho (o mapa demorou): vale pedir de novo daqui a pouco. */
   parcial: boolean;
 }
@@ -326,8 +328,9 @@ export async function montarPercursos(sb: SupabaseClient, dados: { pings?: PingB
   if (novos.length) await sb.rpc("guardar_trechos", { p_itens: novos });
 
   const ajustes: Record<string, Ajuste> = {};
-  const linha: [number, number][] = [];
+  const linhas: [number, number][][] = [];
   regs.forEach((r, i) => {
+    const linha: [number, number][] = [];
     const partes = trechosDe[i].map((t) => {
       const c = guardados[chaveTrecho(t, o)];
       return c && c.length >= 2 ? c : t.map((p) => [p[1], p[2]] as [number, number]);
@@ -341,6 +344,7 @@ export async function montarPercursos(sb: SupabaseClient, dados: { pings?: PingB
     linha.push(...(caminho.length >= 2 ? caminho : r.map((p) => [p[1], p[2]] as [number, number])));
     // pings depois do último usado no caminho (ex.: parado no fim) entram crus
     for (const p of r) if (p[5] > ultimo && metros(linha[linha.length - 1], [p[1], p[2]]) >= o.filtro) linha.push([p[1], p[2]]);
+    if (linha.length) linhas.push(linha);
   });
-  return { pings, ajustes, linha, parcial };
+  return { pings, ajustes, linha: linhas.flat(), linhas, parcial };
 }

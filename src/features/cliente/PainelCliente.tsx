@@ -169,8 +169,8 @@ function SeloPago() {
   return <span className="selo selo-pago"><BadgeCheck size={11} aria-hidden /> PAGO</span>;
 }
 
-function Selo({ s }: { s: StatusP }) {
-  return <span className="selo" style={{ color: STATUS[s].cor }}>{nomeStatus("pedido", s, STATUS[s].rotulo)}</span>;
+function Selo({ s, tipo }: { s: StatusP; tipo?: string | null }) {
+  return <span className="selo" style={{ color: STATUS[s].cor }}>{nomeStatus("pedido", s, STATUS[s].rotulo, tipo)}</span>;
 }
 
 // ------------------------------------------------------------------ lista
@@ -192,7 +192,7 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
     return (
       <button key={p.id} className="cliente-pedido vidro" onClick={() => onAbrir(p.id)}>
         <div className="cliente-pedido-topo">
-          <strong>#{p.numero}</strong><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}
+          <strong>#{p.numero}</strong><Selo s={p.status} tipo={p.tipo_pedido} />{p.pagamento_status === "pago" && <SeloPago />}
           {p.tipo === "planejado" ? <CalendarClock size={13} aria-label="Agendado" /> : <Zap size={13} aria-label="Express" />}
           <span className="espaco" /><strong>{p.valor == null && (p as { preco_oculto?: boolean }).preco_oculto ? "Revisando" : moedaBr(p.valor)}</strong>
         </div>
@@ -218,7 +218,7 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
               const passo = ["recebido", "aprovado"].includes(p.status) ? 0 : p.status === "roteirizado" ? 1 : p.status === "em_rota" ? 2 : 3;
               return (
                 <button key={p.id} type="button" className="cliente-bloco vidro" onClick={() => onAbrir(p.id)}>
-                  <span className="cliente-bloco-topo"><strong>#{p.numero}</strong><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}</span>
+                  <span className="cliente-bloco-topo"><strong>#{p.numero}</strong><Selo s={p.status} tipo={p.tipo_pedido} />{p.pagamento_status === "pago" && <SeloPago />}</span>
                   <span className="cliente-bloco-destino"><MapPinned size={14} aria-hidden /> {ent.length > 1 ? `${ent.length} entregas` : ent[0]?.endereco ?? "Entrega"}</span>
                   <span className="cliente-bloco-passos" aria-label="Andamento">{[0, 1, 2, 3].map((i) => <i key={i} className={i <= passo ? "feito" : ""} />)}</span>
                   <span className="dica">{p.tipo === "planejado" ? `Agendado para ${quando(p.quando)}` : STATUS[p.status].dica}{ent.length > 1 ? ` · ${feitas}/${ent.length}` : ""}</span>
@@ -245,11 +245,12 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
   // o que o gestor deixa o cliente ver da rota (Ajustes → Clientes → O que o cliente vê)
   const ve = new Set(conta.ve_rota ?? ["feito", "motoboy"]);
   // feito: o caminho do motoboy com o seu pedido (da coleta em diante), pelas ruas
-  const [trilha, setTrilha] = useState<[number, number][]>([]);
+  const [pedacos, setPedacos] = useState<[number, number][][]>([]);
+  const trilha = useMemo(() => pedacos.flat(), [pedacos]);
   useEffect(() => {
-    if (!conta.ve_ao_vivo || !ve.has("feito") || !["em_rota", "concluido"].includes(p.status)) { setTrilha([]); return; }
+    if (!conta.ve_ao_vivo || !ve.has("feito") || !["em_rota", "concluido"].includes(p.status)) { setPedacos([]); return; }
     let vivo = true;
-    const buscar = () => trilhaDoPedido(p.id).then((t) => { if (vivo) setTrilha(t); });
+    const buscar = () => trilhaDoPedido(p.id).then((t) => { if (vivo) setPedacos(t); });
     void buscar();
     const t = p.status === "em_rota" ? setInterval(buscar, 60_000) : undefined;
     return () => { vivo = false; if (t) clearInterval(t); };
@@ -287,7 +288,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
       <button className="botao-texto" onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Pedidos</button>
       <div className="cliente-cartao vidro">
         <div className="cliente-pedido-topo">
-          <h2 className="display" style={{ margin: 0 }}>Pedido #{p.numero}</h2><Selo s={p.status} />{p.pagamento_status === "pago" && <SeloPago />}<span className="espaco" />
+          <h2 className="display" style={{ margin: 0 }}>Pedido #{p.numero}</h2><Selo s={p.status} tipo={p.tipo_pedido} />{p.pagamento_status === "pago" && <SeloPago />}<span className="espaco" />
           <strong className="figura" style={{ fontSize: 24 }}>{p.valor == null && (p as { preco_oculto?: boolean }).preco_oculto ? "Revisando" : moedaBr(p.valor)}</strong>
         </div>
         {!["cancelado", "recusado"].includes(p.status) && (() => {
@@ -304,7 +305,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
         })()}
         <p className="dica" style={{ margin: 0 }}>{STATUS[p.status].dica}{p.recusa_motivo ? ` Motivo: ${p.recusa_motivo}` : ""}</p>
         <div className="cliente-mapa">
-          <MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha} rotaPlanejada={ve.has("planejada") ? planejada : null}
+          <MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha} pedacos={pedacos} rotaPlanejada={ve.has("planejada") ? planejada : null}
             caminhoAuto={ve.has("planejada") || ve.has("restante") ? !planejada : false}
             restanteDe={ve.has("restante") && motoboys[0] ? { lat: motoboys[0].lat, lng: motoboys[0].lng } : null}
             motoboys={(ve.has("motoboy") ? motoboys : []).map((m, i) => ({ id: `m${i}`, nome: m.nome, lat: m.lat, lng: m.lng, status: "em_corrida", foto: m.foto }))} />
@@ -323,7 +324,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
           {p.pontos.map((x, i) => (
             <li key={x.id} className={`clicavel${x.status === "concluido" ? " feita" : ""}`} title="Ver no mapa" onClick={() => setFoco({ lat: x.lat, lng: x.lng, vez: Date.now() })}>
               <span className={`pino-mini ${x.tipo}`}>{i + 1}</span>
-              <div><strong>{nomeParada(x.tipo)}</strong> · {x.endereco}
+              <div><strong>{nomeParada(x.tipo, p.tipo_pedido)}</strong> · {x.endereco}
                 {x.contato_nome && <span className="dica"> · {x.contato_nome}</span>}
                 {x.concluido_em && <div className="dica"><CheckCircle2 size={12} aria-hidden /> {quando(x.concluido_em)}{x.recebedor_nome ? ` · recebido por ${x.recebedor_nome}` : ""}</div>}
                 <SelosPonto p={x} />

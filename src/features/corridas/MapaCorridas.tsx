@@ -31,6 +31,8 @@ interface Props {
   paradas?: PinoParada[];
   rotaPlanejada?: string | null;
   trilha?: [number, number][];
+  /** A trilha em pedaços: entre um e outro o GPS ficou sem sinal (não liga com reta). Sem isso, usa `trilha` inteira. */
+  pedacos?: [number, number][][];
   motoboys?: PinoMotoboy[];
   aoClicar?: (lat: number, lng: number) => void;
   modoEscolha?: boolean;
@@ -72,8 +74,12 @@ function linha(coords: [number, number][]) {
   };
 }
 
+function linhas(partes: [number, number][][]) {
+  return { type: "FeatureCollection" as const, features: partes.filter((c) => c.length >= 2).map((c) => ({ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: c } })) };
+}
+
 /** Mapa genérico das telas de corrida: paradas numeradas, rota planejada, trilha real e motoboys. */
-export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio, vias, onMoverVia, onTirarVia, onArrastarLinha }: Props) {
+export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos, motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio, vias, onMoverVia, onTirarVia, onArrastarLinha }: Props) {
   const [cheio, setCheioBase] = useState(false);
   const setCheio = (v: boolean) => { setCheioBase(v); onCheio?.(v); };
   // sem rota pronta: traça o caminho pelas ruas entre as paradas, na ordem
@@ -178,8 +184,8 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], motoboy
 
   useEffect(() => {
     if (!pronto) return;
-    (mapa.current?.getSource("trilha") as maplibregl.GeoJSONSource | undefined)?.setData(linha(trilha));
-  }, [mapa, pronto, trilha]);
+    (mapa.current?.getSource("trilha") as maplibregl.GeoJSONSource | undefined)?.setData(pedacos?.length ? linhas(pedacos) : linha(trilha));
+  }, [mapa, pronto, trilha, pedacos]);
 
   // pinos de paradas e motoboys
   useEffect(() => {

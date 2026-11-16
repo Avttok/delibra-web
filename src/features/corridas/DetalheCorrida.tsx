@@ -76,7 +76,8 @@ function useEventos(corridaId: string) {
 
 /** Trilha real (o feito), traçada pelas ruas pelo servidor; ao vivo, os pings novos entram no fim. */
 function useTrilha(corrida: Corrida, ativa: boolean) {
-  const [pontos, setPontos] = useState<[number, number][]>([]);
+  const [pedacos, setPedacos] = useState<[number, number][][]>([]);
+  const setPontos = (l: [number, number][]) => setPedacos(l.length ? [l] : []);
   const compactada = corrida.trajeto;
   useEffect(() => {
     const sb = supabase();
@@ -84,7 +85,7 @@ function useTrilha(corrida: Corrida, ativa: boolean) {
     async function carregar() {
       const r = await buscarPercursos({ corrida: corrida.id });
       if (!vivo) return;
-      if (r && r.linha.length) { setPontos(r.linha.map(([la, lo]) => [lo, la] as [number, number])); return; }
+      if (r && r.linha.length) { setPedacos(r.linhas.map((l) => l.map(([la, lo]) => [lo, la] as [number, number]))); return; }
       if (compactada) { setPontos(decodificarPolyline(compactada)); return; }
       const { data } = await sb.from("localizacoes").select("lat,lng,registrado_em").eq("corrida_id", corrida.id).order("registrado_em").limit(5000);
       if (vivo && data) setPontos(data.map((p) => [p.lng, p.lat] as [number, number]));
@@ -96,12 +97,13 @@ function useTrilha(corrida: Corrida, ativa: boolean) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "localizacoes", filter: `corrida_id=eq.${corrida.id}` },
         (payload) => {
           const p = payload.new as { lat: number; lng: number };
-          setPontos((l) => [...l, [p.lng, p.lat]]);
+          // ponto novo ao vivo: entra no fim do último pedaço
+          setPedacos((ps) => ps.length ? [...ps.slice(0, -1), [...ps[ps.length - 1], [p.lng, p.lat]]] : [[[p.lng, p.lat]]]);
         })
       .subscribe();
     return () => { vivo = false; if (refazer) clearInterval(refazer); sb.removeChannel(canal); };
-  }, [corrida.id, compactada, ativa]);
-  return pontos;
+  }, [corrida.id, compactada, ativa]); // eslint-disable-line react-hooks/exhaustive-deps
+  return pedacos;
 }
 
 function Comprovante({ caminho, rotulo }: { caminho: string; rotulo: string }) {
@@ -169,7 +171,8 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
   const nome = (id: string | null | undefined) => equipe.find((m) => m.id === id)?.nome ?? "Motoboy";
   const motoboy = equipe.find((m) => m.id === corrida.motoboy_id);
   const ativa = ["aceita", "em_andamento"].includes(corrida.status);
-  const trilha = useTrilha(corrida, ativa);
+  const pedacos = useTrilha(corrida, ativa);
+  const trilha = useMemo(() => pedacos.flat(), [pedacos]);
   const pacotes = usePacotes(corrida.paradas.map((p) => p.pedido_id).filter((x): x is string => Boolean(x)));
   const pacotesDe = (p: (typeof corrida.paradas)[number]) => {
     if (!p.pedido_ponto_id || !p.pedido_id) return [];
@@ -313,7 +316,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
             <div key={p.id} className={`parada-detalhe clicavel ${p.status}`} title="Ver no mapa" onClick={() => setFoco({ lat: p.lat, lng: p.lng, vez: Date.now() })}>
               <span className={`pino-mini ${p.tipo}`}>{p.ordem + 1}</span>
               <div className="parada-texto">
-                <strong>{nomeParada(p.tipo)} · {ROTULO_PARADA[p.status]}{p.dist_rua_m != null && p.tipo === "entrega" ? <span className="dica"> · {formatarKm(p.dist_rua_m)} da coleta</span> : null}</strong>
+                <strong>{nomeParada(p.tipo, corrida.tipo_pedido)} · {ROTULO_PARADA[p.status]}{p.dist_rua_m != null && p.tipo === "entrega" ? <span className="dica"> · {formatarKm(p.dist_rua_m)} da coleta</span> : null}</strong>
                 <span>{p.endereco}</span>
                 {(p.contato_nome || p.contato_telefone) && <span className="dica">{p.contato_nome} {p.contato_telefone}</span>}
                 {p.instrucoes && <span className="dica">{p.instrucoes}</span>}
@@ -428,7 +431,7 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
         onMoverVia={editandoPercurso ? (i, lat, lng) => setVias((v) => v.map((x, j) => j === i ? encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem)) : x)) : undefined}
         onTirarVia={editandoPercurso ? (i) => setVias((v) => v.filter((_, j) => j !== i)) : undefined}
         onArrastarLinha={editandoPercurso ? (lat, lng) => setVias((v) => v.length >= 20 ? v : [...v, encaixarVia(lat, lng, [...corrida.paradas].sort((a, b) => a.ordem - b.ordem))]) : undefined}
-        trilha={trilha}
+        trilha={trilha} pedacos={pedacos}
         motoboys={ativa && motoboy?.lat != null && motoboy.lng != null
           ? [{ id: motoboy.id, nome: motoboy.nome, lat: motoboy.lat, lng: motoboy.lng, status: motoboy.status, foto: motoboy.foto }] : []}
         enquadrar={corrida.id}

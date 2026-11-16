@@ -48,7 +48,7 @@ function Chips<T extends string | number>({ opcoes, valor, onMudar }: { opcoes: 
 // =====================================================================================================  campos próprios
 type Campo = {
   id?: string; entidade: "pedido" | "ponto" | "cliente" | "motoboy"; ponto_tipo: "coleta" | "entrega" | null; tipos_pedido: string[];
-  chave?: string; rotulo: string; dica: string | null; tipo: string; opcoes: string[]; obrigatorio: boolean; quem_preenche: string;
+  chave?: string; rotulo: string; dica: string | null; tipo: string; opcoes: string[]; obrigatorio: boolean; quem_preenche: string; etapa?: "chegou" | "concluir";
   visivel_cliente: boolean; visivel_motoboy: boolean; ordem: number; ativo: boolean; da_plataforma?: boolean;
 };
 const ENTIDADES: [Campo["entidade"], string, string][] = [
@@ -94,6 +94,8 @@ export function CamposProprios() {
               {ent === "ponto" && <>
                 <span className="rotulo">Em qual parada</span>
                 <div className="linha-chips">{([[null, "Coleta e entrega"], ["coleta", "Só coleta"], ["entrega", "Só entrega"]] as [Campo["ponto_tipo"], string][]).map(([t, r]) => <button key={String(t)} type="button" className={`chip${ed.ponto_tipo === t ? " ativo" : ""}`} onClick={() => setEd({ ...ed, ponto_tipo: t })}>{r}</button>)}</div>
+                <span className="rotulo">Quando o motoboy responde</span>
+                <div className="linha-chips">{([["chegou", "Ao chegar no endereço"], ["concluir", "Ao concluir a parada"]] as ["chegou" | "concluir", string][]).map(([t, r]) => <button key={t} type="button" className={`chip${(ed.etapa ?? "concluir") === t ? " ativo" : ""}`} onClick={() => setEd({ ...ed, etapa: t })}>{r}</button>)}</div>
               </>}
               {(ent === "pedido" || ent === "ponto") && tipos.length > 1 && <>
                 <span className="rotulo">Tipos de pedido (nenhum marcado = todos)</span>
@@ -118,7 +120,7 @@ export function CamposProprios() {
               <div key={c.id} className={`catalogo-linha ${c.ativo ? "" : "inativa"}`}>
                 <button type="button" className="catalogo-linha-corpo" disabled={c.da_plataforma && !conta.dev} onClick={() => setEd(c)}>
                   <span><strong>{c.rotulo}{c.obrigatorio ? " *" : ""}</strong>
-                    <small>{TIPOS_CAMPO.find(([t]) => t === c.tipo)?.[1]} · {QUEM.find(([q]) => q === c.quem_preenche)?.[1]}{c.ponto_tipo ? ` · só ${c.ponto_tipo}` : ""}{c.da_plataforma ? " · da plataforma" : ""}</small></span>
+                    <small>{TIPOS_CAMPO.find(([t]) => t === c.tipo)?.[1]} · {QUEM.find(([q]) => q === c.quem_preenche)?.[1]}{c.ponto_tipo ? ` · só ${c.ponto_tipo}` : ""}{c.entidade === "ponto" && c.etapa === "chegou" ? " · na chegada" : ""}{c.da_plataforma ? " · da plataforma" : ""}</small></span>
                 </button>
               </div>
             ))}
@@ -131,28 +133,44 @@ export function CamposProprios() {
 
 // =====================================================================================================  nomes próprios
 export function NomesProprios() {
-  const [atual, setAtual] = useState<Record<string, string>>({});
+  const tipos = useTiposPedido();
+  const [tipo, setTipo] = useState("");  // "" = todos os tipos de pedido
+  const [todos, setTodos] = useState<{ alvo: string; tipo_pedido: string; texto: string; da_plataforma: boolean }[]>([]);
   const [ed, setEd] = useState<Record<string, string>>({});
-  const carregar = useCallback(async () => {
+  const doTipo = useCallback((t: string, r = todos) => Object.fromEntries(r.filter((x) => (x.tipo_pedido ?? "") === t && !x.da_plataforma).map((x) => [x.alvo, x.texto])), [todos]);
+  const geral = doTipo("");
+  const atual = doTipo(tipo);
+  const carregar = useCallback(async (t: string) => {
     const r = (await rpc<{ alvo: string; tipo_pedido: string; texto: string; da_plataforma: boolean }[]>("rotulos_editor")) ?? [];
-    const m = Object.fromEntries(r.filter((x) => !x.tipo_pedido && !x.da_plataforma).map((x) => [x.alvo, x.texto]));
-    setAtual(m); setEd(m);
+    setTodos(r);
+    setEd(Object.fromEntries(r.filter((x) => (x.tipo_pedido ?? "") === t && !x.da_plataforma).map((x) => [x.alvo, x.texto])));
   }, []);
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => { void carregar(tipo); }, [carregar, tipo]);
   async function salvar(alvo: string) {
-    const r = await rpc<Record<string, string>>("salvar_rotulo", { p_alvo: alvo, p_texto: ed[alvo] ?? "" });
-    if (r) { aplicarRotulos(r); toast("Nome salvo.", "ok"); void carregar(); }
+    const r = await rpc<Record<string, string>>("salvar_rotulo", { p_alvo: alvo, p_texto: ed[alvo] ?? "", p_tipo_pedido: tipo });
+    if (r) { aplicarRotulos(r); toast("Nome salvo.", "ok"); void carregar(tipo); }
   }
-  const linha = (alvo: string, padrao: string) => (
-    <div key={alvo} className="nome-proprio">
-      <span className="dica">{padrao}</span>
-      <input value={ed[alvo] ?? ""} placeholder={padrao} onChange={(e) => setEd({ ...ed, [alvo]: e.target.value })} />
-      <button type="button" className="botao-vidro pequeno" disabled={(ed[alvo] ?? "") === (atual[alvo] ?? "")} onClick={() => salvar(alvo)}><Save size={13} aria-hidden /> Salvar</button>
-    </div>
-  );
+  const linha = (alvo: string, padrao: string) => {
+    const base = tipo ? geral[alvo] || padrao : padrao;
+    return (
+      <div key={alvo} className="nome-proprio">
+        <span className="dica">{padrao}</span>
+        <input value={ed[alvo] ?? ""} placeholder={base} onChange={(e) => setEd({ ...ed, [alvo]: e.target.value })} />
+        <button type="button" className="botao-vidro pequeno" disabled={(ed[alvo] ?? "") === (atual[alvo] ?? "")} onClick={() => salvar(alvo)}><Save size={13} aria-hidden /> Salvar</button>
+      </div>
+    );
+  };
   return (
     <div className="catalogo">
       <p className="dica" style={{ margin: 0 }}>Os nomes que a sua equipe e os seus clientes veem. Vazio = o nome padrão. O funcionamento continua o mesmo.</p>
+      {tipos.length > 1 && <>
+        <span className="rotulo">Valem para</span>
+        <div className="linha-chips">
+          <button type="button" className={`chip${tipo === "" ? " ativo" : ""}`} onClick={() => setTipo("")}>Todos os pedidos</button>
+          {tipos.map((t) => <button key={t.chave} type="button" className={`chip${tipo === t.chave ? " ativo" : ""}`} onClick={() => setTipo(t.chave)}>{t.nome}</button>)}
+        </div>
+        {tipo && <p className="dica" style={{ margin: 0 }}>Só nos pedidos deste tipo. Vazio = o nome de “Todos os pedidos”.</p>}
+      </>}
       <section className="bloco"><strong>Tipos de parada</strong>{linha("parada:coleta", "Coleta")}{linha("parada:entrega", "Entrega")}</section>
       <section className="bloco"><strong>Status do pedido</strong>{ALVOS_PEDIDO.map(([s, r]) => linha(`pedido:${s}`, r))}</section>
       <section className="bloco"><strong>Status da rota</strong>{ALVOS_CORRIDA.map(([s, r]) => linha(`rota:${s}`, r))}</section>

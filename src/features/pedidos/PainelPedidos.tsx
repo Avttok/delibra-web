@@ -166,15 +166,17 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
   const pinos: PinoParada[] = pontos.map((x, i) => ({ chave: x.id, lat: x.lat, lng: x.lng, tipo: x.tipo, rotulo: String(i + 1), concluida: x.status === "concluido" }));
   const unicas = [...new Map(rotas.map((r) => [r.corrida_id, r])).values()];
   // feito (trilha pelas ruas de cada rota deste pedido) e a fazer (do motoboy até o que falta)
-  const [trilha, setTrilha] = useState<[number, number][]>([]);
+  const [pedacos, setPedacos] = useState<[number, number][][]>([]);
+  const trilha = useMemo(() => pedacos.flat(), [pedacos]);
   const idsRotas = unicas.map((r) => r.corrida_id).join(",");
   const emRota = unicas.find((r) => ["aceita", "em_andamento"].includes(r.status));
   useEffect(() => {
-    if (!idsRotas) { setTrilha([]); return; }
+    if (!idsRotas) { setPedacos([]); return; }
     let vivo = true;
     async function carregar() {
       const partes = await Promise.all(idsRotas.split(",").map((id) => buscarPercursos({ corrida: id })));
-      if (vivo) setTrilha(partes.flatMap((r) => (r?.linha ?? []).map(([la, lo]) => [lo, la] as [number, number])));
+      // cada rota (e cada trecho sem sinal) é um pedaço: nada de reta ligando o fim de uma ao começo da outra
+      if (vivo) setPedacos(partes.flatMap((r) => (r?.linhas ?? []).map((l) => l.map(([la, lo]) => [lo, la] as [number, number]))));
     }
     void carregar();
     const t = emRota ? setInterval(() => void carregar(), 60_000) : undefined;
@@ -221,7 +223,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
           <button className="icone" aria-label="Fechar" onClick={onFechar}><X size={16} /></button>
         </div>
         {p.recusa_motivo && <p className="erro" style={{ margin: 0 }}>Recusado: {p.recusa_motivo}</p>}
-        <div className="pedido-mapa-p"><MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha}
+        <div className="pedido-mapa-p"><MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha} pedacos={pedacos}
           motoboys={motoEmRota?.lat != null && motoEmRota.lng != null ? [{ id: motoEmRota.id, nome: motoEmRota.nome, lat: motoEmRota.lat, lng: motoEmRota.lng, status: "em_corrida", foto: motoEmRota.foto }] : []}
           restanteDe={motoEmRota?.lat != null && motoEmRota.lng != null ? { lat: motoEmRota.lat, lng: motoEmRota.lng } : null} /></div>
         {(p.veiculo || (p.extras && Object.keys(p.extras).length > 0)) && (
@@ -238,7 +240,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
               <li key={x.id} className={`clicavel${x.status === "concluido" ? " feita" : ""}`} title="Ver no mapa" onClick={() => setFoco({ lat: x.lat, lng: x.lng, vez: Date.now() })}>
                 <span className={`pino-mini ${x.tipo}`}>{i + 1}</span>
                 <div>
-                  <strong>{nomeParada(x.tipo)}</strong> · {x.endereco}
+                  <strong>{nomeParada(x.tipo, p.tipo_pedido)}</strong> · {x.endereco}
                   <div className="dica">{[x.contato_nome, x.contato_telefone, x.instrucoes].filter(Boolean).join(" · ")}</div>
                   <PacotesPonto itens={itens} />
                   {x.concluido_em && <div className="dica"><CheckCircle2 size={12} aria-hidden /> {quando(x.concluido_em)}{x.recebedor_nome ? ` · ${x.recebedor_nome}` : ""}</div>}

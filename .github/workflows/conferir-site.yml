@@ -5,7 +5,7 @@ name: Conferir site
 on:
   push:
     branches: [lote, main]
-    paths: ["src/**", "package.json", "package-lock.json", "next.config.*", "tsconfig.json"]
+    paths: ["src/**", "scripts/testes/**", "package.json", "package-lock.json", "next.config.*", "tsconfig.json"]
   workflow_dispatch:
 
 jobs:
@@ -23,3 +23,10 @@ jobs:
         run: npx tsc --noEmit -p .
       - name: Compilar
         run: npx next build
+      - name: Telas (abre as páginas num navegador de verdade, celular e computador)
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1
+          npx playwright install --with-deps chromium
+          npx next start -p 3100 > /tmp/site.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3100/termos && break; sleep 1; done
+          node scripts/testes/telas.mjs http://localhost:3100 || { tail -40 /tmp/site.log; exit 1; }

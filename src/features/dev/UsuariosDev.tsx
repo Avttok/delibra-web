@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Activity, Battery, Bike, Building2, Check, CodeXml, Database, KeyRound, Lock, LockOpen, PlugZap, Power, RefreshCw, Search, ShieldCheck, Timer, UserCog, UserRound, Users, Wifi } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
@@ -148,7 +148,7 @@ function LinhaUsuario({ u, orgs, aberto, onAbrir, onMudou }: { u: Usuario; orgs:
 
 type Saude = {
   banco_mb: number; tabelas: { nome: string; mb: number; linhas: number }[]; pings_1h: number; pings_24h: number; motoboys_online: number; contas: number; empresas: number;
-  rotas_ativas: number; emergencias_abertas?: number; mensagens_24h?: number; tarefas?: { nome: string; quando: string; ativa: boolean; ultima: string | null; falhas_24h: number; erro: string | null }[];
+  rotas_ativas: number; emergencias_abertas?: number; mensagens_24h?: number; tarefas?: { nome: string; quando: string; ativa: boolean; ultima: string | null; falhas_24h: number; erro: string | null; erro_em?: string | null }[];
   migracoes?: { nome: string; em: string }[];
 };
 
@@ -207,7 +207,13 @@ export function SaudeDev() {
           <span className="rotulo"><Timer size={12} aria-hidden /> Tarefas automáticas</span>
           {tarefas.length === 0 ? <p className="dica">O agendador não respondeu (ou não está instalado).</p> : (
             <table className="dev-tabela"><thead><tr><th>Tarefa</th><th>Quando</th><th>Última</th><th>Falhas 24 h</th></tr></thead>
-              <tbody>{tarefas.map((t) => <tr key={t.nome} title={t.erro ?? undefined}><td>{t.ativa ? "" : "⏸ "}{t.nome.replace("pwex-", "")}</td><td>{t.quando}</td><td>{ha(t.ultima)}</td><td className={t.falhas_24h ? "erro" : ""}>{t.falhas_24h}</td></tr>)}</tbody>
+              <tbody>{tarefas.map((t) => <Fragment key={t.nome}>
+                <tr><td>{t.ativa ? "" : "⏸ "}{t.nome.replace("pwex-", "")}</td><td>{t.quando}</td><td>{ha(t.ultima)}</td><td className={t.falhas_24h ? "erro" : ""}>{t.falhas_24h}</td></tr>
+                {t.falhas_24h > 0 && t.erro && <tr className="dev-tarefa-erro"><td colSpan={4}>
+                  <strong>{explicarErroTarefa(t.erro)}</strong>{t.erro_em && <small> · {ha(t.erro_em)}</small>}
+                  <code>{t.erro.slice(0, 300)}</code>
+                </td></tr>}
+              </Fragment>)}</tbody>
             </table>
           )}
           {(s.migracoes ?? []).length > 0 && <>
@@ -243,4 +249,13 @@ function TravamentosApp() {
       </>}
     </div>
   );
+}
+
+/** Explica em português o erro de uma tarefa automática (o texto original vem logo abaixo). */
+function explicarErroTarefa(e: string): string {
+  if (/lock timeout|canceling statement due to lock/i.test(e)) return "Esperou demais por uma trava do banco. Normal durante uma atualização: a tarefa roda de novo sozinha.";
+  if (/statement timeout/i.test(e)) return "Demorou mais que o limite e foi interrompida. Se repetir, avise o Dev.";
+  if (/deadlock/i.test(e)) return "Duas tarefas brigaram pelo mesmo dado ao mesmo tempo. Ela roda de novo sozinha.";
+  if (/connection|terminat/i.test(e)) return "A conexão com o banco caiu no meio. Ela roda de novo sozinha.";
+  return "Falhou nesta execução. As próximas seguem normalmente; se o número subir, veja o detalhe.";
 }
