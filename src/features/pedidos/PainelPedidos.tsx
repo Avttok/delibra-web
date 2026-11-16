@@ -8,8 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Ban, CalendarClock, Check, CheckCircle2, CircleDollarSign, ClipboardList, FlaskConical, Package, PackagePlus, RefreshCw, Route, Search, Undo2, Wallet, X, Zap,
-  BadgeCheck,
-} from "lucide-react";
+  BadgeCheck, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useEmpresas, useEquipe, useRecarregarAoMudar } from "@/features/corridas/dados";
 import { MapaCorridas, type PinoParada } from "@/features/corridas/MapaCorridas";
@@ -62,6 +61,7 @@ export function PainelPedidos() {
   // link direto (ex.: cartão do chat): /gestor/pedidos?p=<id>
   useEffect(() => { const q = new URLSearchParams(window.location.search).get("p"); if (q) setSel(q); }, []);
   const [novo, setNovo] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
 
   useRecarregarAoMudar(["pedidos", "pedido_pontos", "corridas"], async () => {
     const sb = supabase();
@@ -101,6 +101,7 @@ export function PainelPedidos() {
   const atual = pedidos?.find((p) => p.id === sel) ?? null;
 
   if (novo) return <FormPedido onVoltar={() => setNovo(false)} onCriado={(id) => { setNovo(false); setSel(id); setFiltro("todos"); }} />;
+  if (editando) return <FormPedido editar={editando} onVoltar={() => setEditando(null)} onCriado={(id) => { setEditando(null); setSel(id); }} />;
 
   return (
     <>
@@ -144,15 +145,15 @@ export function PainelPedidos() {
         </div>
       </aside>
       <main className="conteudo">
-        {atual ? <DetalhePedido key={atual.id} p={atual} cliente={cliente(atual)} categorias={categorias} rotas={rotas.filter((r) => r.pedido_id === atual.id)} onFechar={() => setSel(null)} />
+        {atual ? <DetalhePedido key={atual.id} p={atual} cliente={cliente(atual)} categorias={categorias} rotas={rotas.filter((r) => r.pedido_id === atual.id)} onFechar={() => setSel(null)} onEditar={() => setEditando(atual.id)} />
           : <div className="formulario vidro entrar"><p className="vazio">Escolha um pedido para ver, revisar e ajustar.</p></div>}
       </main>
     </>
   );
 }
 
-function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
-  p: Pedido; cliente: string; categorias: Categoria[]; rotas: { corrida_id: string; numero: number; status: string; motoboy_id?: string | null }[]; onFechar: () => void;
+function DetalhePedido({ p, cliente, categorias, rotas, onFechar, onEditar }: {
+  p: Pedido; cliente: string; categorias: Categoria[]; rotas: { corrida_id: string; numero: number; status: string; motoboy_id?: string | null }[]; onFechar: () => void; onEditar: () => void;
 }) {
   const equipe = useEquipe();
   const cfg = useConfiguracoes();
@@ -331,6 +332,8 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
           </p>
         )}
         <div className="linha-botoes">
+          {!finalizado && !pontos.some((x) => x.status === "concluido") && rotas.every((r) => r.status !== "em_andamento") &&
+            <button className="botao-vidro" disabled={ocupado} onClick={onEditar} title="Endereços, itens, horário e opções (como na criação)"><Pencil size={15} aria-hidden /> Editar pedido</button>}
           {p.status === "recebido" && <button className="botao-ouro" disabled={ocupado} onClick={() => acao("aprovar")}><Check size={16} aria-hidden /> Aprovar{mudouValor ? " com o valor novo" : ""}</button>}
           {p.status !== "recebido" && p.status !== "cancelado" && p.status !== "recusado" && mudouValor && <button className="botao-ouro" disabled={ocupado} onClick={() => acao("ajustar")}><CircleDollarSign size={16} aria-hidden /> Salvar valor</button>}
           {!finalizado && <button className="botao-texto" disabled={ocupado} onClick={() => acao("recalcular")}><RefreshCw size={15} aria-hidden /> Recalcular</button>}

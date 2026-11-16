@@ -7,8 +7,7 @@ import { Pagar } from "@/features/pagamentos/Pagar";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
 import {
   ArrowLeft, BadgeCheck, Bookmark, BookmarkPlus, Boxes, Building2, CalendarClock, CheckCircle2, Clock, CreditCard, FileText, FlaskConical, KeyRound, Lock, MapPinned, Package,
-  PackagePlus, Plus, QrCode, Receipt, Truck, Undo2, UserRound, Wallet, X, Zap,
-} from "lucide-react";
+  PackagePlus, Plus, QrCode, Receipt, Truck, Undo2, UserRound, Wallet, X, Zap, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { distanciasColetaEntrega, geo, type Referencia, type Rota } from "@/features/geo";
 import { CampoEndereco } from "@/features/corridas/CampoEndereco";
@@ -23,7 +22,7 @@ import { formatarDuracao, formatarKm } from "@/features/corridas/tipos";
 import { paraCampo, sugestaoHorario } from "@/features/corridas/planejadas";
 import { toast } from "@/features/ui/toast";
 import { moedaBr, quando, traduzir, type Categoria, type Orcamento } from "@/features/pedidos/tipos";
-import { ItensPedido, dadosDoObjeto, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "@/features/pedidos/ItensPedido";
+import { DestinosEntrega, ItensPedido, dadosDoObjeto, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "@/features/pedidos/ItensPedido";
 import { OpcoesPonto, SelosPonto, type Confirmacao, type OpcoesDoPonto } from "@/features/pedidos/OpcoesPonto";
 import { PacotesPonto, pacotesDoPonto } from "@/features/pedidos/Pacotes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
@@ -49,7 +48,7 @@ interface Conta {
   confirmacoes?: Partial<Record<Confirmacao, boolean>>; padrao_confirmacoes?: Partial<Record<Confirmacao, boolean>>;
   pode_janela?: boolean; pode_objetos?: boolean; modelo_horario?: boolean;
   /** Controles do gestor (geral e por cliente). */
-  pode_agendar?: boolean; pode_urgente?: boolean; escolhe_veiculo?: boolean; veiculos_aceitos?: string[] | null; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
+  pode_agendar?: boolean; pode_urgente?: boolean; edita_pedido?: boolean; escolhe_veiculo?: boolean; veiculos_aceitos?: string[] | null; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
   pode_ida_volta?: boolean; coleta_fixa?: boolean; pode_observacoes?: boolean; ve_faturas?: boolean; pode_chat?: boolean;
   pedido_de?: string | null; pedido_ate?: string | null; modo_distancia?: string;
   /** O que aparece da rota no mapa: feito, restante, motoboy, planejada, outras_paradas. */
@@ -93,6 +92,7 @@ type Aba = "pedidos" | "novo" | "faturas" | "chat" | "conta";
 
 /** Painel do cliente. */
 export function PainelCliente() {
+  const [editando, setEditando] = useState<string | null>(null);
   const [conta, setConta] = useState<Conta | null | undefined>(undefined);
   const [pedidos, setPedidos] = useState<PedidoC[] | null>(null);
   const [faturas, setFaturas] = useState<FaturaC[]>([]);
@@ -148,13 +148,14 @@ export function PainelCliente() {
       <div className="segmentado abas-cliente">
         {([["pedidos", "Pedidos", Package], ["novo", "Novo pedido", PackagePlus], ["faturas", conta.cobranca === "credito" ? "Faturas" : "Pagamentos", Receipt], ["chat", "Conversa", MessagesSquare], ["conta", "Minha conta", Building2]] as [Aba, string, typeof Package][])
           .filter(([k]) => (k !== "faturas" || conta.ve_faturas !== false) && (k !== "chat" || conta.pode_chat === true)).map(([k, r, I]) => (
-          <button key={k} type="button" data-tour={`aba-${k}`} className={aba === k ? "ativo" : ""} onClick={() => { setAba(k); setAberto(null); }}>
+          <button key={k} type="button" data-tour={`aba-${k}`} className={aba === k ? "ativo" : ""} onClick={() => { setAba(k); setAberto(null); setEditando(null); }}>
             <I size={14} aria-hidden /> {r}{k === "faturas" && abertas.length > 0 && <span className="filtro-n">{abertas.length}</span>}
           </button>
         ))}
       </div>
-      {aba === "pedidos" && (pedido
-        ? <DetalhePedido pedido={pedido} conta={conta} onVoltar={() => setAberto(null)} onMudou={carregar} />
+      {aba === "pedidos" && editando && <NovoPedido key={editando} conta={conta} editar={editando} onCriado={async (id) => { setEditando(null); await carregar(); setAberto(id); }} />}
+      {aba === "pedidos" && !editando && (pedido
+        ? <DetalhePedido pedido={pedido} conta={conta} onVoltar={() => setAberto(null)} onMudou={carregar} onEditar={() => setEditando(pedido.id)} />
         : <ListaPedidos pedidos={pedidos} onAbrir={setAberto} onNovo={() => setAba("novo")} />)}
       {aba === "novo" && <NovoPedido conta={conta} onCriado={async (id) => { await carregar(); setAba("pedidos"); setAberto(id); }} />}
       {aba === "chat" && conta.pode_chat === true && <div className="cliente-chat"><ChatCliente /></div>}
@@ -235,7 +236,7 @@ function ListaPedidos({ pedidos, onAbrir, onNovo }: { pedidos: PedidoC[]; onAbri
 
 // ------------------------------------------------------------------ detalhe
 
-function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: PedidoC; conta: Conta; onVoltar: () => void; onMudou: () => void }) {
+function DetalhePedido({ pedido: p, conta, onVoltar, onMudou, onEditar }: { pedido: PedidoC; conta: Conta; onVoltar: () => void; onMudou: () => void; onEditar: () => void }) {
   // pedido pré-pago que acabou de ser feito: já abre o pagamento
   const [pagando, setPagando] = useState(() => p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && Number(p.valor) > 0
     && !["cancelado", "recusado"].includes(p.status) && Date.now() - new Date(p.criado_em).getTime() < 120_000);
@@ -347,6 +348,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
         </p>
         {conta.pode_rastreio && !["cancelado", "recusado"].includes(p.status) && <BotaoRastreio pedidoId={p.id} />}
         {conta.pode_avaliar && p.status === "concluido" && <AvaliarPedido pedidoId={p.id} />}
+        {conta.edita_pedido !== false && p.status === "recebido" && <button className="botao-vidro" onClick={onEditar}><Pencil size={15} aria-hidden /> Editar pedido</button>}
         {podeCancelar && <button className="botao-perigo" onClick={cancelar}><X size={15} aria-hidden /> Cancelar pedido</button>}
       </div>
     </div>
@@ -411,9 +413,8 @@ function proximoComHora(hora: string, antecedenciaMin: number): string {
 
 const PASSOS_PEDIDO = ["Endereços", "Horário", "Pagamento"];
 
-function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) => void }) {
+function NovoPedido({ conta, onCriado, editar }: { conta: Conta; onCriado: (id: string) => void; editar?: string }) {
   const [passo, setPasso] = useState(0);
-  const [paraTodos, setParaTodos] = useState(false);
   const coletaPadrao = (): Ponto => ponto("coleta", conta.endereco ? { endereco: conta.endereco, lat: conta.lat, lng: conta.lng, instrucoes: conta.instrucoes_coleta ?? "" } : {});
   const [pontos, setPontos] = useState<Ponto[]>(() => [coletaPadrao(), ponto("entrega")]);
   const [itens, setItens] = useState<ItemForm[]>([]);
@@ -464,7 +465,27 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
   }, [chaveDist]); // eslint-disable-line react-hooks/exhaustive-deps
   const comDist = <T extends { tipo: string }>(p: T, i: number) => ({ ...p, dist_coleta_m: p.tipo === "entrega" ? distEnt[i] ?? null : null });
 
-  const dadosItens = itensParaEnvio(itens, pontos.map((p) => p.chave));
+  // editar (enquanto espera a revisão): carrega o pedido no mesmo formulário
+  useEffect(() => {
+    if (!editar) return;
+    void supabase().rpc("pedido_para_editar", { p_pedido: editar }).then(({ data, error }) => {
+      if (error) { toast(traduzir(error.message), "erro"); return; }
+      const d = data as { quando: string | null; urgente: boolean; tipo_pedido: string; observacoes: string | null; extras: Extras | null; veiculo: string | null;
+        pontos: (Partial<Ponto> & { tipo: Ponto["tipo"] })[]; itens: { descricao: string; categoria_id: string | null; quantidade: number; peso_kg: number | null; comprimento_cm: number | null; largura_cm: number | null; altura_cm: number | null; valor_declarado: number | null; coleta: number | null; entrega: number | null }[] };
+      setUrgente(d.urgente); setTipoPedido(d.tipo_pedido || "padrao"); setObs(d.observacoes ?? ""); setExtras(d.extras ?? {}); setVeiculo(d.veiculo ?? "");
+      if (d.quando) { setAgendar(true); setHorario(paraCampo(new Date(d.quando))); }
+      const novos = d.pontos.map((x) => ponto(x.tipo, { ...x, endereco: x.endereco ?? "", contato_nome: x.contato_nome ?? "", contato_telefone: x.contato_telefone ?? "", instrucoes: x.instrucoes ?? "", referencias: x.referencias ?? [] } as Partial<Ponto>));
+      setPontos(novos);
+      const c0 = novos.find((x) => x.tipo === "coleta")?.chave ?? "";
+      const s = (n: number | null) => (n == null ? "" : String(n).replace(".", ","));
+      setItens(d.itens.map((i) => {
+        const entrega = i.entrega != null ? novos[i.entrega]?.chave : undefined;
+        return { ...novoItem(i.categoria_id ?? ""), descricao: i.descricao ?? "", quantidade: String(i.quantidade), peso_kg: s(i.peso_kg), comprimento_cm: s(i.comprimento_cm), largura_cm: s(i.largura_cm),
+          altura_cm: s(i.altura_cm), valor_declarado: s(i.valor_declarado), coleta: i.coleta != null ? novos[i.coleta]?.chave ?? c0 : c0, destinos: entrega ? { [entrega]: i.quantidade } : undefined };
+      }));
+    });
+  }, [editar]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dadosItens = itensParaEnvio(itens, pontos.map((p) => p.chave), pontos.filter((p) => p.tipo === "entrega").map((p) => p.chave));
   const quandoIso = agendar && horario ? new Date(horario).toISOString() : null;
   const chaveOrc = JSON.stringify([tipoPedido, urgente, quandoIso, rota?.distanciaM, pontos.map((p) => [p.tipo, p.lat, p.lng]), distEnt, dadosItens]);
   useEffect(() => {
@@ -561,12 +582,12 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
     if (jan) return toast(`O horário do ponto ${pontos.indexOf(jan) + 1} termina antes de começar.`, "aviso");
     setEnviando(true);
     const { data, error } = await supabase().rpc("criar_pedido", { dados: {
-      como_cliente: true, modelo_id: modeloId, objetos_usados: [...new Set(itens.map((x) => x.objeto_id).filter(Boolean))],
+      como_cliente: true, editar_id: editar ?? null, modelo_id: modeloId, objetos_usados: [...new Set(itens.map((x) => x.objeto_id).filter(Boolean))],
       quando: quandoIso, urgente, tipo_pedido: tipoPedido, extras, veiculo: veiculo || null, metodo: conta.cobranca === "pre_pago" ? metodo : null, observacoes: obs.trim() || null,
       distancia_m: rota?.distanciaM ?? null, pontos: pontos.map(({ chave, ...p }, i) => { void chave; return comDist(p, i); }), itens: dadosItens } });
     setEnviando(false);
     if (error) return toast(traduzir(error.message), "erro");
-    toast("Recebemos o seu pedido.", "ok", { titulo: "Pedido enviado" });
+    toast(editar ? "Pedido atualizado." : "Recebemos o seu pedido.", "ok", { titulo: editar ? "Pedido salvo" : "Pedido enviado" });
     onCriado(data as string);
   }
 
@@ -647,11 +668,17 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
                   <CampoReferencias valor={p.referencias} lat={p.lat} lng={p.lng} onMudar={(r) => atualizar(p.chave, { referencias: r })} />
                 </div>
               )}
+              {p.tipo === "coleta" && (
+                <div className="itens-ponto">
+                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que se coleta aqui{itens.some((x) => x.coleta === p.chave) && <span className="filtro-n">{itens.filter((x) => x.coleta === p.chave).length}</span>}</span>
+                  <ItensPedido itens={itens} onMudar={setItens} categorias={conta.categorias} pontos={pontos} semCategoria={!conta.categoria_obrigatoria} coletaFixa={p.chave} compacto
+                    objetos={conta.pode_objetos !== false ? objetos : undefined} onSalvarObjeto={conta.pode_objetos !== false ? salvarObjeto : undefined} onApagarObjeto={apagarObjeto} />
+                </div>
+              )}
               {p.tipo === "entrega" && (
                 <div className="itens-ponto">
-                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que vai para esta entrega{itens.some((x) => x.entrega === p.chave) && <span className="filtro-n">{itens.filter((x) => x.entrega === p.chave).length}</span>}</span>
-                  <ItensPedido itens={itens} onMudar={setItens} categorias={conta.categorias} pontos={pontos} semCategoria={!conta.categoria_obrigatoria} entregaFixa={p.chave} compacto
-                    objetos={conta.pode_objetos !== false ? objetos : undefined} onSalvarObjeto={conta.pode_objetos !== false ? salvarObjeto : undefined} onApagarObjeto={apagarObjeto} />
+                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que vai para esta entrega</span>
+                  <DestinosEntrega itens={itens} onMudar={setItens} categorias={conta.categorias} entrega={p.chave} pontos={pontos} />
                 </div>
               )}
               {(algumaConfirmacao || conta.pode_janela) && (
@@ -671,15 +698,6 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
         </div>
 
         <div className={`cliente-cartao vidro${passo !== 0 ? " passo-oculto" : ""}`}>
-          {!paraTodos && !itens.some((x) => !x.entrega) ? (
-            <button type="button" className="botao-texto" style={{ justifySelf: "start" }} onClick={() => setParaTodos(true)}>
-              <Boxes size={15} aria-hidden /> Especificar pacote para entregar em todos os pontos de entrega
-            </button>
-          ) : (<>
-            <span className="rotulo"><Boxes size={13} aria-hidden /> {nEntregas > 1 ? "O que vai para todas as entregas" : "Outros itens"}<Dica titulo="Itens" texto="Cada pacote fica no endereço para onde vai (em cada entrega, acima). Aqui ficam os itens que vão para todas as entregas ou que você ainda não ligou a um endereço." /></span>
-            <ItensPedido itens={itens} onMudar={setItens} categorias={conta.categorias} pontos={pontos} semCategoria={!conta.categoria_obrigatoria} soGerais compacto
-              objetos={conta.pode_objetos !== false ? objetos : undefined} onSalvarObjeto={conta.pode_objetos !== false ? salvarObjeto : undefined} onApagarObjeto={apagarObjeto} />
-          </>)}
           {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: embale e identifique.</p>}
           {conta.pode_observacoes !== false && <textarea placeholder="Observações (opcional)" value={obs} maxLength={1000} onChange={(e) => setObs(e.target.value)} />}
           {conta.escolhe_veiculo && (

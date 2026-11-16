@@ -2291,3 +2291,4 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .linha-tempo small { color: var(--texto-3); }
 @media (max-width: 900px) { .hist-duas { grid-template-columns: 1fr; } .hist-resumo { grid-template-columns: repeat(2, 1fr); } }
 .painel-datas { align-items: center; } .painel-datas input[type=date] { width: auto; }
+.destinos-entrega { display: flex; flex-wrap: wrap; gap: 6px; } .chip.destino small { color: var(--texto-3); margin-left: 4px; } .chip.destino.ativo small { color: inherit; } .chip.destino button:disabled { opacity: .45; }

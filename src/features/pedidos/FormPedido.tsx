@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Boxes, CalendarClock, CheckCircle2, FlaskConical, MapPinned, PackagePlus, Plus, Receipt, Trash2, UserRound, X, Zap } from "lucide-react";
+import { ArrowLeft, Boxes, CalendarClock, CheckCircle2, FlaskConical, MapPinned, PackagePlus, Pencil, Plus, Receipt, Trash2, UserRound, X, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { geo, type Referencia, type Rota, distanciasColetaEntrega } from "@/features/geo";
 import { CampoEndereco } from "@/features/corridas/NovaCorrida";
@@ -14,7 +14,7 @@ import { useModoTeste } from "@/features/teste/modoTeste";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { toast } from "@/features/ui/toast";
 import { moedaBr, traduzir, type Categoria, type Orcamento, type TipoPedido } from "./tipos";
-import { ItensPedido, faltandoItens, itensParaEnvio, type ItemForm, type ObjetoSalvo } from "./ItensPedido";
+import { DestinosEntrega, ItensPedido, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "./ItensPedido";
 import { OpcoesPonto, type Confirmacao, type OpcoesDoPonto } from "./OpcoesPonto";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
@@ -27,7 +27,7 @@ let seq = 0;
 const ponto = (tipo: Ponto["tipo"], base: Partial<Ponto> = {}): Ponto => ({ chave: `p${++seq}`, tipo, endereco: "", lat: null, lng: null, contato_nome: "", contato_telefone: "", instrucoes: "", referencias: [], ...base });
 
 /** Lançar um pedido em nome de um cliente (ou avulso). Vira rota pelo roteirizador. */
-export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => void; onVoltar: () => void }) {
+export function FormPedido({ onCriado, onVoltar, editar }: { onCriado: (id: string) => void; onVoltar: () => void; /** id do pedido a editar (mesma tela da criação) */ editar?: string }) {
   const { empresas } = useEmpresas();
   const { teste } = useModoTeste();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -41,7 +41,6 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
   const [urgente, setUrgente] = useState(false);
   const [pontos, setPontos] = useState<Ponto[]>(() => [ponto("coleta"), ponto("entrega")]);
   const [itens, setItens] = useState<ItemForm[]>([]);
-  const [paraTodos, setParaTodos] = useState(false);
   const [regras, setRegras] = useState<Record<string, unknown>>({});
   const [obs, setObs] = useState("");
   const [extras, setExtras] = useState<Extras>({});
@@ -67,6 +66,33 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
     sb.from("categorias_produto").select("*").eq("ativa", true).order("ordem").then(({ data }) => setCategorias((data ?? []) as Categoria[]));
     sb.from("tipos_pedido").select("*").eq("ativo", true).order("ordem").then(({ data }) => setTipos((data ?? []) as TipoPedido[]));
   }, []);
+  // editar: carrega o pedido no mesmo formulário da criação
+  const [numeroEd, setNumeroEd] = useState<number | null>(null);
+  useEffect(() => {
+    if (!editar) return;
+    void supabase().rpc("pedido_para_editar", { p_pedido: editar }).then(({ data, error }) => {
+      if (error) { toast(traduzir(error.message), "erro"); onVoltar(); return; }
+      const d = data as { numero: number; empresa_id: string | null; cliente_nome: string | null; quando: string | null; urgente: boolean; tipo_pedido: string; observacoes: string | null;
+        extras: Extras | null; veiculo: string | null; regras: Record<string, unknown> | null;
+        pontos: (Partial<Ponto> & { tipo: Ponto["tipo"]; janela_de?: string | null; janela_ate?: string | null })[];
+        itens: { descricao: string; categoria_id: string | null; quantidade: number; peso_kg: number | null; comprimento_cm: number | null; largura_cm: number | null; altura_cm: number | null; valor_declarado: number | null; coleta: number | null; entrega: number | null }[] };
+      setNumeroEd(d.numero);
+      setCliente(d.empresa_id ?? ""); setAvulso(d.cliente_nome ?? ""); setUrgente(d.urgente); setTipoPedido(d.tipo_pedido || "padrao");
+      if (d.quando) { setAgendar(true); setHorario(paraCampo(new Date(d.quando))); } else setAgendar(false);
+      setObs(d.observacoes ?? ""); setExtras(d.extras ?? {}); setVeiculo(d.veiculo ?? ""); setRegras(d.regras ?? {});
+      const novos = d.pontos.map((x) => ponto(x.tipo, { ...x, endereco: x.endereco ?? "", contato_nome: x.contato_nome ?? "", contato_telefone: x.contato_telefone ?? "", instrucoes: x.instrucoes ?? "",
+        referencias: x.referencias ?? [], janela_de: x.janela_de ?? undefined, janela_ate: x.janela_ate ?? undefined } as Partial<Ponto>));
+      setPontos(novos);
+      const primeiraColeta = novos.find((x) => x.tipo === "coleta")?.chave ?? "";
+      const s = (n: number | null) => (n == null ? "" : String(n).replace(".", ","));
+      setItens(d.itens.map((i) => {
+        const entrega = i.entrega != null ? novos[i.entrega]?.chave : undefined;
+        return { ...novoItem(i.categoria_id ?? ""), descricao: i.descricao ?? "", quantidade: String(i.quantidade), peso_kg: s(i.peso_kg), comprimento_cm: s(i.comprimento_cm),
+          largura_cm: s(i.largura_cm), altura_cm: s(i.altura_cm), valor_declarado: s(i.valor_declarado),
+          coleta: i.coleta != null ? novos[i.coleta]?.chave ?? primeiraColeta : primeiraColeta, destinos: entrega ? { [entrega]: i.quantidade } : undefined };
+      }));
+    });
+  }, [editar]); // eslint-disable-line react-hooks/exhaustive-deps
   // coleta padrão do cliente
   useEffect(() => {
     const e = empresas.find((x) => x.id === cliente);
@@ -98,7 +124,7 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
   }, [chaveDist]); // eslint-disable-line react-hooks/exhaustive-deps
   const comDist = <T extends { tipo: string }>(p: T, i: number) => ({ ...p, dist_coleta_m: p.tipo === "entrega" ? distEnt[i] ?? null : null });
 
-  const dadosItens = itensParaEnvio(itens, pontos.map((p) => p.chave));
+  const dadosItens = itensParaEnvio(itens, pontos.map((p) => p.chave), pontos.filter((p) => p.tipo === "entrega").map((p) => p.chave));
   const quandoIso = agendar && horario ? new Date(horario).toISOString() : null;
   const chaveOrc = JSON.stringify([cliente, tipoPedido, urgente, quandoIso, rota?.distanciaM, pontos.map((p) => [p.tipo, p.lat, p.lng]), distEnt, dadosItens, regras]);
   useEffect(() => {
@@ -120,13 +146,13 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
     if (faltou) return toast(`Preencha: ${faltou}.`, "aviso");
     setEnviando(true);
     const { data, error } = await supabase().rpc("criar_pedido", { dados: {
-      extras, veiculo: veiculo || null,
+      editar_id: editar ?? null, extras, veiculo: veiculo || null,
       empresa_id: cliente || null, cliente_nome: cliente ? null : avulso.trim() || null, quando: quandoIso, urgente, tipo_pedido: tipoPedido, teste,
       observacoes: obs.trim() || null, distancia_m: rota?.distanciaM ?? null,
       pontos: pontos.map(({ chave, ...p }, i) => { void chave; return comDist(p, i); }), itens: dadosItens, regras } });
     setEnviando(false);
     if (error) return toast(traduzir(error.message), "erro");
-    toast("O roteirizador já está montando a rota.", "ok", { titulo: "Pedido criado" });
+    toast(editar ? "As rotas que ainda não saíram foram refeitas com o pedido novo." : "O roteirizador já está montando a rota.", "ok", { titulo: editar ? "Pedido salvo" : "Pedido criado" });
     onCriado(data as string);
   }
 
@@ -137,7 +163,8 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
     <>
       <aside className="lateral entrar">
         <button className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Pedidos</button>
-        <CabecaPagina icone={PackagePlus} titulo="Novo pedido" subtitulo={teste ? "Pedido de teste" : "O sistema monta as rotas sozinho"} />
+        <CabecaPagina icone={editar ? Pencil : PackagePlus} titulo={editar ? `Editar pedido${numeroEd ? ` #${numeroEd}` : ""}` : "Novo pedido"}
+          subtitulo={editar ? "Ao salvar, as rotas que ainda não saíram são refeitas" : teste ? "Pedido de teste" : "O sistema monta as rotas sozinho"} />
         <section className="bloco">
           <span className="rotulo">Cliente</span>
           <select value={cliente} onChange={(e) => setCliente(e.target.value)}>
@@ -153,8 +180,8 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
             <button type="button" className={agendar ? "ativo" : ""} onClick={() => setAgendar(true)}><CalendarClock size={14} aria-hidden /> Planejado</button>
           </div>
           {agendar && <input type="datetime-local" value={horario} onChange={(e) => setHorario(e.target.value)} />}
-          <label className="campo"><span>Tipo de pedido</span>
-            <select value={tipoPedido} onChange={(e) => setTipoPedido(e.target.value)}>{tipos.map((t) => <option key={t.chave} value={t.chave}>{t.nome}</option>)}</select></label>
+          {tipos.length > 1 && <label className="campo"><span>Tipo de pedido</span>
+            <select value={tipoPedido} onChange={(e) => setTipoPedido(e.target.value)}>{tipos.map((t) => <option key={t.chave} value={t.chave}>{t.nome}</option>)}</select></label>}
           <label className="opcao"><span><Zap size={14} aria-hidden style={{ color: "var(--vermelho)" }} /> Urgente</span><input type="checkbox" role="switch" checked={urgente} onChange={(e) => setUrgente(e.target.checked)} /></label>
         </section>
         <section className="bloco">
@@ -186,10 +213,16 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
                   <CampoReferencias valor={p.referencias} lat={p.lat} lng={p.lng} onMudar={(r) => atualizar(p.chave, { referencias: r })} />
                 </div>
               )}
+              {p.tipo === "coleta" && (
+                <div className="itens-ponto">
+                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que se coleta aqui{itens.some((x) => x.coleta === p.chave) && <span className="filtro-n">{itens.filter((x) => x.coleta === p.chave).length}</span>}</span>
+                  <ItensPedido itens={itens} onMudar={setItens} categorias={categorias} pontos={pontos} objetos={objetos} coletaFixa={p.chave} compacto />
+                </div>
+              )}
               {p.tipo === "entrega" && (
                 <div className="itens-ponto">
-                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que vai para esta entrega{itens.some((x) => x.entrega === p.chave) && <span className="filtro-n">{itens.filter((x) => x.entrega === p.chave).length}</span>}</span>
-                  <ItensPedido itens={itens} onMudar={setItens} categorias={categorias} pontos={pontos} objetos={objetos} entregaFixa={p.chave} compacto />
+                  <span className="rotulo"><Boxes size={12} aria-hidden /> O que vai para esta entrega</span>
+                  <DestinosEntrega itens={itens} onMudar={setItens} categorias={categorias} entrega={p.chave} pontos={pontos} />
                 </div>
               )}
               <OpcoesPonto tipo={p.tipo} valor={p} onMudar={(d) => atualizar(p.chave, d)} liberadas={todasConf} padrao={padraoConf} comJanela />
@@ -208,15 +241,6 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
               aoClicar={async (lat, lng) => { const k = escolhendo; if (!k) return; setEscolhendo(null); atualizar(k, { lat, lng }); atualizar(k, { endereco: await geo.enderecoDoPonto(lat, lng) }); }} />
           </div>
           <section className="formulario vidro">
-            {!paraTodos && !itens.some((x) => !x.entrega) ? (
-              <button type="button" className="botao-texto" style={{ justifySelf: "start" }} onClick={() => setParaTodos(true)}>
-                <Boxes size={15} aria-hidden /> Especificar pacote para entregar em todos os pontos de entrega
-              </button>
-            ) : (<>
-              <h3 className="display" style={{ margin: 0 }}><Boxes size={18} aria-hidden /> Para todas as entregas</h3>
-              <p className="dica" style={{ margin: 0 }}>Cada pacote fica na entrega para onde vai (na lista de endereços). Aqui, os que vão para todas ou ainda sem endereço.</p>
-              <ItensPedido itens={itens} onMudar={setItens} categorias={categorias} pontos={pontos} objetos={objetos} soGerais />
-            </>)}
             {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: vai com cuidado especial e, se a regra estiver ligada, em rota própria.</p>}
             <textarea placeholder="Observações para o motoboy" value={obs} onChange={(e) => setObs(e.target.value)} />
             <label className="campo"><span>Veículo</span>
@@ -235,7 +259,7 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
               <div><span className="rotulo">Total</span><strong className="texto-grad">{orc ? moedaBr(orc.total) : "—"}</strong></div>
             </div>
             {orc ? <OrcamentoDetalhe orc={orc} /> : <p className="dica" style={{ margin: 0 }}>Localize os endereços para calcular.</p>}
-            <button className="botao-ouro" disabled={enviando} onClick={criar}><PackagePlus size={17} aria-hidden /> {enviando ? "Criando…" : "Criar pedido"}</button>
+            <button className="botao-ouro" disabled={enviando} onClick={criar}>{editar ? <Pencil size={17} aria-hidden /> : <PackagePlus size={17} aria-hidden />} {enviando ? (editar ? "Salvando…" : "Criando…") : editar ? "Salvar pedido" : "Criar pedido"}</button>
           </section>
         </div>
       </main>

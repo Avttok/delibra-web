@@ -10,6 +10,8 @@ export interface ItemForm {
   comprimento_cm: string; largura_cm: string; altura_cm: string; valor_declarado: string; coleta: string; entrega: string;
   /** Veio de um objeto salvo (para contar quantas vezes ele é usado). */
   objeto_id?: string;
+  /** Item da coleta: quanto dele vai para cada entrega (chave do ponto → quantidade). */
+  destinos?: Record<string, number>;
 }
 
 /** Objeto salvo pelo cliente: um produto que ele manda sempre. */
@@ -34,9 +36,31 @@ export function camposDe(k?: Categoria | null): Record<"descricao" | "peso" | "m
   };
 }
 
+/** Quantas unidades do item ainda não têm entrega. */
+export const restante = (x: ItemForm) => Math.max(1, Math.round(num(x.quantidade) ?? 1)) - Object.values(x.destinos ?? {}).reduce((a, b) => a + b, 0);
+
+/**
+ * Itens da coleta divididos pelas entregas: cada parte vira uma linha (mesmo item, a quantidade daquela entrega).
+ * O que sobrar sem entrega segue "para todas". Com uma entrega só, tudo vai para ela.
+ */
+export function dividirPorEntrega(itens: ItemForm[], chavesEntrega: string[]): ItemForm[] {
+  return itens.flatMap((x) => {
+    const total = Math.max(1, Math.round(num(x.quantidade) ?? 1));
+    const d = Object.entries(x.destinos ?? {}).filter(([k, q]) => q > 0 && chavesEntrega.includes(k));
+    if (!d.length) return [chavesEntrega.length === 1 && !x.entrega ? { ...x, entrega: chavesEntrega[0] } : x];
+    const valor = num(x.valor_declarado);
+    const parte = (q: number, entrega: string): ItemForm => ({ ...x, quantidade: String(q), entrega, destinos: undefined,
+      valor_declarado: valor != null ? String(Math.round((valor * q / total) * 100) / 100) : x.valor_declarado });
+    const out = d.map(([k, q]) => parte(Math.min(q, total), k));
+    const sobra = total - d.reduce((a, [, q]) => a + q, 0);
+    if (sobra > 0) out.push(parte(sobra, ""));
+    return out;
+  });
+}
+
 /** Itens prontos para o servidor (índices dos pontos, números). */
-export function itensParaEnvio(itens: ItemForm[], chavesPontos: string[]) {
-  return itens.filter((x) => x.categoria_id || x.descricao.trim()).map((x) => ({
+export function itensParaEnvio(itens: ItemForm[], chavesPontos: string[], chavesEntrega?: string[]) {
+  return (chavesEntrega ? dividirPorEntrega(itens, chavesEntrega) : itens).filter((x) => x.categoria_id || x.descricao.trim()).map((x) => ({
     descricao: x.descricao.trim(), categoria_id: x.categoria_id || null, quantidade: Math.max(1, Math.round(num(x.quantidade) ?? 1)),
     peso_kg: num(x.peso_kg), comprimento_cm: num(x.comprimento_cm), largura_cm: num(x.largura_cm), altura_cm: num(x.altura_cm), valor_declarado: num(x.valor_declarado),
     coleta: x.coleta && chavesPontos.includes(x.coleta) ? chavesPontos.indexOf(x.coleta) : null,
@@ -62,7 +86,7 @@ export function faltandoItens(itens: ItemForm[], categorias: Categoria[]): strin
  * Itens do pedido: o cliente toca no tipo (botões com ícone) e só aparecem os campos que aquele tipo pede.
  * Ex.: documento não pede peso nem valor; peça automotiva pede valor declarado.
  */
-export function ItensPedido({ itens, onMudar, categorias, pontos, semCategoria = true, objetos, onSalvarObjeto, onApagarObjeto, entregaFixa, soGerais, compacto }: {
+export function ItensPedido({ itens, onMudar, categorias, pontos, semCategoria = true, objetos, onSalvarObjeto, onApagarObjeto, entregaFixa, coletaFixa, soGerais, compacto }: {
   itens: ItemForm[];
   onMudar: (l: ItemForm[]) => void;
   categorias: Categoria[];
@@ -75,14 +99,16 @@ export function ItensPedido({ itens, onMudar, categorias, pontos, semCategoria =
   onApagarObjeto?: (o: ObjetoSalvo) => void;
   /** Itens de um ponto de entrega só (1 remessa ↔ 1 endereço): mostra só os dele, os novos já vão para ele e some o "Vai para". */
   entregaFixa?: string;
+  /** Itens de uma coleta ("o que se coleta aqui"): mostra só os dela e os novos já saem dela. */
+  coletaFixa?: string;
   /** Só os itens que não estão presos a uma entrega (vão para todas). */
   soGerais?: boolean;
   /** Botões menores (dentro do ponto). */
   compacto?: boolean;
 }) {
   const chavesEntrega = new Set(pontos.filter((p) => p.tipo === "entrega").map((p) => p.chave));
-  const visiveis = entregaFixa ? itens.filter((x) => x.entrega === entregaFixa) : soGerais ? itens.filter((x) => !x.entrega || !chavesEntrega.has(x.entrega)) : itens;
-  const novo = (categoria = ""): ItemForm => ({ ...novoItem(categoria), entrega: entregaFixa ?? "" });
+  const visiveis = coletaFixa ? itens.filter((x) => x.coleta === coletaFixa) : entregaFixa ? itens.filter((x) => x.entrega === entregaFixa) : soGerais ? itens.filter((x) => !x.entrega || !chavesEntrega.has(x.entrega)) : itens;
+  const novo = (categoria = ""): ItemForm => ({ ...novoItem(categoria), entrega: entregaFixa ?? "", coleta: coletaFixa ?? "" });
   const mudar = (k: string, d: Partial<ItemForm>) => onMudar(itens.map((x) => (x.chave === k ? { ...x, ...d } : x)));
   const coletas = pontos.filter((p) => p.tipo === "coleta"), entregas = pontos.filter((p) => p.tipo === "entrega");
   const rot = (s: string, c: Campo) => (c === "obrigatorio" ? `${s} *` : s);
@@ -151,7 +177,7 @@ export function ItensPedido({ itens, onMudar, categorias, pontos, semCategoria =
                 {c.valor !== "oculto" && <label><span>{rot("Valor (R$)", c.valor)}</span><input inputMode="decimal" value={x.valor_declarado} onChange={(e) => mudar(x.chave, { valor_declarado: e.target.value })} /></label>}
               </div>
             )}
-            {(coletas.length > 1 || (entregas.length > 1 && !entregaFixa)) && (
+            {!coletaFixa && (coletas.length > 1 || (entregas.length > 1 && !entregaFixa)) && (
               <div className="item-numeros">
                 {coletas.length > 1 && <label><span>Sai de</span><select value={x.coleta} onChange={(e) => mudar(x.chave, { coleta: e.target.value })}>
                   <option value="">Qualquer coleta</option>{coletas.map((p) => <option key={p.chave} value={p.chave}>{pontos.indexOf(p) + 1}. {p.endereco.split(",")[0] || "Coleta"}</option>)}</select></label>}
@@ -160,6 +186,43 @@ export function ItensPedido({ itens, onMudar, categorias, pontos, semCategoria =
               </div>
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Na entrega: os itens das coletas viram botões. Toque para mandar para esta entrega; com mais de uma unidade,
+ * use − e + para dizer quantas vão para cá. Só aparece o que foi colocado nas coletas.
+ */
+export function DestinosEntrega({ itens, onMudar, categorias, entrega, pontos }: {
+  itens: ItemForm[]; onMudar: (l: ItemForm[]) => void; categorias: Categoria[]; entrega: string;
+  pontos: { chave: string; tipo: "coleta" | "entrega"; endereco: string }[];
+}) {
+  const daColeta = itens.filter((x) => x.coleta && pontos.some((p) => p.chave === x.coleta && p.tipo === "coleta"));
+  if (!daColeta.length) return <p className="dica" style={{ margin: 0 }}>Coloque os itens na coleta (“O que se coleta aqui”) e escolha aqui o que vem para esta entrega.</p>;
+  const mudar = (x: ItemForm, q: number) => onMudar(itens.map((y) => (y.chave === x.chave ? { ...y, destinos: { ...(y.destinos ?? {}), [entrega]: Math.max(0, q) } } : y)));
+  return (
+    <div className="destinos-entrega" role="group" aria-label="O que vai para esta entrega">
+      {daColeta.map((x) => {
+        const k = categorias.find((c) => c.id === x.categoria_id);
+        const total = Math.max(1, Math.round(num(x.quantidade) ?? 1));
+        const aqui = x.destinos?.[entrega] ?? 0;
+        const livre = restante(x);
+        const nome = x.descricao.trim() || k?.nome || "Item";
+        const coleta = pontos.findIndex((p) => p.chave === x.coleta) + 1;
+        return (
+          <span key={x.chave} className={`chip destino${aqui > 0 ? " ativo" : ""}`}>
+            <button type="button" title={`Da coleta ${coleta}`} disabled={aqui === 0 && livre <= 0}
+              onClick={() => mudar(x, aqui > 0 ? 0 : total === 1 ? 1 : Math.max(1, livre))}>
+              <Icone nome={k?.icone ?? "box"} size={13} /> {nome}{total > 1 && <small> {aqui}/{total}</small>}
+            </button>
+            {total > 1 && aqui > 0 && <>
+              <button type="button" className="tirar" aria-label={`Menos ${nome}`} onClick={() => mudar(x, aqui - 1)}>−</button>
+              <button type="button" className="tirar" aria-label={`Mais ${nome}`} disabled={livre <= 0} onClick={() => mudar(x, aqui + 1)}>+</button>
+            </>}
+          </span>
         );
       })}
     </div>
