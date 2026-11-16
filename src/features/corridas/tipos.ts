@@ -18,6 +18,7 @@ export interface CalculoPagamento {
 }
 
 export interface Parada {
+  respostas?: Record<string, string | number | boolean> | null;
   id: string;
   corrida_id: string;
   ordem: number;

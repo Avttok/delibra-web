@@ -39,8 +39,8 @@ export interface RespostaPercursos {
   /** Faltou ajustar algum trecho (o mapa demorou): vale pedir de novo daqui a pouco. */
   parcial: boolean;
 }
-interface Opcoes { provedor: "valhalla" | "osrm"; perfil: string; raio: number; filtro: number; velMax: number; tiraVoltas: boolean; voltaMax: number }
-const PADRAO: Opcoes = { provedor: "valhalla", perfil: "motorcycle", raio: 30, filtro: 12, velMax: 160, tiraVoltas: true, voltaMax: 450 };
+interface Opcoes { osrm: string; valhalla: string; provedor: "valhalla" | "osrm"; perfil: string; raio: number; filtro: number; velMax: number; tiraVoltas: boolean; voltaMax: number }
+const PADRAO: Opcoes = { osrm: OSRM, valhalla: VALHALLA, provedor: "valhalla", perfil: "motorcycle", raio: 30, filtro: 12, velMax: 160, tiraVoltas: true, voltaMax: 450 };
 
 const valida = (lat: number, lng: number) => Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
 
@@ -145,7 +145,7 @@ async function pedir(url: string, corpo?: unknown): Promise<Record<string, unkno
 async function casarValhalla(pts: PingBruto[], o: Opcoes): Promise<[number, number][] | null | undefined> {
   const t0 = Math.round(pts[0][5] / 1000);
   let ant = -1;
-  const j = await pedir(`${VALHALLA}/trace_route`, {
+  const j = await pedir(`${o.valhalla}/trace_route`, {
     shape: pts.map((p) => { const t = Math.max(Math.round(p[5] / 1000) - t0, ant + 1); ant = t; return { lat: p[1], lon: p[2], time: t }; }),
     costing: ["motorcycle", "auto", "bicycle", "motor_scooter"].includes(o.perfil) ? o.perfil : "motorcycle",
     shape_match: "map_snap", use_timestamps: true,
@@ -169,7 +169,7 @@ async function casarOsrm(pts: PingBruto[], o: Opcoes): Promise<[number, number][
     const ts: number[] = [];
     for (const p of parte) ts.push(Math.max(Math.round(p[5] / 1000), (ts[ts.length - 1] ?? 0) + 1));
     const raios = parte.map((p) => Math.min(60, Math.max(10, Math.round(Math.max(o.raio, (p[6] || 0) * 1.2))))).join(";");
-    const j = await pedir(`${OSRM}/match/v1/driving/${coords}?overview=full&geometries=geojson&gaps=ignore&tidy=true&timestamps=${ts.join(";")}&radiuses=${raios}`);
+    const j = await pedir(`${o.osrm}/match/v1/driving/${coords}?overview=full&geometries=geojson&gaps=ignore&tidy=true&timestamps=${ts.join(";")}&radiuses=${raios}`);
     if (!j) return undefined;
     let pedaco: [number, number][] = [];
     if (j.code === "Ok" && Array.isArray(j.matchings)) {
@@ -190,7 +190,7 @@ async function casarOsrm(pts: PingBruto[], o: Opcoes): Promise<[number, number][
       pedaco = [];
       for (let k = 0; k < parte.length - 1; k += 24) {
         const sub = parte.slice(k, k + 25);
-        const r = await pedir(`${OSRM}/route/v1/driving/${sub.map((p) => `${p[2].toFixed(6)},${p[1].toFixed(6)}`).join(";")}?overview=full&geometries=geojson`);
+        const r = await pedir(`${o.osrm}/route/v1/driving/${sub.map((p) => `${p[2].toFixed(6)},${p[1].toFixed(6)}`).join(";")}?overview=full&geometries=geojson`);
         const cs = (r?.code === "Ok" ? (r.routes as { geometry: { coordinates: [number, number][] } }[])[0]?.geometry.coordinates : null);
         if (!cs) return r ? null : undefined;
         for (const [lng, lat] of cs) pedaco.push([+lat.toFixed(6), +lng.toFixed(6)]);
@@ -266,10 +266,13 @@ const chaveTrecho = (pts: PingBruto[], o: Opcoes) =>
 async function lerOpcoes(sb: SupabaseClient): Promise<Opcoes> {
   try {
     const { data } = await sb.from("configuracoes").select("chave,valor").in("chave",
-      ["percurso_provedor", "percurso_perfil", "percurso_raio_m", "percurso_filtro_m", "percurso_vel_max_kmh", "percurso_tira_voltas", "percurso_volta_max_m"]);
+      ["percurso_provedor", "percurso_perfil", "percurso_raio_m", "percurso_filtro_m", "percurso_vel_max_kmh", "percurso_tira_voltas", "percurso_volta_max_m",
+       "dev_mapa_osrm", "dev_mapa_valhalla"]);
     const c = Object.fromEntries((data ?? []).map((x) => [x.chave, x.valor])) as Record<string, unknown>;
     const n = (k: string, p: number) => (Number.isFinite(Number(c[k])) && c[k] != null ? Number(c[k]) : p);
+    const url = (v: unknown, p: string) => (typeof v === "string" && /^https:\/\//.test(v.trim()) ? v.trim().replace(/\/+$/, "") : p);
     return {
+      osrm: url(c.dev_mapa_osrm, OSRM), valhalla: url(c.dev_mapa_valhalla, VALHALLA),
       provedor: c.percurso_provedor === "osrm" ? "osrm" : "valhalla", perfil: typeof c.percurso_perfil === "string" ? c.percurso_perfil : PADRAO.perfil,
       raio: n("percurso_raio_m", PADRAO.raio), filtro: Math.max(3, n("percurso_filtro_m", PADRAO.filtro)), velMax: n("percurso_vel_max_kmh", PADRAO.velMax),
       tiraVoltas: c.percurso_tira_voltas !== false, voltaMax: n("percurso_volta_max_m", PADRAO.voltaMax),

@@ -20,13 +20,15 @@ import { CampoNumero } from "@/features/ui/CampoNumero";
 import { CompartilharMotoboys } from "@/features/equipe/CompartilharMotoboys";
 import { useConfiguracoes } from "./useConfiguracoes";
 import { useEtapa } from "@/features/ui/useEtapa";
+import { CamposProprios, CargosPersonalizados, NomesProprios, TaxasEBonus } from "@/features/modalidades/Modalidades";
+import { BadgePlus, ListPlus, PenLine, UserCog } from "lucide-react";
 
 const ICONES_AREA: Record<AreaParametro, LucideIcon> = {
   clientes: Building2, preco: Tags, operacao: Route, motoboys: Bike, mapa: MapIcon, comunicacao: MessageCircle, sistema: FlaskConical,
 };
 
 type Estado = "salvando" | "salvo" | "erro" | undefined;
-type Extra = "excecoes" | "zonas" | "horarios" | "categorias" | "tipos";
+type Extra = "excecoes" | "zonas" | "horarios" | "categorias" | "tipos" | "campos" | "nomes" | "taxas" | "cargos";
 type Pagina = AreaParametro | Extra;
 /** Catálogos (peças do lego que são listas) e em que área eles aparecem. */
 const PAGINAS_EXTRAS: { chave: Extra; titulo: string; descricao: string; icone: LucideIcon; area?: AreaParametro }[] = [
@@ -35,7 +37,13 @@ const PAGINAS_EXTRAS: { chave: Extra; titulo: string; descricao: string; icone: 
   { chave: "horarios", titulo: "Horários de pico", descricao: "Faixas de horário com acréscimo.", icone: Clock, area: "preco" },
   { chave: "categorias", titulo: "Categorias de produto", descricao: "Eletrônicos, químicos, frágeis… com taxas próprias.", icone: Boxes, area: "preco" },
   { chave: "tipos", titulo: "Tipos de pedido", descricao: "Os tipos que o cliente escolhe (e que podem ter regras próprias).", icone: Tags, area: "operacao" },
+  { chave: "campos", titulo: "Campos próprios", descricao: "Campos a mais no pedido, na parada, no cliente e no motoboy.", icone: ListPlus, area: "operacao" },
+  { chave: "nomes", titulo: "Nomes próprios", descricao: "Os nomes dos status e das paradas do seu jeito.", icone: PenLine, area: "operacao" },
+  { chave: "taxas", titulo: "Taxas e bônus", descricao: "Espera, pedágio, seguro, noturno: linhas a mais no preço e no pagamento.", icone: BadgePlus, area: "preco" },
+  { chave: "cargos", titulo: "Cargos", descricao: "Atendente, financeiro, despachante: permissões prontas para a equipe.", icone: UserCog, area: "operacao" },
 ];
+/** Ação do Dev que libera cada página nova (sem a ação, a página some). */
+const ACAO_DA_PAGINA: Partial<Record<Extra, string>> = { campos: "campos_personalizados", nomes: "rotulos", taxas: "regras_extras", cargos: "cargos_personalizados" };
 
 const sem = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const casas = (passo = 1) => (String(passo).split(".")[1]?.length ?? 0);
@@ -110,7 +118,7 @@ export function PainelConfiguracoes() {
             );
           })}
           <span className="rotulo" style={{ margin: "10px 4px 2px" }}>Peças do lego<Dica titulo="Peças do lego" texto="Cada regra tem um valor geral e pode ter exceção por tipo de pedido, cliente, motoboy ou num pedido só. Vale a mais específica: pedido, motoboy, cliente, tipo e, por último, a geral." /></span>
-          {PAGINAS_EXTRAS.map((x) => {
+          {PAGINAS_EXTRAS.filter((x) => !ACAO_DA_PAGINA[x.chave] || perm.pode(ACAO_DA_PAGINA[x.chave]!)).map((x) => {
             const I = x.icone;
             return (
               <button key={x.chave} type="button" className={`config-grupo compacto ${!termo && pagina === x.chave ? "ativo" : ""}`} onClick={() => ir(x.chave)}>
@@ -142,7 +150,8 @@ export function PainelConfiguracoes() {
                 <div><h2 className="display">{extra.titulo}</h2><p className="dica">{extra.descricao}</p></div>
               </header>
               {pagina === "excecoes" ? <Excecoes cfg={cfg} /> : pagina === "zonas" ? <CatalogoZonas /> : pagina === "horarios" ? <CatalogoHorarios />
-                : pagina === "categorias" ? <CatalogoCategorias /> : <CatalogoTipos />}
+                : pagina === "categorias" ? <CatalogoCategorias /> : pagina === "campos" ? <CamposProprios /> : pagina === "nomes" ? <NomesProprios />
+                : pagina === "taxas" ? <TaxasEBonus /> : pagina === "cargos" ? <CargosPersonalizados /> : <CatalogoTipos />}
             </>
           ) : area ? (
             <>
@@ -152,7 +161,7 @@ export function PainelConfiguracoes() {
               </header>
               <nav className="config-atalhos" aria-label="Seções">
                 {gruposDaArea.map((g) => <a key={g} href={`#cfg-${g}`} className="chip">{GRUPOS[g].titulo}</a>)}
-                {PAGINAS_EXTRAS.filter((x) => x.area === area.chave).map((x) => <button key={x.chave} type="button" className="chip" onClick={() => ir(x.chave)}><x.icone size={13} aria-hidden /> {x.titulo}</button>)}
+                {PAGINAS_EXTRAS.filter((x) => x.area === area.chave && (!ACAO_DA_PAGINA[x.chave] || perm.pode(ACAO_DA_PAGINA[x.chave]!))).map((x) => <button key={x.chave} type="button" className="chip" onClick={() => ir(x.chave)}><x.icone size={13} aria-hidden /> {x.titulo}</button>)}
               </nav>
               {area.chave === "motoboys" && !soMudados && <AjusteVisual tipo="pagamento" />}
               {area.chave === "preco" && !soMudados && <AjusteVisual tipo="preco" />}

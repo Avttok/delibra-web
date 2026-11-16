@@ -1,14 +1,29 @@
 import type { Endereco, ProvedorGeo, Referencia, Rota } from "./provedor";
 import { poisDoMapa } from "@/lib/mapa/registro";
 
-const NOMINATIM = "https://nominatim.openstreetmap.org";
-const OSRM = "https://router.project-osrm.org";
+// servidores de mapa: o padrão é o público gratuito; o Dev aponta para outros em Ajustes → Plataforma
+let NOMINATIM = "https://nominatim.openstreetmap.org";
+let OSRM = "https://router.project-osrm.org";
 const OVERPASS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
-const VALHALLA = "https://valhalla1.openstreetmap.de";
+let VALHALLA = "https://valhalla1.openstreetmap.de";
+let servidores: Promise<void> | null = null;
+/** Lê uma vez os servidores escolhidos pelo Dev (sem resposta: fica o padrão). */
+function carregarServidores() {
+  servidores ??= (async () => {
+    try {
+      const { supabase } = await import("@/lib/supabase/client");
+      const { data } = await supabase().rpc("servidores_mapa");
+      const d = data as { osrm?: string; valhalla?: string; nominatim?: string } | null;
+      const ok = (u?: string) => (u && /^https:\/\//.test(u) ? u.replace(/\/+$/, "") : null);
+      OSRM = ok(d?.osrm) ?? OSRM; VALHALLA = ok(d?.valhalla) ?? VALHALLA; NOMINATIM = ok(d?.nominatim) ?? NOMINATIM;
+    } catch { /* fica o padrão */ }
+  })();
+  return servidores;
+}
 
 /** Provedor e perfil das rotas (vem de Configurações → rota_provedor / rota_perfil). */
 export const preferenciaRota: { provedor: "valhalla" | "osrm"; perfil: string } = { provedor: "valhalla", perfil: "motorcycle" };
@@ -40,6 +55,7 @@ export function codificarPolyline(pts: [number, number][]): string {
 }
 
 async function rotaValhalla(pontos: { lat: number; lng: number }[], perfil: string): Promise<Rota | null> {
+  await carregarServidores();
   const r = await fetch(`${VALHALLA}/route`, {
     method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(6000),
     body: JSON.stringify({ locations: pontos.map((p) => ({ lat: p.lat, lon: p.lng })), costing: ["motorcycle", "auto", "bicycle", "motor_scooter"].includes(perfil) ? perfil : "motorcycle",
@@ -212,6 +228,7 @@ export const provedorOsm: ProvedorGeo = {
   },
 
   async buscarEnderecos(texto) {
+    await carregarServidores();
     if (texto.trim().length < 4) return [];
     const url = `${NOMINATIM}/search?format=jsonv2&countrycodes=br&limit=6&accept-language=pt-BR&q=${encodeURIComponent(texto)}`;
     const r = await fetch(url);
@@ -221,6 +238,7 @@ export const provedorOsm: ProvedorGeo = {
   },
 
   async enderecoDoPonto(lat, lng) {
+    await carregarServidores();
     const url = `${NOMINATIM}/reverse?format=jsonv2&accept-language=pt-BR&lat=${lat}&lon=${lng}`;
     try {
       const r = await fetch(url);
@@ -233,6 +251,7 @@ export const provedorOsm: ProvedorGeo = {
   },
 
   async calcularRota(pontos) {
+    await carregarServidores();
     if (pontos.length < 2) return null;
     // provedor escolhido em Configurações (Valhalla tem perfil de moto); se não responder, o OSRM
     if (preferenciaRota.provedor === "valhalla") {

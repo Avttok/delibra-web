@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BatteryCharging, BatteryMedium, Bell, BellOff, Bike, Check, ChevronDown, CircleAlert, CirclePlay, Cpu, FlaskConical, MapPin, Pause, Play, Search, ShieldCheck, Signal, Smartphone, Timer, UserRound, Wifi, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
@@ -37,6 +37,7 @@ export function ModulosDev({ modulos, onSalvar }: { modulos: ModuloLinha[]; onSa
           ))}
         </div>
       </div>
+      <ModulosPorEmpresa modulos={modulos} />
       {grupos.map((g) => (
         <section key={g} className="modulos-grupo">
           <span className="rotulo">{g}</span>
@@ -258,5 +259,41 @@ export function AparelhosDev({ aparelhos }: { aparelhos: Aparelho[] }) {
         );
       })}
     </div>
+  );
+}
+
+
+/** Exceção por empresa: o módulo segue a regra geral, ou fica ligado ou desligado só nesta empresa. */
+function ModulosPorEmpresa({ modulos }: { modulos: ModuloLinha[] }) {
+  const [orgs, setOrgs] = useState<{ id: string; nome: string }[]>([]);
+  const [org, setOrg] = useState("");
+  const [mapa, setMapa] = useState<Record<string, boolean>>({});
+  useEffect(() => { void supabase().rpc("dev_organizacoes").then(({ data }) => setOrgs(((data ?? []) as { id: string; nome: string }[]).map((o) => ({ id: o.id, nome: o.nome })))); }, []);
+  useEffect(() => { if (org) void supabase().rpc("modulos_da_empresa", { p_org: org }).then(({ data }) => setMapa((data ?? {}) as Record<string, boolean>)); }, [org]);
+  async function definir(chave: string, v: boolean | null) {
+    const { error } = await supabase().rpc("definir_modulo_empresa", { p_org: org, p_chave: chave, p_ligado: v });
+    if (error) return;
+    setMapa((m) => { const n = { ...m }; if (v == null) delete n[chave]; else n[chave] = v; return n; });
+  }
+  return (
+    <section className="modulos-grupo">
+      <span className="rotulo">Por empresa</span>
+      <label className="campo"><span>Empresa</span>
+        <select value={org} onChange={(e) => setOrg(e.target.value)}><option value="">Escolha uma empresa para ver as exceções</option>{orgs.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></label>
+      {org && modulos.map((m) => {
+        const v = mapa[m.chave];
+        return (
+          <div key={m.chave} className="nome-proprio">
+            <span>{m.nome}</span>
+            <div className="segmentado" style={{ gridTemplateColumns: "repeat(3, 1fr)" }} role="radiogroup" aria-label={`${m.nome} nesta empresa`}>
+              <button className={v == null ? "ativo" : ""} onClick={() => definir(m.chave, null)}>Regra geral</button>
+              <button className={v === true ? "ativo" : ""} onClick={() => definir(m.chave, true)}>Ligado</button>
+              <button className={v === false ? "ativo" : ""} onClick={() => definir(m.chave, false)}>Desligado</button>
+            </div>
+            <span />
+          </div>
+        );
+      })}
+    </section>
   );
 }

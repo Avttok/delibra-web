@@ -19,6 +19,7 @@ import { OpcoesPonto, type Confirmacao, type OpcoesDoPonto } from "./OpcoesPonto
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
 import { RegrasPedido } from "./RegrasPedido";
+import { CamposExtras, faltaCampo, useCamposProprios, type Extras } from "@/features/modalidades/CamposExtras";
 
 interface Ponto extends OpcoesDoPonto { chave: string; tipo: "coleta" | "entrega"; endereco: string; lat: number | null; lng: number | null; contato_nome: string; contato_telefone: string; instrucoes: string; referencias: Referencia[] }
 
@@ -36,12 +37,15 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
   const [agendar, setAgendar] = useState(false);
   const [horario, setHorario] = useState(() => paraCampo(sugestaoHorario(60)));
   const [tipoPedido, setTipoPedido] = useState("padrao");
+  const camposPedido = useCamposProprios("pedido", { tipoPedido, quem: "gestor" });
   const [urgente, setUrgente] = useState(false);
   const [pontos, setPontos] = useState<Ponto[]>(() => [ponto("coleta"), ponto("entrega")]);
   const [itens, setItens] = useState<ItemForm[]>([]);
   const [paraTodos, setParaTodos] = useState(false);
   const [regras, setRegras] = useState<Record<string, unknown>>({});
   const [obs, setObs] = useState("");
+  const [extras, setExtras] = useState<Extras>({});
+  const [veiculo, setVeiculo] = useState("");
   const [rota, setRota] = useState<Rota | null>(null);
   const [orc, setOrc] = useState<Orcamento | null>(null);
   const [escolhendo, setEscolhendo] = useState<string | null>(null);
@@ -112,8 +116,11 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
     if (pontos.some((p) => p.lat == null)) return toast("Localize todos os endereços.", "aviso");
     const falta = faltandoItens(itens, categorias);
     if (falta) return toast(falta, "aviso");
+    const faltou = faltaCampo(camposPedido, extras);
+    if (faltou) return toast(`Preencha: ${faltou}.`, "aviso");
     setEnviando(true);
     const { data, error } = await supabase().rpc("criar_pedido", { dados: {
+      extras, veiculo: veiculo || null,
       empresa_id: cliente || null, cliente_nome: cliente ? null : avulso.trim() || null, quando: quandoIso, urgente, tipo_pedido: tipoPedido, teste,
       observacoes: obs.trim() || null, distancia_m: rota?.distanciaM ?? null,
       pontos: pontos.map(({ chave, ...p }, i) => { void chave; return comDist(p, i); }), itens: dadosItens, regras } });
@@ -212,6 +219,12 @@ export function FormPedido({ onCriado, onVoltar }: { onCriado: (id: string) => v
             </>)}
             {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: vai com cuidado especial e, se a regra estiver ligada, em rota própria.</p>}
             <textarea placeholder="Observações para o motoboy" value={obs} onChange={(e) => setObs(e.target.value)} />
+            <label className="campo"><span>Veículo</span>
+              <select value={veiculo} onChange={(e) => setVeiculo(e.target.value)}>
+                <option value="">Qualquer um (ou o que o cliente aceita)</option>
+                <option value="moto">Moto</option><option value="carro">Carro</option><option value="bicicleta">Bicicleta</option><option value="van">Van</option>
+              </select></label>
+            <CamposExtras campos={camposPedido} valores={extras} onMudar={setExtras} />
           </section>
           <RegrasPedido valor={regras} onMudar={setRegras} />
           <section className="formulario vidro">

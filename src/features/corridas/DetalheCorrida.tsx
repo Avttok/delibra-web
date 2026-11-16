@@ -25,6 +25,8 @@ import {
   COR_CORRIDA, ROTULO_CORRIDA, ROTULO_PARADA, formatarDuracao, formatarKm, hora, numeroCorrida,
   type Corrida, type Evento, type Oferta,
 } from "./tipos";
+import { nomeParada } from "@/features/modalidades/rotulos";
+import { ExtrasVistos, useCamposProprios } from "@/features/modalidades/CamposExtras";
 
 const ROTULO_EVENTO: Record<string, string> = {
   parada_liberada: "Parada liberada pelo gestor",
@@ -135,6 +137,7 @@ function usePacotes(pedidos: string[]): (Pacote & { pedido_id: string })[] {
 }
 
 export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corrida: Corrida; oferta?: Oferta; onVoltar: () => void; onExcluida?: () => void }) {
+  const camposParada = useCamposProprios("ponto");
   const [foco, setFoco] = useState<{ lat: number; lng: number; vez: number } | null>(null);
   const conta = useConta();
   const [excluindo, setExcluindo] = useState(false);
@@ -310,11 +313,12 @@ export function DetalheCorrida({ corrida, oferta, onVoltar, onExcluida }: { corr
             <div key={p.id} className={`parada-detalhe clicavel ${p.status}`} title="Ver no mapa" onClick={() => setFoco({ lat: p.lat, lng: p.lng, vez: Date.now() })}>
               <span className={`pino-mini ${p.tipo}`}>{p.ordem + 1}</span>
               <div className="parada-texto">
-                <strong>{p.tipo === "coleta" ? "Coleta" : "Entrega"} · {ROTULO_PARADA[p.status]}{p.dist_rua_m != null && p.tipo === "entrega" ? <span className="dica"> · {formatarKm(p.dist_rua_m)} da coleta</span> : null}</strong>
+                <strong>{nomeParada(p.tipo)} · {ROTULO_PARADA[p.status]}{p.dist_rua_m != null && p.tipo === "entrega" ? <span className="dica"> · {formatarKm(p.dist_rua_m)} da coleta</span> : null}</strong>
                 <span>{p.endereco}</span>
                 {(p.contato_nome || p.contato_telefone) && <span className="dica">{p.contato_nome} {p.contato_telefone}</span>}
                 {p.instrucoes && <span className="dica">{p.instrucoes}</span>}
                 <PacotesPonto itens={pacotesDe(p)} />
+                <ExtrasVistos campos={camposParada} valores={p.respostas} titulo="Respostas do motoboy" />
                 {(() => {
                   // o que esta parada exige: o que o cliente pediu no ponto ou, vazio, o padrão da rota (só nas entregas)
                   const x = p as typeof p & OpcoesDoPonto & { codigo?: string | null };

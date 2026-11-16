@@ -18,6 +18,7 @@ import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { PARAMETROS, type ValorParametro } from "@/features/configuracoes/definicoes";
 import { Dica } from "@/features/ui/Tour";
 import { traduzir } from "./tipos";
+import { nomeParada } from "@/features/modalidades/rotulos";
 
 interface ParadaPrevia { id: string; ordem: number; tipo: "coleta" | "entrega"; endereco: string; lat: number; lng: number; pedido_id: string | null; deste_pedido: boolean; dist_rua_m: number | null }
 interface RotaPrevia {
@@ -223,7 +224,7 @@ function CartaoRota({ r, previa, outras, ocupado, rodar, sug, intencao, onIntenc
             <li key={x.id} className={x.deste_pedido ? "" : "outro"}>
               <span className={`pino-mini ${x.tipo}`}>{i + 1}</span>
               <span className="rota-previa-end">
-                <strong>{x.tipo === "coleta" ? "Coleta" : "Entrega"}</strong> {x.endereco.split(",").slice(0, 2).join(",")}
+                <strong>{nomeParada(x.tipo)}</strong> {x.endereco.split(",").slice(0, 2).join(",")}
                 {!x.deste_pedido && <small> · outro pedido</small>}
                 {x.dist_rua_m != null && x.tipo === "entrega" && <small> · {formatarKm(x.dist_rua_m)} da coleta</small>}
               </span>

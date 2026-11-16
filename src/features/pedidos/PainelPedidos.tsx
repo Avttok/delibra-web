@@ -34,6 +34,8 @@ import { Dica } from "@/features/ui/Tour";
 import { Icone } from "@/features/ui/icones";
 import { COR_PEDIDO, ROTULO_PEDIDO, moedaBr, quando, traduzir, type Categoria, type Pedido, type StatusPedido } from "./tipos";
 import { useEtapa } from "@/features/ui/useEtapa";
+import { nomeParada } from "@/features/modalidades/rotulos";
+import { ExtrasVistos, useCamposProprios } from "@/features/modalidades/CamposExtras";
 
 type Filtro = "revisar" | "andamento" | "entregues" | "fora" | "todos";
 const FILTROS: { k: Filtro; rotulo: string; st: StatusPedido[] | null }[] = [
@@ -160,6 +162,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
   const [foco, setFoco] = useState<{ lat: number; lng: number; vez: number } | null>(null);
   const [regras, setRegras] = useState<Record<string, unknown>>((p as Pedido & { regras?: Record<string, unknown> }).regras ?? {});
   const pontos = [...(p.pedido_pontos ?? [])].sort((a, b) => a.ordem - b.ordem);
+  const camposPedido = useCamposProprios("pedido");
   const pinos: PinoParada[] = pontos.map((x, i) => ({ chave: x.id, lat: x.lat, lng: x.lng, tipo: x.tipo, rotulo: String(i + 1), concluida: x.status === "concluido" }));
   const unicas = [...new Map(rotas.map((r) => [r.corrida_id, r])).values()];
   // feito (trilha pelas ruas de cada rota deste pedido) e a fazer (do motoboy até o que falta)
@@ -221,6 +224,12 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
         <div className="pedido-mapa-p"><MapaCorridas paradas={pinos} enquadrar={p.id} foco={foco} trilha={trilha}
           motoboys={motoEmRota?.lat != null && motoEmRota.lng != null ? [{ id: motoEmRota.id, nome: motoEmRota.nome, lat: motoEmRota.lat, lng: motoEmRota.lng, status: "em_corrida", foto: motoEmRota.foto }] : []}
           restanteDe={motoEmRota?.lat != null && motoEmRota.lng != null ? { lat: motoEmRota.lat, lng: motoEmRota.lng } : null} /></div>
+        {(p.veiculo || (p.extras && Object.keys(p.extras).length > 0)) && (
+          <div className="bloco">
+            {p.veiculo && <p className="dica" style={{ margin: 0 }}>Veículo pedido: <strong>{p.veiculo}</strong></p>}
+            <ExtrasVistos campos={camposPedido} valores={p.extras} titulo="Campos do pedido" />
+          </div>
+        )}
         <ol className="pedido-pontos">
           {pontos.map((x, i) => {
             const idsTipo = pontos.filter((y) => y.tipo === x.tipo).map((y) => y.id);
@@ -229,7 +238,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar }: {
               <li key={x.id} className={`clicavel${x.status === "concluido" ? " feita" : ""}`} title="Ver no mapa" onClick={() => setFoco({ lat: x.lat, lng: x.lng, vez: Date.now() })}>
                 <span className={`pino-mini ${x.tipo}`}>{i + 1}</span>
                 <div>
-                  <strong>{x.tipo === "coleta" ? "Coleta" : "Entrega"}</strong> · {x.endereco}
+                  <strong>{nomeParada(x.tipo)}</strong> · {x.endereco}
                   <div className="dica">{[x.contato_nome, x.contato_telefone, x.instrucoes].filter(Boolean).join(" · ")}</div>
                   <PacotesPonto itens={itens} />
                   {x.concluido_em && <div className="dica"><CheckCircle2 size={12} aria-hidden /> {quando(x.concluido_em)}{x.recebedor_nome ? ` · ${x.recebedor_nome}` : ""}</div>}

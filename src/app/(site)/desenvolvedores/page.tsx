@@ -53,8 +53,10 @@ Content-Type: application/json`}</pre>
           <li><strong>referencia_externa</strong>: o número do pedido na sua loja. Mandar de novo a mesma referência não cria outro pedido: devolve o que já existe (pode repetir sem medo se a conexão cair).</li>
           <li><strong>itens</strong>: <code>entrega</code> e <code>coleta</code> são a posição do ponto na lista, começando em 0.</li>
           <li>Outros campos: <code>urgente</code> (true/false), <code>tipo_pedido</code>, <code>observacoes</code>, <code>metodo</code> (pagamento, quando a loja paga antes).</li>
+          <li><strong>extras</strong>: os campos próprios que a transportadora criou para o pedido (ex.: <code>{`{ "numero_da_nota": "123" }`}</code>). Os obrigatórios precisam vir; os que não existem são ignorados. Cada ponto também aceita <code>extras</code>.</li>
+          <li><strong>veiculo</strong>: <code>moto</code>, <code>carro</code>, <code>bicicleta</code> ou <code>van</code>, quando a transportadora deixa a loja escolher. A rota só vai para quem tem esse veículo.</li>
         </ul>
-        <p>Resposta <code>201</code> com o pedido (<code>id</code>, <code>numero</code>, <code>status</code>, <code>valor</code>, <code>pontos</code>) e o link de acompanhamento em <code>rastreio</code>. Se a referência já existia, a resposta é <code>200</code> com <code>&quot;repetido&quot;: true</code>.</p>
+        <p>Resposta <code>201</code> com o pedido (<code>id</code>, <code>numero</code>, <code>status</code>, <code>valor</code>, <code>extras</code>, <code>pontos</code> com as <code>respostas</code> que o motoboy deu em cada parada) e o link de acompanhamento em <code>rastreio</code>. Se a referência já existia, a resposta é <code>200</code> com <code>&quot;repetido&quot;: true</code>.</p>
 
         <h2>3. Consultar</h2>
         <pre>{`GET ${base}/api/v1/pedidos/{id}
@@ -96,6 +98,7 @@ X-Delibra-Assinatura: t=1763215200,v1=…
             <tr><td><code>401</code> chave_invalida</td><td>Chave errada, ausente ou cancelada.</td></tr>
             <tr><td><code>403</code> api_desligada · empresa_sem_acesso</td><td>API desligada para a transportadora ou loja sem conta de cliente.</td></tr>
             <tr><td><code>404</code> pedido_inexistente</td><td>O pedido não é da sua loja ou não existe.</td></tr>
+            <tr><td><code>429</code> limite_excedido</td><td>Chamadas demais no mesmo minuto (o limite é da transportadora; o padrão é 120 por minuto). Espere o minuto virar.</td></tr>
             <tr><td><code>422</code> pedido_invalido e outros</td><td>Faltou algo no pedido ou uma regra da transportadora barrou (ex.: só agendado). O campo <code>mensagem</code> explica.</td></tr>
           </tbody>
         </table>

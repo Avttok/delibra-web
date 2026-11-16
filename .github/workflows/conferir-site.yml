@@ -1,0 +1,25 @@
+name: Conferir site
+
+# A cada envio no lote (e antes de ir para a main), confere os tipos e compila o site como a Vercel compila.
+# Se quebrar aqui, não publique: a Vercel manteria a versão anterior no ar, mas o erro já fica visível.
+on:
+  push:
+    branches: [lote, main]
+    paths: ["src/**", "package.json", "package-lock.json", "next.config.*", "tsconfig.json"]
+  workflow_dispatch:
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Tipos
+        run: npx tsc --noEmit -p .
+      - name: Compilar
+        run: npx next build

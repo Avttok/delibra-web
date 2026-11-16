@@ -2244,3 +2244,12 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .api-lista li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--texto-2); padding: 8px 10px; border-radius: 10px; background: var(--campo, rgb(255 255 255 / 0.04)); }
 .api-lista li.revogada { opacity: 0.55; }
 .botao-ouro.pequeno { padding: 6px 12px; font-size: 13px; min-height: 0; }
+
+/* ---------------------------------------------------------------- modalidades */
+.nome-proprio { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; }
+.nome-proprio input { min-width: 0; }
+@media (max-width: 560px) { .nome-proprio { grid-template-columns: 1fr auto; } .nome-proprio .dica { grid-column: 1 / -1; } }
+.campos-extras { display: grid; gap: 10px; }
+.extras-lista { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin: 0; }
+.extras-lista dt { color: var(--texto-3); }
+.extras-lista dd { margin: 0; color: var(--texto); }

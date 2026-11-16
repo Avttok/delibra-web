@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-type Aviso = { id: number; canal: "email" | "whatsapp" | "nota" | "cobranca" | "webhook"; para: string | null; assunto: string | null; corpo: Record<string, unknown>; empresa: string | null; nf_provedor: string; nf_cnpj: string; nf_servico: string };
+type Aviso = { id: number; canal: "email" | "whatsapp" | "nota" | "cobranca" | "webhook"; para: string | null; assunto: string | null; corpo: Record<string, unknown>; empresa: string | null; nf_provedor: string; nf_cnpj: string; nf_servico: string; textos?: Record<string, string> };
 
 const moeda = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const data = (v: unknown) => (typeof v === "string" ? v.split("-").reverse().join("/") : "");
@@ -15,6 +15,14 @@ const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&
 /** O texto de cada e-mail, curto e no tom do app. */
 function html(a: Aviso) {
   const c = a.corpo, emp = esc(a.empresa ?? "Delibra"), nome = esc(c.nome);
+  // texto próprio da empresa (Ajustes → Integrações), com {nome}, {empresa}, {numero}, {valor}, {vencimento}
+  const proprio = a.textos?.[String(c.modelo ?? "")]?.trim();
+  if (proprio) {
+    const v: Record<string, string> = { nome: String(c.nome ?? ""), empresa: String(a.empresa ?? "Delibra"), numero: String(c.numero ?? ""),
+      valor: moeda(c.total ?? c.valor), vencimento: data(c.vencimento) };
+    const txt = esc(proprio.replace(/\{(nome|empresa|numero|valor|vencimento)\}/g, (_, k: string) => v[k] ?? ""));
+    return `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#16130c;max-width:520px">${txt.split(/\n+/).map((l) => `<p>${l}</p>`).join("")}<p style="color:#8a8270;font-size:12px">${emp}</p></div>`;
+  }
   const corpo = (() => {
     switch (c.modelo) {
       case "cadastro": return `<p>Olá, ${nome}!</p><p>Seu cadastro na <strong>${emp}</strong> foi aprovado. Você já pode entrar e fazer pedidos.</p>`;

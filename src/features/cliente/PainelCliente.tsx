@@ -31,6 +31,9 @@ import { Icone } from "@/features/ui/icones";
 import { AvaliarPedido, BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 import { useEtapa } from "@/features/ui/useEtapa";
 import { AceiteTermos } from "@/features/conta/AceiteTermos";
+import { nomeParada, nomeStatus } from "@/features/modalidades/rotulos";
+import { aplicarRotulos } from "@/features/modalidades/rotulos";
+import { CamposExtras, faltaCampo, useCamposProprios, type Extras } from "@/features/modalidades/CamposExtras";
 
 // ------------------------------------------------------------------ dados
 
@@ -46,7 +49,7 @@ interface Conta {
   confirmacoes?: Partial<Record<Confirmacao, boolean>>; padrao_confirmacoes?: Partial<Record<Confirmacao, boolean>>;
   pode_janela?: boolean; pode_objetos?: boolean; modelo_horario?: boolean;
   /** Controles do gestor (geral e por cliente). */
-  pode_agendar?: boolean; pode_urgente?: boolean; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
+  pode_agendar?: boolean; pode_urgente?: boolean; escolhe_veiculo?: boolean; veiculos_aceitos?: string[] | null; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
   pode_ida_volta?: boolean; coleta_fixa?: boolean; pode_observacoes?: boolean; ve_faturas?: boolean; pode_chat?: boolean;
   pedido_de?: string | null; pedido_ate?: string | null; modo_distancia?: string;
   /** O que aparece da rota no mapa: feito, restante, motoboy, planejada, outras_paradas. */
@@ -98,7 +101,8 @@ export function PainelCliente() {
 
   const carregar = useCallback(async () => {
     const sb = supabase();
-    const [c, p, f] = await Promise.all([sb.rpc("minha_conta_cliente"), sb.rpc("meus_pedidos_cliente", { p_dias: 400 }), sb.rpc("minhas_faturas")]);
+    const [c, p, f, r] = await Promise.all([sb.rpc("minha_conta_cliente"), sb.rpc("meus_pedidos_cliente", { p_dias: 400 }), sb.rpc("minhas_faturas"), sb.rpc("meus_rotulos")]);
+    if (!r.error) aplicarRotulos(r.data as Record<string, string>);
     setConta((c.data as Conta | null) ?? null);
     setPedidos((p.data as PedidoC[] | null) ?? []);
     setFaturas((f.data as FaturaC[] | null) ?? []);
@@ -166,7 +170,7 @@ function SeloPago() {
 }
 
 function Selo({ s }: { s: StatusP }) {
-  return <span className="selo" style={{ color: STATUS[s].cor }}>{STATUS[s].rotulo}</span>;
+  return <span className="selo" style={{ color: STATUS[s].cor }}>{nomeStatus("pedido", s, STATUS[s].rotulo)}</span>;
 }
 
 // ------------------------------------------------------------------ lista
@@ -319,7 +323,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou }: { pedido: Pedido
           {p.pontos.map((x, i) => (
             <li key={x.id} className={`clicavel${x.status === "concluido" ? " feita" : ""}`} title="Ver no mapa" onClick={() => setFoco({ lat: x.lat, lng: x.lng, vez: Date.now() })}>
               <span className={`pino-mini ${x.tipo}`}>{i + 1}</span>
-              <div><strong>{x.tipo === "coleta" ? "Coleta" : "Entrega"}</strong> · {x.endereco}
+              <div><strong>{nomeParada(x.tipo)}</strong> · {x.endereco}
                 {x.contato_nome && <span className="dica"> · {x.contato_nome}</span>}
                 {x.concluido_em && <div className="dica"><CheckCircle2 size={12} aria-hidden /> {quando(x.concluido_em)}{x.recebedor_nome ? ` · recebido por ${x.recebedor_nome}` : ""}</div>}
                 <SelosPonto p={x} />
@@ -417,9 +421,12 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
   const [agendar, setAgendar] = useState(!podeAgora && podeAgendar);
   const [horario, setHorario] = useState(() => paraCampo(sugestaoHorario(Math.max(60, conta.antecedencia_min))));
   const [tipoPedido, setTipoPedido] = useState(conta.tipos_pedido[0]?.chave ?? "padrao");
+  const camposPedido = useCamposProprios("pedido", { tipoPedido, quem: "cliente" });
   const [urgente, setUrgente] = useState(false);
   const [metodo, setMetodo] = useState(conta.metodos[0] ?? "pix");
   const [obs, setObs] = useState("");
+  const [extras, setExtras] = useState<Extras>({});
+  const [veiculo, setVeiculo] = useState("");
   const [rota, setRota] = useState<Rota | null>(null);
   const [orc, setOrc] = useState<Orcamento | null>(null);
   const [escolhendo, setEscolhendo] = useState<string | null>(null);
@@ -547,12 +554,14 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
     if (falta) return toast(falta, "aviso");
     if (!agendar && !podeAgora) return toast(podeAgendar ? "Agora não dá para pedir na hora. Escolha Agendar." : "Agora não dá para fazer pedidos. Fale com a empresa.", "aviso");
     if (agendar && horario && conta.agendar_max_dias && new Date(horario).getTime() > Date.now() + conta.agendar_max_dias * 86_400_000) return toast(`Dá para agendar até ${conta.agendar_max_dias} dias à frente.`, "aviso");
+    const faltou = faltaCampo(camposPedido, extras);
+    if (faltou) return toast(`Preencha: ${faltou}.`, "aviso");
     const jan = pontos.find((p) => p.janela_de && p.janela_ate && p.janela_de >= p.janela_ate);
     if (jan) return toast(`O horário do ponto ${pontos.indexOf(jan) + 1} termina antes de começar.`, "aviso");
     setEnviando(true);
     const { data, error } = await supabase().rpc("criar_pedido", { dados: {
       como_cliente: true, modelo_id: modeloId, objetos_usados: [...new Set(itens.map((x) => x.objeto_id).filter(Boolean))],
-      quando: quandoIso, urgente, tipo_pedido: tipoPedido, metodo: conta.cobranca === "pre_pago" ? metodo : null, observacoes: obs.trim() || null,
+      quando: quandoIso, urgente, tipo_pedido: tipoPedido, extras, veiculo: veiculo || null, metodo: conta.cobranca === "pre_pago" ? metodo : null, observacoes: obs.trim() || null,
       distancia_m: rota?.distanciaM ?? null, pontos: pontos.map(({ chave, ...p }, i) => { void chave; return comDist(p, i); }), itens: dadosItens } });
     setEnviando(false);
     if (error) return toast(traduzir(error.message), "erro");
@@ -672,6 +681,14 @@ function NovoPedido({ conta, onCriado }: { conta: Conta; onCriado: (id: string) 
           </>)}
           {perigoso && <p className="alerta-perigo"><FlaskConical size={14} aria-hidden /> Produto perigoso: embale e identifique.</p>}
           {conta.pode_observacoes !== false && <textarea placeholder="Observações (opcional)" value={obs} maxLength={1000} onChange={(e) => setObs(e.target.value)} />}
+          {conta.escolhe_veiculo && (
+            <label className="campo"><span>Veículo</span>
+              <select value={veiculo} onChange={(e) => setVeiculo(e.target.value)}>
+                <option value="">Qualquer um</option>
+                {[["moto", "Moto"], ["carro", "Carro"], ["bicicleta", "Bicicleta"], ["van", "Van"]].filter(([v]) => !conta.veiculos_aceitos?.length || conta.veiculos_aceitos.includes(v)).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
+              </select></label>
+          )}
+          <CamposExtras campos={camposPedido} valores={extras} onMudar={setExtras} />
         </div>
         {passo === 2 && <div className="cliente-cartao vidro"><span className="rotulo"><CheckCircle2 size={13} aria-hidden /> Tudo certo?</span>
           <p className="dica" style={{ margin: 0 }}>Confira o valor e o pagamento ao lado e toque em “Fazer pedido”.</p></div>}

@@ -28,6 +28,7 @@ export interface ItemPedido {
   peso_kg: number | null; comprimento_cm: number | null; largura_cm: number | null; altura_cm: number | null; valor_declarado: number | null; observacoes: string | null;
 }
 export interface Pedido {
+  extras?: Record<string, string | number | boolean> | null; veiculo?: string | null;
   id: string; numero: number; teste: boolean; empresa_id: string | null; cliente_nome: string | null; criado_por: string | null; origem: "cliente" | "gestor";
   tipo: "express" | "planejado"; tipo_pedido: string; quando: string | null; urgente: boolean; status: StatusPedido; observacoes: string | null;
   distancia_estimada_m: number | null; orcamento: Orcamento | null; valor_calculado: number | null; valor_ajuste: number; ajuste_motivo: string | null;
@@ -51,6 +52,8 @@ export const COR_PEDIDO: Record<StatusPedido, string> = {
 };
 
 const ERROS: Record<string, string> = {
+  veiculo_nao_serve: "Esta rota pede outro tipo de veículo.",
+  campo_repetido: "Já existe um campo com esse nome.",
   acao_bloqueada: "A plataforma não liberou isso para gestores.",
   ajuste_bloqueado: "Este ajuste está travado pela plataforma.",
   cliente_sem_agendado: "Esta conta não faz pedidos agendados (libere em Ajustes → Clientes).",
@@ -112,6 +115,8 @@ const ERROS: Record<string, string> = {
 };
 export function traduzir(msg: string | undefined): string {
   if (!msg) return "Erro desconhecido.";
+  const campo = /campo_(obrigatorio|invalido):([^\n]+)/.exec(msg);
+  if (campo) return campo[1] === "obrigatorio" ? `Preencha: ${campo[2].trim()}.` : `Valor inválido em: ${campo[2].trim()}.`;
   return Object.entries(ERROS).find(([k]) => msg.includes(k))?.[1] ?? msg;
 }
 

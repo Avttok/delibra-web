@@ -23,6 +23,7 @@ import { MapaCorridas } from "@/features/corridas/MapaCorridas";
 import type { Empresa } from "@/features/corridas/tipos";
 import type { DadosCnpj } from "@/lib/cnpj/consulta";
 import { useEtapa } from "@/features/ui/useEtapa";
+import { ExtrasDoCadastro } from "@/features/modalidades/CamposExtras";
 
 interface Formulario {
   nome: string;
@@ -357,6 +358,7 @@ export function PainelEmpresas() {
             {aba === "api" && selecionada !== "nova" && <ApiDaLoja empresa={selecionada} nome={form.nome} />}
             {aba === "penalidades" && selecionada !== "nova" && <Penalidades alvoTipo="cliente" alvoId={selecionada} nome={form.nome} />}
             {(aba === "cadastro" || selecionada === "nova") && <>
+            {selecionada && selecionada !== "nova" && <ExtrasDoCadastro key={selecionada} entidade="cliente" alvo={selecionada} tabela="empresas" />}
 
             <section className="secao">
               <div className="secao-titulo"><span className="cabeca-icone grad-suave" style={{ width: 34, height: 34, borderRadius: 11 }}><Search size={17} /></span><h3>Identificação</h3></div>

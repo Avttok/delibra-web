@@ -24,6 +24,8 @@ import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { COR_STATUS, ROTULO_STATUS, type StatusMotoboy } from "@/features/rastreamento/tipos";
 import { useEtapa } from "@/features/ui/useEtapa";
+import { ExtrasDoCadastro } from "@/features/modalidades/CamposExtras";
+import { EscolherCargo } from "@/features/modalidades/Modalidades";
 
 interface Membro {
   id: string; email: string; nome: string; foto_url: string | null; papeis: string[];
@@ -190,6 +192,7 @@ export function PainelEquipe() {
                   {pleno && <OpcaoCargo cargo="supervisor" rotulo="Supervisor (líder de equipe: só o que você liberar)" icone={<UserCog size={14} style={{ verticalAlign: -2 }} />} marcado={supervisor} tinha={m.papeis.includes("supervisor")} vagas={vagas} onMudar={setSupervisor} />}
                   {supervisor && !gestor && pleno && (
                     <div className="permissoes-supervisor">
+                      <EscolherCargo pessoa={m.id} atual={(m as { cargo_id?: string | null }).cargo_id ?? null} onMudou={() => toast("As permissões do cargo valem a partir de agora. Recarregue para ver.", "ok")} />
                       <span className="rotulo">O que este supervisor pode fazer</span>
                       {PERMISSOES_SUPERVISOR.map((x) => (
                         <label key={x.chave} className="opcao"><span>{x.rotulo}</span>
@@ -198,6 +201,7 @@ export function PainelEquipe() {
                     </div>
                   )}
                   <OpcaoCargo cargo="motoboy" rotulo="Motoboy (usa o app e recebe corridas)" icone={<Bike size={14} style={{ verticalAlign: -2 }} />} marcado={motoboy} tinha={m.papeis.includes("motoboy")} vagas={vagas} onMudar={setMotoboy} />
+                  {m.papeis.includes("motoboy") && <ExtrasDoCadastro entidade="motoboy" alvo={m.id} tabela="motoboys" />}
                   {gestor && motoboy && <p className="dica">Gestor + motoboy tem as ferramentas de administrador e o modo teste no app.</p>}
                   {(gestor || devPapel) && (
                     <label className="campo"><span><Building2 size={13} style={{ verticalAlign: -2 }} /> Também é cliente (entra no site do cliente como este cadastro)</span>

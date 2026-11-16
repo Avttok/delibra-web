@@ -25,6 +25,7 @@ import { ProvedorConta, type ContextoConta, type CorTema, type Papel } from "@/f
 import { Toasts, toast } from "@/features/ui/toast";
 import { definirPreferenciaRota } from "@/features/geo";
 import { AceiteTermos } from "@/features/conta/AceiteTermos";
+import { aplicarRotulos } from "@/features/modalidades/rotulos";
 
 type Acesso = "carregando" | "anonimo" | "negado" | "gestor";
 
@@ -107,6 +108,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
       setPapeis(d?.papeis ?? []);
       setCorTema(d?.dev && d?.cor_tema === "vermelho" ? "vermelho" : "ouro");
       setModulos(d?.modulos ?? {});
+      aplicarRotulos((d as { rotulos?: Record<string, string> } | null)?.rotulos);
       setNome(d?.nome ?? "");
       setFoto(d?.foto_url ?? null);
       if (s.user.email) contas.atualizarPerfil(s.user.email, d?.nome ?? null, d?.foto_url ?? null);
