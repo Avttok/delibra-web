@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Bike, ChevronLeft, ChevronRight, CircleDollarSign, Clock, ClipboardList, CloudOff, Hand, LayoutDashboard, PackageCheck, Route, Siren, Star, Trophy, Users, XCircle } from "lucide-react";
@@ -92,7 +93,9 @@ export function PainelDoDia() {
   ].filter(Boolean) as { icone: typeof Siren; texto: string; href: string; forte: boolean }[] : [];
   return (
     <section className="conteudo painel-dia">
-      <CabecaPagina icone={LayoutDashboard} titulo={ehHoje ? "Hoje" : "Dia"} subtitulo={new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: ehHoje ? undefined : "numeric" })} />
+      <CabecaPagina icone={LayoutDashboard} titulo={ehHoje ? "Hoje" : "Dia"} subtitulo={new Date(`${dia}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: ehHoje ? undefined : "numeric" })}>
+        <AjustesRapidos titulo="Ajustes gerais" grupos={["plataforma", "quadro", "despacho"]} />
+      </CabecaPagina>
       <div className="linha-botoes painel-datas">
         <button type="button" className="botao-vidro pequeno" onClick={() => mover(-1)} aria-label="Dia anterior"><ChevronLeft size={15} aria-hidden /></button>
         <input type="date" value={dia} max={hojeIso()} onChange={(e) => { if (e.target.value) { setP(null); setDia(e.target.value); } }} aria-label="Escolher o dia" />

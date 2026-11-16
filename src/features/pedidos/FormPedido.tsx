@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Boxes, CalendarClock, CheckCircle2, FlaskConical, MapPinned, PackagePlus, Pencil, Plus, Receipt, Trash2, UserRound, X, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
@@ -164,7 +165,9 @@ export function FormPedido({ onCriado, onVoltar, editar }: { onCriado: (id: stri
       <aside className="lateral entrar">
         <button className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Pedidos</button>
         <CabecaPagina icone={editar ? Pencil : PackagePlus} titulo={editar ? `Editar pedido${numeroEd ? ` #${numeroEd}` : ""}` : "Novo pedido"}
-          subtitulo={editar ? "Ao salvar, as rotas que ainda não saíram são refeitas" : teste ? "Pedido de teste" : "O sistema monta as rotas sozinho"} />
+          subtitulo={editar ? "Ao salvar, as rotas que ainda não saíram são refeitas" : teste ? "Pedido de teste" : "O sistema monta as rotas sozinho"}>
+          <AjustesRapidos titulo="Ajustes do pedido" grupos={["pedidos", "precocliente", "preco", "comprovantes", "cli_pode"]} />
+        </CabecaPagina>
         <section className="bloco">
           <span className="rotulo">Cliente</span>
           <select value={cliente} onChange={(e) => setCliente(e.target.value)}>

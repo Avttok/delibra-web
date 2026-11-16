@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { Idade } from "@/features/ui/Idade";
 
 import { useEffect, useMemo, useState } from "react";
@@ -105,7 +106,9 @@ export function PainelCorridas() {
   return (
     <>
       <aside className="lateral lateral-larga entrar">
-        <CabecaPagina icone={Route} titulo="Rotas" subtitulo={(() => { const n = corridas.filter((c) => ATIVAS.includes(c.status)).length; return `${n === 0 ? "Nenhuma ativa" : n === 1 ? "1 ativa" : `${n} ativas`} agora${teste ? " · modo teste" : ""}`; })()} />
+        <CabecaPagina icone={Route} titulo="Rotas" subtitulo={(() => { const n = corridas.filter((c) => ATIVAS.includes(c.status)).length; return `${n === 0 ? "Nenhuma ativa" : n === 1 ? "1 ativa" : `${n} ativas`} agora${teste ? " · modo teste" : ""}`; })()}>
+          <AjustesRapidos titulo="Ajustes das rotas" grupos={["rotas", "despacho", "extensao", "quadro", "planejadas", "local", "pular", "offline", "comprovantes"]} />
+        </CabecaPagina>
         <div className="lateral-cabecalho">
           <span className="rotulo">Mostrar</span>
           <div className="filtro">

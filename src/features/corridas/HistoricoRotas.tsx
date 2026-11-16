@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, Bike, Building2, CalendarRange, Clock, ExternalLink, History, MapPin, Package, Receipt, Search, Star, WifiOff } from "lucide-react";
 import Link from "next/link";
@@ -76,7 +77,8 @@ export function HistoricoRotas({ onVoltar, onAbrir }: { onVoltar: () => void; on
     <>
       <aside className="lateral lateral-larga entrar">
         <button className="botao-texto" style={{ alignSelf: "flex-start" }} onClick={onVoltar}><ArrowLeft size={15} aria-hidden /> Rotas</button>
-        <div className="lateral-cabecalho"><h2 className="display" style={{ margin: 0 }}><History size={18} aria-hidden /> Histórico de rotas</h2></div>
+        <div className="lateral-cabecalho"><h2 className="display" style={{ margin: 0 }}><History size={18} aria-hidden /> Histórico de rotas</h2>
+          <AjustesRapidos titulo="Ajustes do percurso e do pagamento" grupos={["percurso", "pagamento", "mb_ve", "avaliacoes"]} /></div>
         <section className="bloco hist-filtros">
           <div className="hist-datas">
             <label className="campo"><span><CalendarRange size={12} aria-hidden /> De</span><input type="date" value={de} max={ate} onChange={(e) => setDe(e.target.value)} /></label>

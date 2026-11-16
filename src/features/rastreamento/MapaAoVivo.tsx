@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, BatteryMedium, Bike, Crosshair, Flame, FlaskConical, LocateFixed, Map as IconeMapa, Search, Signpost, Timer } from "lucide-react";
 import { maplibregl } from "@/lib/mapa/maplibre";
@@ -203,7 +204,9 @@ export function MapaAoVivo() {
   return (
     <>
       <aside className="lateral entrar">
-        <CabecaPagina icone={IconeMapa} titulo="Mapa" subtitulo={`${ativos} em serviço · ${todos.length} motoboy${todos.length === 1 ? "" : "s"}`} />
+        <CabecaPagina icone={IconeMapa} titulo="Mapa" subtitulo={`${ativos} em serviço · ${todos.length} motoboy${todos.length === 1 ? "" : "s"}`}>
+          <AjustesRapidos titulo="Ajustes do mapa e do GPS" grupos={["mapa", "rastreamento", "percurso", "navegacao", "regiao"]} />
+        </CabecaPagina>
         <span className={`conexao ${conectado ? "on" : ""}`}>{conectado ? "Tempo real conectado" : "Conectando…"}</span>
         {erro && <p className="erro">{erro}</p>}
 

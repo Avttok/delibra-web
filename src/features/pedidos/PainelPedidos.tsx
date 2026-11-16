@@ -1,5 +1,6 @@
 "use client";
 
+import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 import { PacotesPonto, pacotesDoPonto } from "./Pacotes";
 import { comSessao } from "@/features/pagamentos/Recebimentos";
@@ -106,7 +107,9 @@ export function PainelPedidos() {
   return (
     <>
       <aside className="lateral entrar">
-        <CabecaPagina icone={ClipboardList} titulo="Pedidos" subtitulo={teste ? "Pedidos de teste" : `${contagem("revisar")} para revisar · ${contagem("andamento")} em andamento`} />
+        <CabecaPagina icone={ClipboardList} titulo="Pedidos" subtitulo={teste ? "Pedidos de teste" : `${contagem("revisar")} para revisar · ${contagem("andamento")} em andamento`}>
+          <AjustesRapidos titulo="Ajustes dos pedidos" grupos={["pedidos", "aprender", "rotas", "cli_pode", "faturas"]} />
+        </CabecaPagina>
         <div className="linha-botoes">
           <button className="botao-ouro" onClick={() => setNovo(true)}><PackagePlus size={16} aria-hidden /> Novo pedido</button>
           <button className="botao-texto" title="Roda o roteirizador agora" onClick={async () => {

@@ -118,7 +118,7 @@ export function PainelConfiguracoes() {
             );
           })}
           <span className="rotulo" style={{ margin: "10px 4px 2px" }}>Peças do lego<Dica titulo="Peças do lego" texto="Cada regra tem um valor geral e pode ter exceção por tipo de pedido, cliente, motoboy ou num pedido só. Vale a mais específica: pedido, motoboy, cliente, tipo e, por último, a geral." /></span>
-          {PAGINAS_EXTRAS.filter((x) => !ACAO_DA_PAGINA[x.chave] || perm.pode(ACAO_DA_PAGINA[x.chave]!)).map((x) => {
+          {PAGINAS_EXTRAS.filter((x) => (!ACAO_DA_PAGINA[x.chave] || perm.pode(ACAO_DA_PAGINA[x.chave]!)) && (x.chave !== "tipos" || conta.dev || cfg.dev_tipos_pedido_ligado === true)).map((x) => {
             const I = x.icone;
             return (
               <button key={x.chave} type="button" className={`config-grupo compacto ${!termo && pagina === x.chave ? "ativo" : ""}`} onClick={() => ir(x.chave)}>
