@@ -22,7 +22,7 @@ import { formatarDuracao, formatarKm } from "@/features/corridas/tipos";
 import { paraCampo, sugestaoHorario } from "@/features/corridas/planejadas";
 import { toast } from "@/features/ui/toast";
 import { moedaBr, quando, traduzir, type Categoria, type Orcamento } from "@/features/pedidos/tipos";
-import { DestinosEntrega, ItensPedido, dadosDoObjeto, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "@/features/pedidos/ItensPedido";
+import { DestinosEntrega, semPonto, ItensPedido, dadosDoObjeto, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "@/features/pedidos/ItensPedido";
 import { OpcoesPonto, SelosPonto, type Confirmacao, type OpcoesDoPonto } from "@/features/pedidos/OpcoesPonto";
 import { PacotesPonto, pacotesDoPonto } from "@/features/pedidos/Pacotes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
@@ -648,9 +648,9 @@ function NovoPedido({ conta, onCriado, editar }: { conta: Conta; onCriado: (id: 
                 {pontos.length > 2 && alca}
                 <span className={`pino-mini ${p.tipo}`}>{i + 1}</span>
                 {fixa(p) ? <span className="selo"><Lock size={11} aria-hidden /> Coleta</span>
-                  : <select value={p.tipo} onChange={(e) => atualizar(p.chave, { tipo: e.target.value as Ponto["tipo"] })}><option value="coleta" disabled={!podeColeta && p.tipo !== "coleta"}>Coleta</option><option value="entrega" disabled={!podeEntrega && p.tipo !== "entrega"}>Entrega</option></select>}
+                  : <select value={p.tipo} onChange={(e) => { atualizar(p.chave, { tipo: e.target.value as Ponto["tipo"] }); setItens((l) => semPonto(l, p.chave)); }}><option value="coleta" disabled={!podeColeta && p.tipo !== "coleta"}>Coleta</option><option value="entrega" disabled={!podeEntrega && p.tipo !== "entrega"}>Entrega</option></select>}
                 <span className="espaco" />
-                {pontos.length > 2 && !fixa(p) && <button type="button" className="icone" title="Remover" onClick={() => setPontos((l) => l.filter((x) => x.chave !== p.chave))}><X size={14} /></button>}
+                {pontos.length > 2 && !fixa(p) && <button type="button" className="icone" title="Remover" onClick={() => { setPontos((l) => l.filter((x) => x.chave !== p.chave)); setItens((l) => semPonto(l, p.chave)); }}><X size={14} /></button>}
               </div>
               {fixa(p) ? <p className="dica" style={{ margin: 0 }}><strong>{p.endereco || "Endereço de coleta da conta"}</strong> (a coleta é sempre aqui)</p> : <CampoEndereco valor={p.endereco} onTexto={(t) => atualizar(p.chave, { endereco: t, lat: null, lng: null })} onEscolher={(e) => atualizar(p.chave, { endereco: e.descricao, lat: e.lat, lng: e.lng })} />}
               <div className="parada-acoes">

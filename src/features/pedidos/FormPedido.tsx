@@ -15,7 +15,7 @@ import { useModoTeste } from "@/features/teste/modoTeste";
 import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { toast } from "@/features/ui/toast";
 import { moedaBr, traduzir, type Categoria, type Orcamento, type TipoPedido } from "./tipos";
-import { DestinosEntrega, ItensPedido, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "./ItensPedido";
+import { DestinosEntrega, semPonto, ItensPedido, faltandoItens, itensParaEnvio, novoItem, type ItemForm, type ObjetoSalvo } from "./ItensPedido";
 import { OpcoesPonto, type Confirmacao, type OpcoesDoPonto } from "./OpcoesPonto";
 import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { ListaOrdenavel } from "@/features/ui/ListaOrdenavel";
@@ -194,11 +194,11 @@ export function FormPedido({ onCriado, onVoltar, editar }: { onCriado: (id: stri
               <div className="parada-topo">
                 {alca}
                 <span className={`pino-mini ${p.tipo}`}>{i + 1}</span>
-                <select value={p.tipo} onChange={(e) => atualizar(p.chave, { tipo: e.target.value as Ponto["tipo"] })}>
+                <select value={p.tipo} onChange={(e) => { atualizar(p.chave, { tipo: e.target.value as Ponto["tipo"] }); setItens((l) => semPonto(l, p.chave)); }}>
                   <option value="coleta">Coleta</option><option value="entrega">Entrega</option>
                 </select>
                 <span className="espaco" />
-                {pontos.length > 2 && <button type="button" className="icone" title="Remover" onClick={() => setPontos((l) => l.filter((x) => x.chave !== p.chave))}><X size={14} /></button>}
+                {pontos.length > 2 && <button type="button" className="icone" title="Remover" onClick={() => { setPontos((l) => l.filter((x) => x.chave !== p.chave)); setItens((l) => semPonto(l, p.chave)); }}><X size={14} /></button>}
               </div>
               <CampoEndereco valor={p.endereco} onTexto={(t) => atualizar(p.chave, { endereco: t, lat: null, lng: null })} onEscolher={(e) => atualizar(p.chave, { endereco: e.descricao, lat: e.lat, lng: e.lng })} />
               <div className="parada-acoes">

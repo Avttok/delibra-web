@@ -228,3 +228,12 @@ export function DestinosEntrega({ itens, onMudar, categorias, entrega, pontos }:
     </div>
   );
 }
+
+/** Um ponto saiu (ou mudou de coleta para entrega): os itens dele somem e ninguém manda mais nada para ele. */
+export function semPonto(itens: ItemForm[], chave: string): ItemForm[] {
+  return itens.filter((x) => x.coleta !== chave).map((x) => {
+    if (!x.destinos || !(chave in x.destinos)) return x.entrega === chave ? { ...x, entrega: "" } : x;
+    const d = { ...x.destinos }; delete d[chave];
+    return { ...x, destinos: d, entrega: x.entrega === chave ? "" : x.entrega };
+  });
+}
