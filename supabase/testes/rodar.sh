@@ -73,5 +73,5 @@ done
 saida=$(psql -q -d $DB -f lote50.sql 2>&1 | grep -E "OK |FALHA")
 echo "$saida" | sed 's/^.*\(OK\|FALHA\)/\1/'
 ok=$(echo "$saida" | grep -c "OK ")
-if echo "$saida" | grep -q FALHA || [ "$ok" -lt 22 ]; then echo "::error::Teste do lote 50 falhou ($ok de 22 ok)."; psql -q -d $DB -f lote50.sql 2>&1 | grep ERROR | grep -v "t60\|t77\|t80\|t81" | head; exit 1; fi
+if echo "$saida" | grep -q FALHA || [ "$ok" -lt 28 ]; then echo "::error::Teste do lote 50 falhou ($ok de 28 ok)."; psql -q -d $DB -f lote50.sql 2>&1 | grep ERROR | grep -v "t60\|t77\|t80\|t81" | head; exit 1; fi
 echo "Tudo certo: pode publicar."

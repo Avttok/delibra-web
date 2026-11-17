@@ -113,7 +113,12 @@ export function PainelCliente() {
     setPedidos((p.data as PedidoC[] | null) ?? []);
     setFaturas((f.data as FaturaC[] | null) ?? []);
   }, []);
-  useEffect(() => { void carregar(); const t = setInterval(carregar, 15_000); return () => clearInterval(t); }, [carregar]);
+  useEffect(() => {
+    void carregar(); const t = setInterval(carregar, 15_000);
+    const sinal = () => void carregar();
+    window.addEventListener("pwex:perfil", sinal);
+    return () => { clearInterval(t); window.removeEventListener("pwex:perfil", sinal); };
+  }, [carregar]);
   // voltou da página de cartão do Mercado Pago: confere o pagamento
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("pagamento");

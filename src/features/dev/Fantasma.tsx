@@ -10,7 +10,7 @@ import { catalogoChaves, mostrarValor, rotuloChave, ROTULO_TIPO, type ChaveDev, 
 export type Escopo = "global" | "empresa" | "cliente" | "pessoa" | "papel";
 export interface Regra {
   id?: string; chave: string; escopo: Escopo; alvo: string | null; valor: unknown;
-  condicoes: { dias?: number[]; de?: string; ate?: string; papeis?: string[]; teste?: boolean };
+  condicoes: { dias?: number[]; de?: string; ate?: string; papeis?: string[]; teste?: boolean; aparelho?: "app" | "site" };
   porque: string | null; valida_de: string | null; valida_ate: string | null; ativo: boolean;
   versao?: number; alvo_nome?: string | null; vencida?: boolean; autor?: string | null; atualizado_em?: string;
 }
@@ -84,6 +84,7 @@ function resumoCondicoes(c: Regra["condicoes"]) {
   if (c.papeis?.length) p.push(`só ${c.papeis.join(", ")}`);
   if (c.teste === true) p.push("só no modo teste");
   if (c.teste === false) p.push("só no real");
+  if (c.aparelho) p.push(c.aparelho === "app" ? "só no app" : "só no site");
   return p.join(" · ");
 }
 const paraLocal = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
@@ -179,6 +180,9 @@ export function EditorRegra({ inicial, catalogo, onFechar, onSalvou }: { inicial
           })}</div>
           <div className="segmentado" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
             {([[undefined, "Real e teste"], [false, "Só no real"], [true, "Só no modo teste"]] as const).map(([v, n]) => <button key={n} type="button" className={r.condicoes.teste === v ? "ativo" : ""} onClick={() => cond({ teste: v })}>{n}</button>)}
+          </div>
+          <div className="segmentado" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            {([[undefined, "Site e app"], ["app", "Só no app"], ["site", "Só no site"]] as const).map(([v, n]) => <button key={n} type="button" className={r.condicoes.aparelho === v ? "ativo" : ""} onClick={() => cond({ aparelho: v })}>{n}</button>)}
           </div>
           <div className="regra-linha">
             <label className="campo"><span>Começa em</span><input type="datetime-local" value={paraLocal(r.valida_de)} onChange={(e) => muda({ valida_de: deLocal(e.target.value) })} /></label>
@@ -328,7 +332,7 @@ export function ExplicarDev({ catalogo }: { catalogo: ChaveDev[] }) {
         <label className="campo"><span>O quê</span>
           <select value={chave} onChange={(e) => { setChave(e.target.value); setRes(null); }}>
             <option value="">Escolha</option>
-            {(["modulo", "acao", "especial", "ajuste"] as const).map((tp) => (
+            {(["modulo", "acao", "especial", "ajuste", "nivel"] as const).map((tp) => (
               <optgroup key={tp} label={ROTULO_TIPO[tp]}>{catalogo.filter((c) => c.tipo === tp).map((c) => <option key={c.chave} value={c.chave}>{c.rotulo}</option>)}</optgroup>
             ))}
           </select>
@@ -394,6 +398,60 @@ export function MatrizDev() {
         </div>
       )}
       {editando && <EditorRegra inicial={editando} catalogo={catalogo} onFechar={() => setEditando(null)} onSalvou={() => { setEditando(null); void montar(); }} />}
+    </div>
+  );
+}
+
+interface VerComo {
+  perfil: { nome: string; papeis: string[]; modulos: Record<string, boolean>; configuracoes: Record<string, unknown>; organizacao: { nome: string } | null; cargo: { nome: string } | null };
+  permissoes: { ajustes: Record<string, string>; acoes: Record<string, boolean> } | null;
+  novidades: { titulo: string; area: string }[]; avisos: { texto: string }[];
+}
+/** Ver como: o sistema responde para você exatamente como responderia para a pessoa (sem você perder nada). */
+export function VerComoDev() {
+  const catalogo = useCatalogo();
+  const [pessoa, setPessoa] = useState<{ id: string; nome: string } | null>(null);
+  const [v, setV] = useState<VerComo | null>(null);
+  const [busca, setBusca] = useState("");
+  useEffect(() => {
+    if (!pessoa) return;
+    setV(null);
+    void supabase().rpc("dev_ver_como", { p_pessoa: pessoa.id }).then(({ data, error }) => { if (error) toast(erroDev(error.message), "erro"); else setV(data as VerComo); });
+  }, [pessoa]);
+  const rot = (k: string) => rotuloChave(catalogo, k);
+  const desligados = v ? Object.entries(v.perfil.modulos).filter(([, on]) => !on).map(([k]) => k) : [];
+  const ligados = v ? Object.entries(v.perfil.modulos).filter(([, on]) => on).map(([k]) => k) : [];
+  const acoesNao = v?.permissoes ? Object.entries(v.permissoes.acoes ?? {}).filter(([, on]) => !on).map(([k]) => k) : [];
+  const t = busca.trim().toLowerCase();
+  const cfg = v ? Object.entries(v.perfil.configuracoes ?? {}).filter(([k]) => !t || `${k} ${rot(k)}`.toLowerCase().includes(t)) : [];
+  return (
+    <div className="fantasma">
+      <BuscaPessoa valor={pessoa?.id ?? null} nome={pessoa?.nome} rotulo="Ver o sistema como" onEscolher={(id, nome) => setPessoa({ id, nome })} />
+      {!pessoa ? <p className="vazio">Escolha uma pessoa: você vê os módulos, ações, ajustes, avisos e novidades exatamente como chegam para ela.</p> : !v ? <p className="dica">Carregando…</p> : (<>
+        <div className="fantasma-explica">
+          <Ghost size={22} aria-hidden />
+          <p><strong>{v.perfil.nome}</strong> · {v.perfil.papeis.join(", ")}{v.perfil.cargo ? ` · cargo ${v.perfil.cargo.nome}` : ""}{v.perfil.organizacao ? ` · ${v.perfil.organizacao.nome}` : ""}</p>
+        </div>
+        <section className="explicar-dev vidro-sutil">
+          <span className="rotulo">Módulos desligados para esta pessoa ({desligados.length})</span>
+          <div className="regra-dias">{desligados.length ? desligados.map((k) => <span key={k} className="chip">{rot(`modulo:${k}`)}</span>) : <span className="dica">Nenhum: vê tudo que a empresa tem.</span>}</div>
+          <span className="dica">{ligados.length} módulos ligados.</span>
+        </section>
+        {v.permissoes && <section className="explicar-dev vidro-sutil">
+          <span className="rotulo">Ações bloqueadas ({acoesNao.length})</span>
+          <div className="regra-dias">{acoesNao.length ? acoesNao.map((k) => <span key={k} className="chip">{rot(`acao:${k}`)}</span>) : <span className="dica">Nenhuma.</span>}</div>
+        </section>}
+        <section className="explicar-dev vidro-sutil">
+          <span className="rotulo">Avisos e novidades que chegam</span>
+          {v.avisos.length ? v.avisos.map((a, i) => <p key={i}>{a.texto}</p>) : <p className="dica">Nenhum aviso agora.</p>}
+          <p className="dica">{v.novidades.length} novidade(s): {v.novidades.slice(0, 5).map((n) => n.titulo).join(" · ")}</p>
+        </section>
+        <section className="explicar-dev vidro-sutil">
+          <span className="rotulo">Ajustes que o app e o site recebem</span>
+          <label className="busca-mini"><Search size={14} aria-hidden /><input placeholder="Buscar ajuste" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
+          <table className="dev-tabela"><tbody>{cfg.slice(0, 80).map(([k, val]) => <tr key={k}><td>{rot(k)}</td><td><strong>{mostrarValor(val)}</strong></td></tr>)}</tbody></table>
+        </section>
+      </>)}
     </div>
   );
 }

@@ -10,7 +10,8 @@ import { definirMarcaEmpresa, ehPw, useMarcaEmpresa } from "@/features/marca/mar
 import { BotaoTema } from "@/features/tema/BotaoTema";
 import { Toasts } from "@/features/ui/toast";
 import { CriarConta } from "./CriarConta";
-import { AvisosDev, BotaoNovidades } from "@/features/dev/AvisosDev";
+import { AvisosDev, BotaoNovidades, JanelaNovidades } from "@/features/dev/AvisosDev";
+import { useSinais } from "@/features/dev/sinais";
 
 interface Acesso {
   tipo: "cliente" | "gestor" | "cadastro" | "nenhum";
@@ -27,6 +28,8 @@ type Estado = { fase: "carregando" } | { fase: "anonimo" } | { fase: "logado"; a
 export function AreaCliente({ children }: { children: ReactNode }) {
   const marca = useMarcaEmpresa();
   const [estado, setEstado] = useState<Estado>({ fase: "carregando" });
+  // empresa congelada ou regras do Dev: vale na hora
+  useSinais(estado.fase === "logado", (s) => { if (s === "empresa") window.location.reload(); else window.dispatchEvent(new Event("pwex:perfil")); });
   const [cadastrando, setCadastrando] = useState(false);
   // /entrar?criar=1 abre direto o cadastro da empresa
   useEffect(() => {
@@ -135,6 +138,7 @@ export function AreaCliente({ children }: { children: ReactNode }) {
       {ehPw(marca) && <footer className="rodape">
         Um projeto de irmão para irmão! <Heart size={13} aria-label="com amor" className="coracao" fill="currentColor" />
       </footer>}
+      <JanelaNovidades />
       <Toasts />
     </div>
   );

@@ -22,7 +22,9 @@ import { ProvedorTeste } from "@/features/teste/modoTeste";
 import { MenuPerfil } from "./MenuPerfil";
 import { ModoDev } from "@/features/dev/ModoDev";
 import { AreaDev } from "@/features/dev/AreaDev";
-import { AvisosDev, BotaoNovidades } from "@/features/dev/AvisosDev";
+import { useSinais } from "@/features/dev/sinais";
+import { recarregarPermissoes } from "@/features/conta/permissoes";
+import { AvisosDev, JanelaNovidades } from "@/features/dev/AvisosDev";
 import { Tour, type PassoTour } from "@/features/ui/Tour";
 import { ProvedorConta, type ContextoConta, type CorTema, type Papel } from "@/features/conta/conta";
 import { Toasts, toast } from "@/features/ui/toast";
@@ -88,6 +90,8 @@ export function AreaGestor({ children }: { children: ReactNode }) {
     });
   }, [sessao]);
 
+  // o que o Dev muda (empresa congelada, regras, módulos, cargos) vale na hora, sem recarregar a página
+  useSinais(Boolean(sessao), (s) => { if (s === "empresa" || s === "perfil") { setVersaoPerfil((v) => v + 1); recarregarPermissoes(); } });
   const [permSup, setPermSup] = useState<Record<string, boolean> | null>(null);
   const [empresa, setEmpresa] = useState<string | null>(null);
   const [bloqueio, setBloqueio] = useState<{ status: string; motivo: string | null } | null>(null);
@@ -288,7 +292,6 @@ export function AreaGestor({ children }: { children: ReactNode }) {
           </nav>
           <span className="espaco" />
           {dev && <ModoDev />}
-          {contextoConta.modulo("novidades") && <BotaoNovidades />}
           <MenuPerfil
             id={sessao!.user.id}
             email={sessao?.user.email ?? ""}
@@ -335,6 +338,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
         </footer>}
         </div>
       </div>
+      <JanelaNovidades />
       <Toasts />
       </ProvedorTeste>
       </ProvedorConta>

@@ -14,9 +14,10 @@ import { useConfiguracoes } from "@/features/configuracoes/useConfiguracoes";
 import { supabase } from "@/lib/supabase/client";
 import { ESTILOS, useTema } from "@/features/tema/tema";
 import { abrirTour } from "@/features/ui/Tour";
-import { Compass, LifeBuoy } from "lucide-react";
+import { Compass, LifeBuoy, Megaphone } from "lucide-react";
 import { useModoTeste } from "@/features/teste/modoTeste";
 import { useConta } from "@/features/conta/conta";
+import { abrirNovidades } from "@/features/dev/AvisosDev";
 import { SelosCargo } from "@/features/conta/Cargos";
 import { toast } from "@/features/ui/toast";
 import { useFecharNoVoltar } from "@/features/ui/useEtapa";
@@ -128,6 +129,11 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
             <Link href="/gestor/empresa" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
               <Landmark size={17} aria-hidden /> Minha empresa e plano
             </Link>
+          )}
+          {conta.modulo("novidades") && (
+            <button type="button" role="menuitem" className="menu-item" onClick={() => { setAberto(false); abrirNovidades(); }}>
+              <Megaphone size={17} aria-hidden /> O que mudou
+            </button>
           )}
           {(conta.dev || conta.papeis.includes("gestor")) && conta.modulo("auditoria") && (
             <Link href="/gestor/historico" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>

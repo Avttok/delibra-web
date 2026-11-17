@@ -94,3 +94,33 @@ select case when (select count(*) from public.registro_dev) = 0 then 'OK registr
 select set_config('request.uid','00000000-0000-0000-0000-0000000000d1',false) \g /dev/null
 select public.dev_salvar_novidade('{"versao":"Lote 99","area":"gestor","titulo":"Teste"}') as nv \gset
 select case when exists (select 1 from jsonb_array_elements(public.dev_novidades()) n where n ->> 'id' = :'nv') then 'OK novidade criada pelo app' else 'FALHA novidade app' end;
+-- 14. condição de aparelho: sem o cabeçalho do app, vale como site
+reset role;
+insert into public.regras_dev (chave, escopo, alvo, valor, condicoes) values ('raio_chegada_m', 'pessoa', '00000000-0000-0000-0000-0000000000a3', '555', '{"aparelho":"app"}'),
+  ('intervalo_corrida_s', 'pessoa', '00000000-0000-0000-0000-0000000000a3', '7', '{"aparelho":"site"}');
+select case when privado.decide('00000000-0000-0000-0000-0000000000a3', 'raio_chegada_m') is null
+             and privado.decide('00000000-0000-0000-0000-0000000000a3', 'intervalo_corrida_s') ->> 'valor' = '7' then 'OK condição de aparelho' else 'FALHA aparelho' end;
+-- 15. a tela recebe o ajuste já com a regra; ver como
+set role authenticated;
+select set_config('request.uid','00000000-0000-0000-0000-0000000000a3',false) \g /dev/null
+select case when public.meu_perfil() -> 'configuracoes' ->> 'intervalo_corrida_s' = '7' then 'OK regra chega ao perfil da pessoa' else 'FALHA perfil sem regra: ' || coalesce(public.meu_perfil() -> 'configuracoes' ->> 'intervalo_corrida_s', 'nulo') end;
+select set_config('request.uid','00000000-0000-0000-0000-0000000000d1',false) \g /dev/null
+select case when public.dev_ver_como('00000000-0000-0000-0000-0000000000c1') -> 'perfil' -> 'modulos' ->> 'pedidos' = 'false'
+             and public.is_dev() and auth.uid() = '00000000-0000-0000-0000-0000000000d1' then 'OK ver como o cliente (e volta a ser Dev)' else 'FALHA ver como' end;
+-- 16. nível do ajuste para o gestor pela regra
+reset role;
+insert into public.regras_dev (chave, escopo, alvo, valor) values ('nivel:oferta_segundos', 'pessoa', '00000000-0000-0000-0000-0000000000a1', '"oculto"');
+select set_config('request.uid','00000000-0000-0000-0000-0000000000a1',false) \g /dev/null
+select case when privado.nivel_ajuste(null, 'oferta_segundos') = 'oculto' then 'OK nível do ajuste pela regra' else 'FALHA nível' end;
+-- 17. sinais instantâneos (tempo real no site, push no app)
+reset role;
+select set_config('request.uid','00000000-0000-0000-0000-0000000000d1',false) \g /dev/null
+select public.dev_avisar('{"texto":"Agora","nivel":"urgente"}') \g /dev/null
+select public.dev_congelar_empresa(:'ob', true, 'x') \g /dev/null
+select public.dev_congelar_empresa(:'ob', false) \g /dev/null
+select public.dev_derrubar_sessoes('00000000-0000-0000-0000-0000000000a3', null) \g /dev/null
+select case when exists (select 1 from public.sinais where tipo = 'avisos') and exists (select 1 from public.sinais where tipo = 'empresa' and organizacao_id = :'ob')
+             and exists (select 1 from public.sinais where tipo = 'sessao' and pessoa_id = '00000000-0000-0000-0000-0000000000a3') then 'OK sinais instantâneos' else 'FALHA sinais' end;
+set role authenticated;
+select set_config('request.uid','00000000-0000-0000-0000-0000000000b1',false) \g /dev/null
+select case when not exists (select 1 from public.sinais where pessoa_id = '00000000-0000-0000-0000-0000000000a3') then 'OK sinal de outra pessoa não vaza' else 'FALHA sinal vazou' end;

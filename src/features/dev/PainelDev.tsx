@@ -17,7 +17,7 @@ import { toast } from "@/features/ui/toast";
 import { usePathname } from "next/navigation";
 import { areaDoCaminho } from "./AreaDev";
 import { ComandoDev } from "./Comando";
-import { MatrizDev, RegrasDev } from "./Fantasma";
+import { MatrizDev, RegrasDev, VerComoDev } from "./Fantasma";
 import { ExploradorDev, MinhaContaDev, NovidadesDev, RegistroDev } from "./Dados";
 import Link from "next/link";
 
@@ -101,8 +101,8 @@ export function PainelDev() {
       {area === "regras" && <RegrasDev />}
       {area === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
       {area === "permissoes" && (<>
-        <Sub a="perm" opcoes={[["matriz", "Pessoa × permissão"], ["gestores", "O que os gestores podem"]]} />
-        {aba("perm", "matriz") === "matriz" ? <MatrizDev /> : <PermissoesDev />}
+        <Sub a="perm" opcoes={[["matriz", "Pessoa × permissão"], ["vercomo", "Ver como"], ["gestores", "O que os gestores podem"]]} />
+        {aba("perm", "matriz") === "matriz" ? <MatrizDev /> : aba("perm", "matriz") === "vercomo" ? <VerComoDev /> : <PermissoesDev />}
       </>)}
       {area === "ajustes" && (<>
         <Sub a="ajustes" opcoes={[["versao", "Versão do app"], ["integracoes", "Integrações"], ["sistema", "Todos os ajustes"]]} />
