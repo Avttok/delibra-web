@@ -50,3 +50,8 @@ do $$ begin
 exception when others then raise notice 'FALHA ficha: %', sqlerrm; end $$;
 -- 6. tipos de pedido desligados: o gestor só não vê
 select case when (select count(*) from public.tipos_pedido) = 0 then 'OK tipos de pedido desligados' else 'FALHA tipos visíveis' end;
+-- 0049: ficha do motoboy só para ele
+set role authenticated;
+select set_config('request.uid','00000000-0000-0000-0000-0000000000a1',false) \g /dev/null
+do $$ begin perform public.minha_ficha_rota('00000000-0000-0000-0000-0000000000f8'); raise notice 'FALHA ficha de outro motoboy abriu';
+exception when others then if sqlerrm = 'corrida_nao_e_sua' then raise notice 'OK ficha do motoboy só para ele'; else raise notice 'FALHA ficha motoboy: %', sqlerrm; end if; end $$;
