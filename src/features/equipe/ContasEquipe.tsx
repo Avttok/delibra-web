@@ -27,6 +27,9 @@ export const ERROS: Record<string, string> = {
   limite_gestores_do_plano: "A empresa já tem o máximo de gestores. Fale com o suporte da plataforma para liberar mais.",
   limite_supervisores_do_plano: "A empresa já tem o máximo de supervisores. Fale com o suporte da plataforma para liberar mais.",
   limite_motoboys_do_plano: "A empresa já tem o máximo de motoboys do plano. Fale com o suporte da plataforma para liberar mais.",
+  cargo_obrigatorio: "Escolha o cargo da pessoa. Sem cargo cadastrado (Ajustes → Cargos), não dá para criar conta de equipe.",
+  sem_empresa: "Escolha a empresa da conta nova.",
+  sem_permissao: "Você não tem permissão para criar contas.",
 };
 
 export type Vagas = Partial<Record<"gestor" | "supervisor" | "motoboy", { usados: number; limite: number | null; pode: boolean }>>;
@@ -134,16 +137,22 @@ export function NovaConta({ onFechar, onCriada }: { padraoRepasse?: number; onFe
   const pleno = conta.papeis.includes("gestor") || conta.dev;
   const vagas = useVagas();
   useEffect(() => { if (vagas.motoboy?.pode === false) setMotoboy(false); }, [vagas.motoboy?.pode]);
+  // conta de equipe (supervisor) precisa de um cargo da empresa
+  const [cargos, setCargos] = useState<{ id: string; nome: string }[] | null>(null);
+  const [cargo, setCargo] = useState("");
+  useEffect(() => { void supabase().rpc("cargos_da_empresa").then(({ data }) => setCargos(((data ?? []) as { id: string; nome: string }[]))); }, []);
+  const semCargos = cargos != null && cargos.length === 0;
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [criada, setCriada] = useState<{ id: string } | null>(null);
 
   async function criar() {
     setErro(null);
+    if (supervisor && !cargo && !conta.dev) return setErro(ERROS.cargo_obrigatorio);
     setEnviando(true);
     const r = await chamar("/api/equipe/criar", {
       nome, email, senha, papeis: [motoboy && "motoboy", gestor && "gestor", supervisor && "supervisor"].filter(Boolean),
-      repasse: null,
+      repasse: null, cargo_id: supervisor ? cargo || null : null,
     });
     setEnviando(false);
     if (!r.ok) return setErro(r.erro ?? "Não foi possível criar.");
@@ -174,8 +183,18 @@ export function NovaConta({ onFechar, onCriada }: { padraoRepasse?: number; onFe
         <label className="campo"><span>Senha inicial</span><CampoSenha valor={senha} onMudar={setSenha} /></label>
         <span className="rotulo">Papéis</span>
         <OpcaoCargo cargo="motoboy" rotulo="Motoboy (usa o app e recebe corridas)" icone={<Bike size={14} style={{ verticalAlign: -2 }} />} marcado={motoboy} vagas={vagas} onMudar={setMotoboy} />
-        {pleno && <OpcaoCargo cargo="gestor" rotulo="Gestor (dono da empresa: pode tudo)" icone={<ShieldCheck size={14} style={{ verticalAlign: -2 }} />} marcado={gestor} vagas={vagas} onMudar={setGestor} />}
-        {pleno && <OpcaoCargo cargo="supervisor" rotulo="Supervisor (líder de equipe: você escolhe o que ele pode)" icone={<UserCog size={14} style={{ verticalAlign: -2 }} />} marcado={supervisor} vagas={vagas} onMudar={setSupervisor} />}
+        {/* só o Dev cria gestor */}
+        {conta.dev && <OpcaoCargo cargo="gestor" rotulo="Gestor (dono da empresa: pode tudo)" icone={<ShieldCheck size={14} style={{ verticalAlign: -2 }} />} marcado={gestor} vagas={vagas} onMudar={setGestor} />}
+        {pleno && <OpcaoCargo cargo="supervisor" rotulo="Equipe / supervisor (faz o que o cargo dele permite)" icone={<UserCog size={14} style={{ verticalAlign: -2 }} />} marcado={supervisor}
+          vagas={semCargos && !conta.dev ? { ...vagas, supervisor: { usados: vagas.supervisor?.usados ?? 0, limite: vagas.supervisor?.limite ?? null, pode: false } } : vagas} onMudar={setSupervisor} />}
+        {pleno && semCargos && !conta.dev && <p className="dica" style={{ margin: 0 }}>Para criar conta de equipe, cadastre antes um cargo em Configurações → Cargos.</p>}
+        {supervisor && cargos && cargos.length > 0 && (
+          <label className="campo"><span>Cargo *</span>
+            <select value={cargo} onChange={(e) => setCargo(e.target.value)}>
+              <option value="">Escolha o cargo…</option>
+              {cargos.map((k) => <option key={k.id} value={k.id}>{k.nome}</option>)}
+            </select></label>
+        )}
       </div>
       {erro && <p className="erro">{erro}</p>}
       <div className="linha-botoes" style={{ marginTop: 18 }}>

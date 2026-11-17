@@ -108,7 +108,8 @@ export function PainelEquipe() {
         <CabecaPagina icone={Users} titulo="Equipe" subtitulo={lista.length === 1 ? "1 pessoa" : `${lista.length} pessoas`}>
           <AjustesRapidos titulo="Ajustes da equipe e dos motoboys" grupos={["perfil", "app_motoboy", "mb_ve", "veiculo", "penalidades", "emergencia", "jogo", "regiao"]} />
         </CabecaPagina>
-        {conta.modulo("criar_contas") && <button className="botao-ouro" onClick={() => setCriando(true)}><UserPlus size={17} aria-hidden /> Nova conta</button>}
+        {conta.modulo("criar_contas") ? <button className="botao-ouro" onClick={() => setCriando(true)}><UserPlus size={17} aria-hidden /> Nova conta</button>
+          : <p className="dica" style={{ margin: 0 }}><UserPlus size={13} aria-hidden style={{ verticalAlign: -2 }} /> Criar contas está desligado para esta empresa. Peça ao suporte da plataforma (Dev → Módulos).</p>}
         {criando && (
           <NovaConta padraoRepasse={Number(cfg.repasse_motoboy_pct)} onFechar={() => setCriando(false)}
             onCriada={async (id) => { setCriando(false); await carregar(); setSel(id); setAba("editar"); }} />

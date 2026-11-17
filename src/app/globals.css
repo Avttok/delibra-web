@@ -2295,3 +2295,5 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .modal-ajustes { max-width: 640px; display: grid; gap: 10px; } .ajustes-rapidos-botao { margin-left: auto; }
 .hist-ficha.compacta .hist-duas { grid-template-columns: 1fr; } .hist-ficha.compacta .formulario { padding: 14px; } .abas-detalhe { display: flex; flex-wrap: wrap; gap: 4px; } .abas-detalhe button { display: inline-flex; align-items: center; gap: 5px; }
 .rotas-de { display: grid; gap: 10px; } .modal-ficha { max-width: 980px; }
+.mapa-botao-plano { width: auto !important; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 600; }
+.mapa-botao-plano:not(.ativo) span { text-decoration: line-through; opacity: .75; }

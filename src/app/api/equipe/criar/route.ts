@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const gestor = await gestorDaRequisicao(req);
   if (!gestor) return Response.json({ erro: "apenas_gestor" }, { status: 403 });
 
-  let c: { email?: string; senha?: string; nome?: string; papeis?: string[]; repasse?: number | null; empresa_id?: string | null; organizacao_id?: string | null };
+  let c: { email?: string; senha?: string; nome?: string; papeis?: string[]; repasse?: number | null; empresa_id?: string | null; organizacao_id?: string | null; cargo_id?: string | null };
   try { c = await req.json(); } catch { return Response.json({ erro: "json_invalido" }, { status: 400 }); }
 
   const email = String(c.email ?? "").trim().toLowerCase();
@@ -54,6 +54,15 @@ export async function POST(req: Request) {
   }
 
   const admin = supabaseAdmin();
+  // conta de equipe (supervisor) só nasce com um cargo da empresa: sem cargo cadastrado, não dá para criar
+  let cargo: { id: string; permissoes: unknown } | null = null;
+  if (papeis.includes("supervisor")) {
+    if (uuidValido(c.cargo_id) && organizacaoId) {
+      const { data: k } = await admin.from("cargos").select("id,permissoes").eq("id", c.cargo_id).eq("organizacao_id", organizacaoId).maybeSingle();
+      cargo = (k as { id: string; permissoes: unknown } | null) ?? null;
+    }
+    if (!cargo && !dev) return Response.json({ erro: "cargo_obrigatorio" }, { status: 400 });
+  }
   const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome } });
   if (error || !data.user) {
     const existe = /already|registered|exists/i.test(error?.message ?? "");
@@ -62,7 +71,8 @@ export async function POST(req: Request) {
   const id = data.user.id;
 
   // perfil nasce pelo gatilho do banco; aqui só definimos nome e papéis
-  const p = await admin.from("perfis").upsert({ id, nome, papeis, organizacao_id: organizacaoId, responsavel_id: gestor, ...(empresaId ? { empresa_id: empresaId } : {}) });
+  const p = await admin.from("perfis").upsert({ id, nome, papeis, organizacao_id: organizacaoId, responsavel_id: gestor, ...(empresaId ? { empresa_id: empresaId } : {}),
+    ...(cargo ? { cargo_id: cargo.id, permissoes: cargo.permissoes ?? {} } : {}) });
   if (p.error) {
     await admin.auth.admin.deleteUser(id).catch(() => null);
     const limite = /limite_\w+_do_plano|apenas_dev_cria_gestor/.exec(p.error.message)?.[0];

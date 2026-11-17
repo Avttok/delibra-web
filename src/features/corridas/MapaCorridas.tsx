@@ -379,7 +379,7 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
       {temPlano && (
         <button type="button" className={`mapa-botao mapa-botao-plano${verPlano ? " ativo" : ""}`} aria-pressed={verPlano}
           title={verPlano ? "Esconder a rota planejada" : "Mostrar a rota planejada"} onClick={() => trocarPlano(!verPlano)}>
-          {verPlano ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}
+          {verPlano ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />} <span>Rota planejada</span>
         </button>
       )}
       {legenda && comFeito && (
