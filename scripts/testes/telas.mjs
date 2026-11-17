@@ -16,6 +16,8 @@ const PAGINAS = [
   // área logada sem sessão: tem que mandar para o login, não quebrar
   { url: "/gestor", texto: /./ },
   { url: "/gestor/pedidos", texto: /./ },
+  { url: "/gestor/dev/regras", texto: /./ },
+  { url: "/dev", texto: /./ },
   { url: "/ajuda", texto: /./ },
 ];
 // avisos de rede/sessão sem banco no teste não contam como erro da tela

@@ -1,5 +1,6 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
 import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { BotaoRastreio } from "@/features/avaliacoes/Avaliacao";
 import { PacotesPonto, pacotesDoPonto } from "./Pacotes";
@@ -159,6 +160,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar, onEditar }: {
   p: Pedido; cliente: string; categorias: Categoria[]; rotas: { corrida_id: string; numero: number; status: string; motoboy_id?: string | null }[]; onFechar: () => void; onEditar: () => void;
 }) {
   const equipe = useEquipe();
+  const conta = useConta();
   const cfg = useConfiguracoes();
   const [valor, setValor] = useState(String(p.valor ?? "").replace(".", ","));
   const [motivo, setMotivo] = useState(p.ajuste_motivo ?? "");
@@ -325,7 +327,7 @@ function DetalhePedido({ p, cliente, categorias, rotas, onFechar, onEditar }: {
           <label className="campo" style={{ flex: 2 }}><span>Motivo do ajuste</span><input placeholder="Ex.: desconto de cliente fiel, volume a mais na coleta…" value={motivo} onChange={(e) => setMotivo(e.target.value)} /></label>
         </div>
         <p className="dica" style={{ margin: 0 }}>
-          Calculado {moedaBr(p.valor_calculado)}{p.valor_ajuste ? ` · ajuste ${p.valor_ajuste > 0 ? "+" : ""}${moedaBr(p.valor_ajuste)}` : ""} · Dev {moedaBr(p.valor_dev)} ·
+          Calculado {moedaBr(p.valor_calculado)}{p.valor_ajuste ? ` · ajuste ${p.valor_ajuste > 0 ? "+" : ""}${moedaBr(p.valor_ajuste)}` : ""} ·{conta.dev && ` plataforma ${moedaBr(p.valor_dev)} ·`}
           {p.cobranca === "credito" ? (p.fatura_id ? " já na fatura" : " entra na próxima fatura") : p.pagamento_status === "pago" ? ` pago (${p.pagamento_metodo ?? ""})` : " pagamento antecipado pendente"}
         </p>
         {p.cobranca === "pre_pago" && p.pagamento_status === "pendente" && !finalizado && (

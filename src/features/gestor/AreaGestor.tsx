@@ -21,6 +21,8 @@ import { useEstabelecimentos } from "@/lib/mapa/estabelecimentos";
 import { ProvedorTeste } from "@/features/teste/modoTeste";
 import { MenuPerfil } from "./MenuPerfil";
 import { ModoDev } from "@/features/dev/ModoDev";
+import { AreaDev } from "@/features/dev/AreaDev";
+import { AvisosDev, BotaoNovidades } from "@/features/dev/AvisosDev";
 import { Tour, type PassoTour } from "@/features/ui/Tour";
 import { ProvedorConta, type ContextoConta, type CorTema, type Papel } from "@/features/conta/conta";
 import { Toasts, toast } from "@/features/ui/toast";
@@ -214,7 +216,8 @@ export function AreaGestor({ children }: { children: ReactNode }) {
   const contextoConta = useMemo<ContextoConta>(() => ({
     id: sessao?.user.id ?? "",
     papeis, dev, corTema, modulos,
-    modulo: (m) => dev || modulos[m] !== false,
+    // o servidor já resolve o Dev (ele só perde o que ele mesmo desligou para si)
+    modulo: (m) => modulos[m] !== false,
     definirCor: async (c) => {
       const { error } = await supabase().rpc("definir_cor_tema", { p_cor: c });
       if (error) return error.message.includes("apenas_dev") ? "Só o Dev pode usar o tema vermelho." : error.message;
@@ -251,16 +254,29 @@ export function AreaGestor({ children }: { children: ReactNode }) {
 
   const exibido = nome || sessao?.user.email?.split("@")[0] || "Gestor";
 
+  // Delibra Dev: a terceira parte do sistema, com cara e navegação próprias
+  if (caminho?.startsWith("/gestor/dev"))
+    return (
+      <ContextoSessao.Provider value={sessao}>
+        <ProvedorConta valor={{ ...contextoConta, corTema: dev ? "vermelho" : contextoConta.corTema }}>
+          <ProvedorTeste valor={contextoTeste}>
+            <AreaDev nome={exibido}><ExigirDoisPassos />{children}</AreaDev>
+            <Toasts />
+          </ProvedorTeste>
+        </ProvedorConta>
+      </ContextoSessao.Provider>
+    );
+
   return (
     <ContextoSessao.Provider value={sessao}>
       <ProvedorConta valor={contextoConta}>
       <ProvedorTeste valor={contextoTeste}>
       <div className="painel">
-        <Tour id="gestor" passos={TOUR_GESTOR} />
+        {contextoConta.modulo("tour") && <Tour id="gestor" passos={TOUR_GESTOR} />}
         <header className="topo vidro">
           <Link href="/gestor/mapa" aria-label="Delibra, início" className="topo-marca"><Logo />{empresa && !marca?.logo && !marca?.nomeApp && <span className="topo-empresa">{empresa}</span>}</Link>
           <nav className="abas">
-            {ABAS.map((a) => (a.href === "/gestor/clientes" && permSup && permSup.clientes === false ? { ...a, href: "/gestor/equipe" } : a)).filter((a) => (a.href !== "/gestor/carteira" || (contextoConta.modulo("carteira") && perm.pode("ver_carteira"))) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
+            {ABAS.filter((a) => (a.href !== "/gestor/inicio" || contextoConta.modulo("painel_dia")) && (a.href !== "/gestor/mapa" || contextoConta.modulo("mapa_ao_vivo"))).map((a) => (a.href === "/gestor/clientes" && permSup && permSup.clientes === false ? { ...a, href: "/gestor/equipe" } : a)).filter((a) => (a.href !== "/gestor/carteira" || (contextoConta.modulo("carteira") && perm.pode("ver_carteira"))) && (a.href !== "/gestor/chat" || contextoConta.modulo("chat"))
               // supervisor: só o que o gestor liberou
               && (!permSup || ((a.href !== "/gestor/carteira" || permSup.financeiro === true) && (a.href !== "/gestor/configuracoes" || permSup.ajustes === true)
                   && (a.href !== "/gestor/mapa" || permSup.mapa !== false)))).map(({ href, rotulo, icone: Icone }) => (
@@ -272,6 +288,7 @@ export function AreaGestor({ children }: { children: ReactNode }) {
           </nav>
           <span className="espaco" />
           {dev && <ModoDev />}
+          {contextoConta.modulo("novidades") && <BotaoNovidades />}
           <MenuPerfil
             id={sessao!.user.id}
             email={sessao?.user.email ?? ""}
@@ -296,9 +313,9 @@ export function AreaGestor({ children }: { children: ReactNode }) {
             ))}
           </nav>
         )}
-        <EmergenciasAbertas />
-        <ChamadosPendentes />
-        <ChamadoUrgente />
+        <AvisosDev />
+        {contextoConta.modulo("emergencia") && <EmergenciasAbertas />}
+        {contextoConta.modulo("penalidades") && <><ChamadosPendentes /><ChamadoUrgente /></>}
         <AceiteTermos origem="gestor" />
         <div className="corpo" data-gaveta={telaDeMapa ? gaveta : undefined}>
           {children}

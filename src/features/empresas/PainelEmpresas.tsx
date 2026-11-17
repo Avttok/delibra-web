@@ -1,5 +1,7 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
+
 import { RotasDe } from "@/features/corridas/HistoricoRotas";
 import { AjustesRapidos } from "@/features/configuracoes/AjustesRapidos";
 import { BotaoCompartilhar } from "@/features/chat/PaginaChat";
@@ -136,6 +138,7 @@ function AcessosCliente({ empresaId, nome }: { empresaId: string; nome: string }
 }
 
 export function PainelEmpresas() {
+  const contaH = useConta();
   const cfgGeral = useConfiguracoes() as unknown as Record<string, unknown>;
   const cfgRepasse = Number(cfgGeral.repasse_motoboy_pct ?? 67.5);
   const { empresas, favoritos, recarregar } = useEmpresas();
@@ -352,7 +355,7 @@ export function PainelEmpresas() {
               <div className="segmentado segmentado-rolavel" style={{ maxWidth: 520 }}>
                 <button type="button" className={aba === "cadastro" ? "ativo" : ""} onClick={() => setAba("cadastro")}><Building2 size={14} aria-hidden /> Cadastro</button>
                 <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={14} aria-hidden /> Regras</button>
-                <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Route size={14} aria-hidden /> Rotas</button>
+                {contaH.modulo("historico_rotas") && <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Route size={14} aria-hidden /> Rotas</button>}
                 <button type="button" className={aba === "zonas" ? "ativo" : ""} onClick={() => setAba("zonas")}><CircleDot size={14} aria-hidden /> Zonas</button>
                 <button type="button" className={aba === "penalidades" ? "ativo" : ""} onClick={() => setAba("penalidades")}><Gavel size={14} aria-hidden /> Penalidades</button>
                 {perm.pode("integracao_api") && <button type="button" className={aba === "api" ? "ativo" : ""} onClick={() => setAba("api")}><Webhook size={14} aria-hidden /> API</button>}

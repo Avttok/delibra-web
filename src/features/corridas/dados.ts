@@ -105,6 +105,7 @@ export function traduzirErro(msg: string | undefined): string {
   const mapa: Record<string, string> = {
     apenas_gestor: "Apenas gestores podem fazer isso.",
     acao_bloqueada: "A plataforma não liberou isso para gestores.",
+    modulo_desligado: "Esta parte do sistema está desligada pela plataforma.",
     ajuste_bloqueado: "Este ajuste está travado pela plataforma.",
     corrida_precisa_de_2_paradas: "A corrida precisa de pelo menos uma coleta e uma entrega.",
     primeira_parada_deve_ser_coleta: "A primeira parada precisa ser uma coleta.",

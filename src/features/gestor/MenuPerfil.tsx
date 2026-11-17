@@ -129,7 +129,7 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
               <Landmark size={17} aria-hidden /> Minha empresa e plano
             </Link>
           )}
-          {(conta.dev || conta.papeis.includes("gestor")) && (
+          {(conta.dev || conta.papeis.includes("gestor")) && conta.modulo("auditoria") && (
             <Link href="/gestor/historico" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
               <History size={17} aria-hidden /> Histórico de mudanças
             </Link>
@@ -137,8 +137,8 @@ export function MenuPerfil({ id, email, nome, foto, onSair, onPerfilSalvo }: Pro
           {conta.dev && (
             <div className="menu-grupo" role="group" aria-label="Dev">
               <span className="menu-grupo-titulo"><CodeXml size={13} aria-hidden /> Dev</span>
-              <Link href="/gestor/dev" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
-                <CodeXml size={17} aria-hidden /> Console Dev
+              <Link href="/gestor/dev/comando" role="menuitem" className="menu-item" onClick={() => setAberto(false)}>
+                <CodeXml size={17} aria-hidden /> Delibra Dev
               </Link>
               <label className="menu-item menu-teste">
                 <Palette size={17} aria-hidden />

@@ -55,6 +55,7 @@ const ERROS: Record<string, string> = {
   veiculo_nao_serve: "Esta rota pede outro tipo de veículo.",
   campo_repetido: "Já existe um campo com esse nome.",
   acao_bloqueada: "A plataforma não liberou isso para gestores.",
+  modulo_desligado: "Esta parte do sistema está desligada pela plataforma.",
   ajuste_bloqueado: "Este ajuste está travado pela plataforma.",
   cliente_sem_agendado: "Esta conta não faz pedidos agendados (libere em Ajustes → Clientes).",
   agendamento_longe_demais: "Data longe demais: escolha um dia mais perto.",

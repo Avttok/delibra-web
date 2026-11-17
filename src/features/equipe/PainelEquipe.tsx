@@ -36,6 +36,7 @@ interface Membro {
 }
 
 export function PainelEquipe() {
+  const contaH = useConta();
   const cfg = useConfiguracoes();
   const eu = useSessaoGestor()?.user.id;
   const [lista, setLista] = useState<Membro[]>([]);
@@ -167,7 +168,7 @@ export function PainelEquipe() {
               <div className="segmentado segmentado-rolavel">
                 <button type="button" className={aba === "registro" ? "ativo" : ""} onClick={() => setAba("registro")}><History size={15} aria-hidden /> Registro</button>
                 {m.papeis.includes("motoboy") && conta.modulo("trilhas_mapa") && <button type="button" className={aba === "percursos" ? "ativo" : ""} onClick={() => setAba("percursos")}><Route size={15} aria-hidden /> Percursos</button>}
-                {m.papeis.includes("motoboy") && <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Package size={15} aria-hidden /> Rotas</button>}
+                {m.papeis.includes("motoboy") && contaH.modulo("historico_rotas") && <button type="button" className={aba === "rotas" ? "ativo" : ""} onClick={() => setAba("rotas")}><Package size={15} aria-hidden /> Rotas</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "veiculo" ? "ativo" : ""} onClick={() => setAba("veiculo")}><Bike size={15} aria-hidden /> Veículo</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "medalhas" ? "ativo" : ""} onClick={() => setAba("medalhas")}><Trophy size={15} aria-hidden /> Medalhas</button>}
                 {m.papeis.includes("motoboy") && <button type="button" className={aba === "regras" ? "ativo" : ""} onClick={() => setAba("regras")}><Layers size={15} aria-hidden /> Regras</button>}

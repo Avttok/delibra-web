@@ -1,5 +1,6 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CheckCircle2, Download, FilePlus2, Receipt, Send, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
@@ -22,6 +23,7 @@ const hojeIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 600
 
 /** Faturas dos clientes no crédito: geradas por ciclo (ou à mão), revisadas, emitidas e baixadas. */
 export function Faturas() {
+  const conta = useConta();
   const { teste } = useModoTeste();
   const { empresas } = useEmpresas();
   const [faturas, setFaturas] = useState<Fatura[]>([]);
@@ -104,13 +106,13 @@ export function Faturas() {
       )}
       <div className="dev-rolagem">
         <table className="tabela tabela-clicavel">
-          <thead><tr><th>Nº</th><th>Cliente</th><th>Período</th><th>Situação</th><th>Vence</th><th>Total</th><th>Dev</th></tr></thead>
+          <thead><tr><th>Nº</th><th>Cliente</th><th>Período</th><th>Situação</th><th>Vence</th><th>Total</th>{conta.dev && <th>Plataforma</th>}</tr></thead>
           <tbody>
             {faturas.map((f) => (
               <tr key={f.id} className={sel === f.id ? "ativo" : ""} onClick={() => setSel(sel === f.id ? null : f.id)}>
                 <td>{f.numero}</td><td>{nome(f.empresa_id)}</td><td>{data(f.inicio)}–{data(f.fim)}</td>
                 <td><span className="selo" style={{ color: COR[f.status] }}>{ROT[f.status]}</span></td><td>{data(f.vencimento)}</td>
-                <td><strong>{moedaBr(f.total)}</strong></td><td>{moedaBr(f.valor_dev)}</td>
+                <td><strong>{moedaBr(f.total)}</strong></td>{conta.dev && <td>{moedaBr(f.valor_dev)}</td>}
               </tr>
             ))}
           </tbody>

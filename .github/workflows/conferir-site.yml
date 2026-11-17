@@ -19,6 +19,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Tudo no painel do Dev (módulos, ajustes, permissões especiais)
+        run: node scripts/checar-controle-dev.mjs
       - name: Tipos
         run: npx tsc --noEmit -p .
       - name: Compilar

@@ -1,5 +1,7 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
+
 import { useEffect, useState } from "react";
 import { Boxes, Check, ChevronDown, Flame, MapPinned, Package, RotateCcw, Route, Scale, Sparkles, Timer, Wallet, Waypoints } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -68,7 +70,8 @@ export function ValorCliente({ pedidoId, orc, regrasIniciais, bloqueado, onMudou
   const [previa, setPrevia] = useState<Orcamento | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const mudou = JSON.stringify(regras) !== JSON.stringify(salvas);
-  const pode = !bloqueado && perm.pode("editar_valor_pedido");
+  const contaV = useConta();
+  const pode = !bloqueado && perm.pode("editar_valor_pedido") && contaV.modulo("orcamento_editavel");
 
   useEffect(() => {
     if (!mudou) { setPrevia(null); return; }

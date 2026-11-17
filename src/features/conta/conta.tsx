@@ -10,7 +10,11 @@ export type CorTema = "ouro" | "vermelho";
 export type Modulo =
   | "corridas_planejadas" | "pontos_referencia" | "excluir_corridas" | "modo_teste" | "criar_contas"
   | "carteira" | "trilhas_mapa" | "estabelecimentos" | "atualizacao_app"
-  | "chat" | "navegacao" | "extensao_rota" | "orcamento_editavel" | "objetos_cliente";
+  | "chat" | "navegacao" | "extensao_rota" | "orcamento_editavel" | "objetos_cliente"
+  | "pedidos" | "editar_pedido" | "tipos_pedido" | "itens_pedido" | "pedido_urgente" | "series"
+  | "historico_rotas" | "ficha_rota" | "rota_planejada" | "pular_parada" | "comprovantes" | "rastreio" | "avaliacoes"
+  | "painel_dia" | "mapa_ao_vivo" | "cargos" | "penalidades" | "emergencia" | "holerite" | "faturas" | "pagamento_online" | "precos"
+  | "api_externa" | "campos_personalizados" | "auditoria" | "ajuda" | "tour" | "novidades" | "dois_passos" | "avisos";
 
 export interface ContextoConta {
   id: string;

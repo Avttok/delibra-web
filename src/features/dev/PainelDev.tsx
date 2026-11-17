@@ -4,7 +4,7 @@ import { IntegracoesDev } from "./Integracoes";
 
 import { useCallback, useEffect, useState } from "react";
 import { PagamentosDev } from "@/features/pagamentos/PagamentosDev";
-import { Building2, MessagesSquare, Wallet, BatteryMedium, Bell, BellOff, Bike, CodeXml, Eraser, FlaskConical, History, LayoutDashboard, Rocket, ShieldCheck, Smartphone, Timer, ToggleRight, UserRound, Plug, Activity, Users } from "lucide-react";
+import { Bike, ShieldCheck, UserRound } from "lucide-react";
 import { ApagarTudo } from "./ApagarTudo";
 import { AparelhosDev, ModulosDev, TarefasDev, type Aparelho, type Tarefa } from "./DevExtras";
 import { VersaoApp } from "./VersaoApp";
@@ -12,10 +12,14 @@ import { ConversasDev, DevOculto, EmpresasDev, FaturamentoDev } from "./Platafor
 import { SaudeDev, UsuariosDev } from "./UsuariosDev";
 import { PermissoesDev } from "./PermissoesDev";
 import { supabase } from "@/lib/supabase/client";
-import { CabecaPagina } from "@/features/ui/CabecaPagina";
 import { useConta, type Papel } from "@/features/conta/conta";
 import { toast } from "@/features/ui/toast";
-import { useEtapa } from "@/features/ui/useEtapa";
+import { usePathname } from "next/navigation";
+import { areaDoCaminho } from "./AreaDev";
+import { ComandoDev } from "./Comando";
+import { MatrizDev, RegrasDev } from "./Fantasma";
+import { ExploradorDev, MinhaContaDev, NovidadesDev, RegistroDev } from "./Dados";
+import Link from "next/link";
 
 interface ModuloLinha { chave: string; nome: string; descricao: string | null; grupo: string; ligado: boolean; papeis: Papel[] | null; ordem: number }
 interface Painel {
@@ -37,30 +41,10 @@ const PAPEIS_MODULO: { p: Papel; rotulo: string; icone: typeof Bike }[] = [
   { p: "gestor", rotulo: "Gestores", icone: ShieldCheck }, { p: "motoboy", rotulo: "Motoboys", icone: Bike }, { p: "cliente", rotulo: "Clientes", icone: UserRound },
 ];
 
-type Aba = "permissoes" | "empresas" | "usuarios" | "saude" | "faturamento" | "pagamentos" | "conversas" | "sistema" | "modulos" | "versao" | "aparelhos" | "tarefas" | "registro" | "apagar" | "integracoes";
-const GRUPOS_DEV: { titulo: string; abas: { id: Aba; rotulo: string; icone: typeof Bike }[] }[] = [
-  { titulo: "Agora", abas: [
-    { id: "sistema", rotulo: "Visão geral", icone: LayoutDashboard }, { id: "saude", rotulo: "Saúde do sistema", icone: Activity },
-    { id: "aparelhos", rotulo: "Aparelhos", icone: Smartphone }, { id: "tarefas", rotulo: "Tarefas automáticas", icone: Timer }] },
-  { titulo: "Negócio", abas: [
-    { id: "empresas", rotulo: "Empresas", icone: Building2 }, { id: "usuarios", rotulo: "Usuários", icone: Users },
-    { id: "permissoes", rotulo: "Permissões dos gestores", icone: ShieldCheck },
-    { id: "faturamento", rotulo: "Faturamento", icone: Wallet }, { id: "pagamentos", rotulo: "Pagamentos", icone: Wallet }] },
-  { titulo: "Sistema", abas: [
-    { id: "modulos", rotulo: "Módulos", icone: ToggleRight }, { id: "integracoes", rotulo: "Integrações", icone: Plug }, { id: "versao", rotulo: "Versão do app", icone: Rocket },
-    { id: "conversas", rotulo: "Conversas", icone: MessagesSquare }, { id: "registro", rotulo: "Registro", icone: History }, { id: "apagar", rotulo: "Apagar", icone: Eraser }] },
-];
-
-function ha(iso: string | null) {
-  if (!iso) return "—";
-  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  return s < 60 ? "agora" : s < 3600 ? `há ${Math.floor(s / 60)} min` : s < 86400 ? `há ${Math.floor(s / 3600)} h` : `há ${Math.floor(s / 86400)} d`;
-}
-
-/** Console do Dev: o sistema inteiro à vista, módulos liga/desliga e quem vê cada um. */
+/** Delibra Dev: cada área do console. A navegação fica no AreaDev; aqui só o conteúdo. */
 export function PainelDev() {
   const conta = useConta();
-  const [aba, setAba] = useEtapa<Aba>("dev-aba", "sistema");
+  const area = areaDoCaminho(usePathname());
   const [oculto, setOculto] = useState(false);
   const lerOculto = useCallback(() => {
     void supabase().auth.getUser().then(({ data: u }) => supabase().from("perfis").select("dev_oculto").eq("id", u.user?.id ?? "").maybeSingle()
@@ -70,10 +54,15 @@ export function PainelDev() {
   const [modulos, setModulos] = useState<ModuloLinha[]>([]);
   const [painel, setPainel] = useState<Painel | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [sub, setSub] = useState<Record<string, string>>({});
+  const aba = (a: string, padrao: string) => sub[a] ?? padrao;
+  const Sub = ({ a, opcoes }: { a: string; opcoes: [string, string][] }) => (
+    <div className="filtro dev-sub">{opcoes.map(([k, r]) => <button key={k} className={aba(a, opcoes[0][0]) === k ? "ativo" : ""} onClick={() => setSub({ ...sub, [a]: k })}>{r}</button>)}</div>
+  );
 
   const carregar = useCallback(async () => {
     const sb = supabase();
-    const [m, p] = await Promise.all([sb.from("modulos").select("*").order("ordem"), sb.rpc("painel_dev")]);
+    const [m, p] = await Promise.all([sb.from("modulos").select("*").order("grupo").order("ordem"), sb.rpc("painel_dev")]);
     if (m.error || p.error) return setErro((m.error ?? p.error)!.message);
     setModulos(m.data as ModuloLinha[]);
     setPainel(p.data as Painel);
@@ -87,74 +76,68 @@ export function PainelDev() {
     toast(`${m.nome}: ${ligado ? "ligado" : "desligado"}${papeis?.length ? ` · só ${papeis.map((p) => PAPEIS_MODULO.find((x) => x.p === p)?.rotulo.toLowerCase()).join(", ")}` : ""}`, "ok");
     conta.recarregar();
   }
-
-  if (!conta.dev) {
-    return <main className="conteudo"><div className="formulario vidro"><p className="erro">Esta área é só do Dev.</p></div></main>;
-  }
+  if (!conta.dev) return null;
 
   return (
-    <>
-      <aside className="lateral entrar">
-        <CabecaPagina icone={CodeXml} titulo="Console Dev" subtitulo="O sistema inteiro, sem filtro" />
-        <nav className="dev-nav" aria-label="Áreas do Dev">
-          {GRUPOS_DEV.map((g) => (
-            <div key={g.titulo} className="dev-nav-grupo">
-              <span>{g.titulo}</span>
-              {g.abas.map((a) => (
-                <button key={a.id} type="button" className={aba === a.id ? "ativo" : ""} aria-current={aba === a.id ? "page" : undefined} onClick={() => setAba(a.id)}>
-                  <a.icone size={15} aria-hidden /> {a.rotulo}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <button className="botao-texto" onClick={() => void carregar()}>Atualizar números</button>
-        <p className="dica">Cada empresa cadastra a própria equipe. A conta do Dev só você mesmo altera.</p>
-        {erro && <p className="erro">{erro}</p>}
-      </aside>
-      <main className="conteudo">
-        <div className="formulario vidro entrar">
-          {aba === "empresas" && <EmpresasDev />}
-          {aba === "faturamento" && <FaturamentoDev />}
-          {aba === "pagamentos" && <PagamentosDev />}
-          {aba === "conversas" && <ConversasDev />}
-          {aba === "usuarios" && <UsuariosDev />}
-          {aba === "permissoes" && <PermissoesDev />}
-          {aba === "saude" && <SaudeDev />}
-          {aba === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
-          {aba === "integracoes" && <IntegracoesDev />}
-          {aba === "versao" && <VersaoApp />}
-          {aba === "sistema" && <DevOculto oculto={oculto} onMudou={lerOculto} />}
-          {aba === "sistema" && painel && (<>
-            {CONTAGENS.map((g) => (
-              <section key={g.titulo} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span className="rotulo">{g.titulo}</span>
-                <div className="dev-grade">
-                  {g.itens.map(([k, r, f]) => {
-                    const v = Number(painel.contagens[k] ?? 0);
-                    return <div key={k} className="dev-num"><strong>{f === "r$" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : f === "mb" ? `${v.toLocaleString("pt-BR")} MB` : v.toLocaleString("pt-BR")}</strong><span>{r}</span></div>;
-                  })}
-                </div>
-              </section>
-            ))}
-          </>)}
-          {aba === "aparelhos" && painel && <AparelhosDev aparelhos={painel.aparelhos as Aparelho[]} />}
-          {aba === "apagar" && <ApagarTudo />}
-          {aba === "tarefas" && painel && <TarefasDev tarefas={(painel.tarefas ?? []) as Tarefa[]} onMudou={() => void carregar()} />}
-          {aba === "registro" && painel && (
-            painel.exclusoes.length === 0 ? <p className="vazio">Nada apagado até agora.</p> : (
-              <table className="dev-tabela">
-                <thead><tr><th>O quê</th><th>Por</th><th>Quando</th><th>Motivo</th></tr></thead>
-                <tbody>{painel.exclusoes.map((x, i) => (
-                  <tr key={i}><td>{x.tipo === "conta" ? "Conta" : "Corrida"} {x.rotulo}</td><td>{x.por ?? "—"}</td><td>{new Date(x.quando).toLocaleString("pt-BR")}</td><td>{x.motivo ?? "—"}</td></tr>
-                ))}</tbody>
-              </table>
-            )
-          )}
-          {!painel && !erro && !["versao", "apagar", "empresas", "faturamento", "pagamentos", "conversas", "usuarios", "saude", "permissoes", "modulos", "integracoes"].includes(aba) && <p className="dica">Carregando…</p>}
-        </div>
-      </main>
-    </>
+    <div className="dev-area">
+      {erro && <p className="erro">{erro}</p>}
+      {area === "comando" && <ComandoDev />}
+      {area === "sistema" && (<>
+        <Sub a="sistema" opcoes={[["numeros", "Números"], ["saude", "Saúde"], ["aparelhos", "Aparelhos"], ["tarefas", "Tarefas automáticas"], ["apagar", "Apagar"]]} />
+        {aba("sistema", "numeros") === "numeros" && (painel ? CONTAGENS.map((g) => (
+          <section key={g.titulo} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span className="rotulo">{g.titulo}</span>
+            <div className="dev-grade">{g.itens.map(([k, r, f]) => {
+              const v = Number(painel.contagens[k] ?? 0);
+              return <div key={k} className="dev-num"><strong>{f === "r$" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : f === "mb" ? `${v.toLocaleString("pt-BR")} MB` : v.toLocaleString("pt-BR")}</strong><span>{r}</span></div>;
+            })}</div>
+          </section>
+        )) : <p className="dica">Carregando…</p>)}
+        {aba("sistema", "numeros") === "saude" && <SaudeDev />}
+        {aba("sistema", "numeros") === "aparelhos" && painel && <AparelhosDev aparelhos={painel.aparelhos as Aparelho[]} />}
+        {aba("sistema", "numeros") === "tarefas" && painel && <TarefasDev tarefas={(painel.tarefas ?? []) as Tarefa[]} onMudou={() => void carregar()} />}
+        {aba("sistema", "numeros") === "apagar" && <ApagarTudo />}
+      </>)}
+      {area === "regras" && <RegrasDev />}
+      {area === "modulos" && <ModulosDev modulos={modulos} onSalvar={salvar} />}
+      {area === "permissoes" && (<>
+        <Sub a="perm" opcoes={[["matriz", "Pessoa × permissão"], ["gestores", "O que os gestores podem"]]} />
+        {aba("perm", "matriz") === "matriz" ? <MatrizDev /> : <PermissoesDev />}
+      </>)}
+      {area === "ajustes" && (<>
+        <Sub a="ajustes" opcoes={[["versao", "Versão do app"], ["integracoes", "Integrações"], ["sistema", "Todos os ajustes"]]} />
+        {aba("ajustes", "versao") === "versao" && <VersaoApp />}
+        {aba("ajustes", "versao") === "integracoes" && <IntegracoesDev />}
+        {aba("ajustes", "versao") === "sistema" && (
+          <div className="explicar-dev vidro-sutil">
+            <p>Os ajustes de todo o sistema (e os só do Dev) ficam na tela de Ajustes. Com uma empresa em foco, o que você salva vale só para ela.</p>
+            <Link className="botao-ouro" href="/gestor/configuracoes">Abrir os Ajustes</Link>
+            <p className="dica">Para mudar um ajuste só para uma pessoa, um cliente ou um cargo, use as Regras do Fantasma.</p>
+          </div>
+        )}
+      </>)}
+      {area === "empresas" && (<>
+        <Sub a="emp" opcoes={[["empresas", "Empresas"], ["faturamento", "Faturamento"], ["pagamentos", "Pagamentos"]]} />
+        {aba("emp", "empresas") === "empresas" && <EmpresasDev />}
+        {aba("emp", "empresas") === "faturamento" && <FaturamentoDev />}
+        {aba("emp", "empresas") === "pagamentos" && <PagamentosDev />}
+      </>)}
+      {area === "pessoas" && <UsuariosDev />}
+      {area === "dados" && <ExploradorDev />}
+      {area === "auditoria" && (<>
+        <Sub a="aud" opcoes={[["dev", "Registro do Dev"], ["exclusoes", "Exclusões"], ["conversas", "Conversas"]]} />
+        {aba("aud", "dev") === "dev" && <RegistroDev />}
+        {aba("aud", "dev") === "conversas" && <ConversasDev />}
+        {aba("aud", "dev") === "exclusoes" && (painel && painel.exclusoes.length ? (
+          <table className="dev-tabela">
+            <thead><tr><th>O quê</th><th>Por</th><th>Quando</th><th>Motivo</th></tr></thead>
+            <tbody>{painel.exclusoes.map((x, i) => (
+              <tr key={i}><td>{x.tipo === "conta" ? "Conta" : "Corrida"} {x.rotulo}</td><td>{x.por ?? "—"}</td><td>{new Date(x.quando).toLocaleString("pt-BR")}</td><td>{x.motivo ?? "—"}</td></tr>
+            ))}</tbody>
+          </table>) : <p className="vazio">Nada apagado até agora.</p>)}
+      </>)}
+      {area === "novidades" && <NovidadesDev />}
+      {area === "conta" && <MinhaContaDev oculto={oculto} onMudou={lerOculto} />}
+    </div>
   );
 }
-

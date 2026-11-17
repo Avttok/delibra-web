@@ -1,5 +1,7 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Crosshair, Eye, EyeOff, Maximize2, Minus, Plus, X } from "lucide-react";
 import { maplibregl } from "@/lib/mapa/maplibre";
@@ -81,6 +83,7 @@ function linhas(partes: [number, number][][]) {
 
 /** Mapa genérico das telas de corrida: paradas numeradas, rota planejada, trilha real e motoboys. */
 export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos, motoboys = [], aoClicar, modoEscolha, enquadrar, foco, rotas = [], caminhoAuto = true, restanteDe, legenda = true, maximizavel = true, titulo, painelCheio, onCheio, vias, onMoverVia, onTirarVia, onArrastarLinha }: Props) {
+  const contaH = useConta();
   const [cheio, setCheioBase] = useState(false);
   const setCheio = (v: boolean) => { setCheioBase(v); onCheio?.(v); };
   // sem rota pronta: traça o caminho pelas ruas entre as paradas, na ordem
@@ -376,7 +379,7 @@ export function MapaCorridas({ paradas = [], rotaPlanejada, trilha = [], pedacos
         </div>
       )}
       {cheio && painelCheio && <div className="mapa-cheia-painel vidro">{painelCheio}</div>}
-      {temPlano && (
+      {temPlano && contaH.modulo("rota_planejada") && (
         <button type="button" className={`mapa-botao mapa-botao-plano${verPlano ? " ativo" : ""}`} aria-pressed={verPlano}
           title={verPlano ? "Esconder a rota planejada" : "Mostrar a rota planejada"} onClick={() => trocarPlano(!verPlano)}>
           {verPlano ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />} <span>Rota planejada</span>

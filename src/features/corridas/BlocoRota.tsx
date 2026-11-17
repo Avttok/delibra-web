@@ -1,5 +1,7 @@
 "use client";
 
+import { useConta } from "@/features/conta/conta";
+
 import { useEffect, useState } from "react";
 import { Dica } from "@/features/ui/Tour";
 import Link from "next/link";
@@ -109,6 +111,7 @@ function ContaMotoboyBase({ calc }: { calc: CalculoPagamento }) {
 
 /** Peças da rota automática no detalhe: pedidos, liberar, mover entregas e o pagamento do motoboy. */
 export function BlocoRota({ corrida, equipe }: { corrida: Corrida; equipe: MembroEquipe[] }) {
+  const contaB = useConta();
   const [pedidos, setPedidos] = useState<{ id: string; numero: number; cliente: string }[]>([]);
   const [abertas, setAbertas] = useState<{ id: string; numero: number }[]>([]);
   const [motoboy, setMotoboy] = useState("");
@@ -200,7 +203,7 @@ export function BlocoRota({ corrida, equipe }: { corrida: Corrida; equipe: Membr
             </select>
             <button className="botao-texto" disabled={!motoboy} onClick={() => liberar(null, motoboy)}><Send size={15} aria-hidden /> Enviar oferta</button>
           </div>
-          {!corrida.agendada_para && equipe.some((m) => m.status === "em_corrida" && m.modo_teste === corrida.teste) && (
+          {!corrida.agendada_para && contaB.modulo("extensao_rota") && equipe.some((m) => m.status === "em_corrida" && m.modo_teste === corrida.teste) && (
             <>
               <span className="rotulo" style={{ marginTop: 6 }}><Route size={12} aria-hidden /> Estender a rota de quem já está em corrida
                 <Dica titulo="Extensão de rota" texto="As paradas desta rota entram no fim da rota que o motoboy já está fazendo. Pedindo, ele recebe a oferta e decide; direto, a rota dele já aumenta. O ganho dele nunca diminui por isso (Configurações → Extensão de rota)." /></span>

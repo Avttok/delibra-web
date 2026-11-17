@@ -10,6 +10,7 @@ import { definirMarcaEmpresa, ehPw, useMarcaEmpresa } from "@/features/marca/mar
 import { BotaoTema } from "@/features/tema/BotaoTema";
 import { Toasts } from "@/features/ui/toast";
 import { CriarConta } from "./CriarConta";
+import { AvisosDev, BotaoNovidades } from "@/features/dev/AvisosDev";
 
 interface Acesso {
   tipo: "cliente" | "gestor" | "cadastro" | "nenhum";
@@ -116,6 +117,7 @@ export function AreaCliente({ children }: { children: ReactNode }) {
         {a.teste && <span className="selo selo-teste"><FlaskConical size={12} aria-hidden /> Teste</span>}
         {!comoGestor && <TrocarTransportadora />}
         <span className="cliente-ola">Olá, <strong>{(a.nome ?? "").split(" ")[0]}</strong></span>
+        <BotaoNovidades />
         <BotaoTema />
         <button className="botao-texto" onClick={() => sair()} title="Sair"><LogOut size={16} aria-hidden /> Sair</button>
       </header>
@@ -128,6 +130,7 @@ export function AreaCliente({ children }: { children: ReactNode }) {
           <button className="botao-texto" onClick={() => escolherCliente("")}>Sair do modo cliente</button>
         </div>
       )}
+      <AvisosDev />
       <main className="cliente-corpo" key={versao}>{children}</main>
       {ehPw(marca) && <footer className="rodape">
         Um projeto de irmão para irmão! <Heart size={13} aria-label="com amor" className="coracao" fill="currentColor" />

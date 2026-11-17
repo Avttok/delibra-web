@@ -26,6 +26,7 @@ import { useEtapa } from "@/features/ui/useEtapa";
 type Visao = { tipo: "lista" } | { tipo: "nova" } | { tipo: "historico" } | { tipo: "detalhe"; id: string };
 
 export function PainelCorridas() {
+  const contaH = useConta();
   const { corridas: todasCorridas, ofertas, erro, carregou } = useCorridas();
   // modo teste: só corridas de teste; fora dele, só as reais
   const { teste } = useModoTeste();
@@ -130,7 +131,7 @@ export function PainelCorridas() {
         </div>
         <label className="busca-mini"><Search size={14} aria-hidden /><input placeholder="Nº, motoboy, cliente, endereço…" value={buscaRota} onChange={(e) => setBuscaRota(e.target.value)} /></label>
         <div className="linha-botoes">
-          <button className="botao-vidro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "historico" })}><History size={16} aria-hidden /> Histórico de rotas</button>
+          {contaH.modulo("historico_rotas") && <button className="botao-vidro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "historico" })}><History size={16} aria-hidden /> Histórico de rotas</button>}
           {criarRota && <button className="botao-ouro" style={{ flex: 1 }} onClick={() => setVisao({ tipo: "nova" })}><Plus size={17} aria-hidden /> Corrida avulsa</button>}
           {conta.modulo("excluir_corridas") && <button className="botao-texto" onClick={() => (selecionando ? sairSelecao() : setSelecionando(true))} title="Selecionar para apagar">
             {selecionando ? <X size={16} aria-hidden /> : <CheckSquare size={16} aria-hidden />} {selecionando ? "Cancelar" : "Selecionar"}

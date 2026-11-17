@@ -48,7 +48,7 @@ interface Conta {
   confirmacoes?: Partial<Record<Confirmacao, boolean>>; padrao_confirmacoes?: Partial<Record<Confirmacao, boolean>>;
   pode_janela?: boolean; pode_objetos?: boolean; modelo_horario?: boolean;
   /** Controles do gestor (geral e por cliente). */
-  pode_agendar?: boolean; pode_urgente?: boolean; edita_pedido?: boolean; escolhe_veiculo?: boolean; veiculos_aceitos?: string[] | null; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
+  pode_agendar?: boolean; pode_urgente?: boolean; edita_pedido?: boolean; pode_pedir?: boolean; edita_aprovado?: boolean; tour?: boolean; escolhe_veiculo?: boolean; veiculos_aceitos?: string[] | null; max_entregas?: number | null; max_coletas?: number | null; agendar_max_dias?: number | null;
   pode_ida_volta?: boolean; coleta_fixa?: boolean; pode_observacoes?: boolean; ve_faturas?: boolean; pode_chat?: boolean;
   pedido_de?: string | null; pedido_ate?: string | null; modo_distancia?: string;
   /** O que aparece da rota no mapa: feito, restante, motoboy, planejada, outras_paradas. */
@@ -101,9 +101,15 @@ export function PainelCliente() {
 
   const carregar = useCallback(async () => {
     const sb = supabase();
-    const [c, p, f, r] = await Promise.all([sb.rpc("minha_conta_cliente"), sb.rpc("meus_pedidos_cliente", { p_dias: 400 }), sb.rpc("minhas_faturas"), sb.rpc("meus_rotulos")]);
+    const [c, p, f, r, eu] = await Promise.all([sb.rpc("minha_conta_cliente"), sb.rpc("meus_pedidos_cliente", { p_dias: 400 }), sb.rpc("minhas_faturas"), sb.rpc("meus_rotulos"), sb.rpc("meu_perfil")]);
     if (!r.error) aplicarRotulos(r.data as Record<string, string>);
-    setConta((c.data as Conta | null) ?? null);
+    // módulos e permissões especiais que o Dev definiu para este cliente
+    const perfil = eu.data as { modulos?: Record<string, boolean>; configuracoes?: Record<string, unknown> } | null;
+    const m = perfil?.modulos ?? {};
+    const cc = c.data as Conta | null;
+    setConta(cc ? { ...cc, pode_pedir: m.pedidos !== false, pode_urgente: cc.pode_urgente !== false && m.pedido_urgente !== false,
+      edita_pedido: cc.edita_pedido !== false && m.editar_pedido !== false, edita_aprovado: perfil?.configuracoes?.especial_cliente_edita_aprovado === true,
+      pode_rastreio: Boolean(cc.pode_rastreio) && m.rastreio !== false, pode_avaliar: Boolean(cc.pode_avaliar) && m.avaliacoes !== false, tour: m.tour !== false, pode_objetos: cc.pode_objetos !== false && m.objetos_cliente !== false } : null);
     setPedidos((p.data as PedidoC[] | null) ?? []);
     setFaturas((f.data as FaturaC[] | null) ?? []);
   }, []);
@@ -142,12 +148,12 @@ export function PainelCliente() {
           <span><b>{pedidos.length}</b><small>pedidos</small></span>
           {conta.ve_faturas !== false && <span><b>{abertas.length}</b><small>{conta.cobranca === "credito" ? "faturas abertas" : "a pagar"}</small></span>}
         </div>
-        <button className="botao-ouro" onClick={() => { setAba("novo"); setAberto(null); }}><PackagePlus size={17} aria-hidden /> Novo pedido</button>
+        {conta.pode_pedir !== false && <button className="botao-ouro" onClick={() => { setAba("novo"); setAberto(null); }}><PackagePlus size={17} aria-hidden /> Novo pedido</button>}
       </div>
-      <Tour id="cliente" passos={TOUR_CLIENTE} />
+      {conta.tour !== false && <Tour id="cliente" passos={TOUR_CLIENTE} />}
       <div className="segmentado abas-cliente">
         {([["pedidos", "Pedidos", Package], ["novo", "Novo pedido", PackagePlus], ["faturas", conta.cobranca === "credito" ? "Faturas" : "Pagamentos", Receipt], ["chat", "Conversa", MessagesSquare], ["conta", "Minha conta", Building2]] as [Aba, string, typeof Package][])
-          .filter(([k]) => (k !== "faturas" || conta.ve_faturas !== false) && (k !== "chat" || conta.pode_chat === true)).map(([k, r, I]) => (
+          .filter(([k]) => (k !== "novo" || conta.pode_pedir !== false) && (k !== "faturas" || conta.ve_faturas !== false) && (k !== "chat" || conta.pode_chat === true)).map(([k, r, I]) => (
           <button key={k} type="button" data-tour={`aba-${k}`} className={aba === k ? "ativo" : ""} onClick={() => { setAba(k); setAberto(null); setEditando(null); }}>
             <I size={14} aria-hidden /> {r}{k === "faturas" && abertas.length > 0 && <span className="filtro-n">{abertas.length}</span>}
           </button>
@@ -348,7 +354,7 @@ function DetalhePedido({ pedido: p, conta, onVoltar, onMudou, onEditar }: { pedi
         </p>
         {conta.pode_rastreio && !["cancelado", "recusado"].includes(p.status) && <BotaoRastreio pedidoId={p.id} />}
         {conta.pode_avaliar && p.status === "concluido" && <AvaliarPedido pedidoId={p.id} />}
-        {conta.edita_pedido !== false && p.status === "recebido" && <button className="botao-vidro" onClick={onEditar}><Pencil size={15} aria-hidden /> Editar pedido</button>}
+        {conta.edita_pedido !== false && (p.status === "recebido" || (conta.edita_aprovado && ["aprovado", "roteirizado"].includes(p.status))) && <button className="botao-vidro" onClick={onEditar}><Pencil size={15} aria-hidden /> Editar pedido</button>}
         {podeCancelar && <button className="botao-perigo" onClick={cancelar}><X size={15} aria-hidden /> Cancelar pedido</button>}
       </div>
     </div>
