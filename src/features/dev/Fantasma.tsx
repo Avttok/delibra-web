@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, CircleHelp, Copy, Ghost, History, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, CircleHelp, Copy, Ghost, History, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
 import { useConta } from "@/features/conta/conta";
@@ -344,25 +344,59 @@ export function ExplicarDev({ catalogo }: { catalogo: ChaveDev[] }) {
   );
 }
 
-/** Matriz pessoa × permissão de uma empresa, com o porquê de cada célula. Clique muda só para aquela pessoa. */
+interface LinhaMatriz { id: string; nome: string; papeis: string[]; cargo: string | null; cliente: string | null; valores: Record<string, Explicacao> }
+
+/**
+ * Matriz pessoa × permissão de uma empresa, com o porquê de cada célula. Muda ali mesmo:
+ * sim/não com um toque, números e opções na própria célula, ↺ volta ao que vinha antes. No topo da coluna, vale para a empresa toda.
+ */
 export function MatrizDev() {
   const catalogo = useCatalogo();
   const { empresas } = useAlvos();
   const [org, setOrg] = useState("");
-  const [chaves, setChaves] = useState<string[]>(["modulo:pedidos", "modulo:carteira", "modulo:chat", "acao:criar_contas", "acao:ver_carteira", "especial_ignora_local", "especial_cliente_edita_aprovado"]);
-  const [linhas, setLinhas] = useState<{ id: string; nome: string; papeis: string[]; cargo: string | null; cliente: string | null; valores: Record<string, Explicacao> }[] | null>(null);
+  const [chaves, setChaves] = useState<string[]>(["modulo:pedidos", "modulo:carteira", "modulo:chat", "acao:criar_contas", "dev_criar_rota_manual", "especial_ignora_local", "especial_cliente_edita_aprovado"]);
+  const [linhas, setLinhas] = useState<LinhaMatriz[] | null>(null);
+  const [regras, setRegras] = useState<Regra[]>([]);
   const [carregando, setCarregando] = useState(false);
-  const [editando, setEditando] = useState<Regra | null>(null);
+  const [salvando, setSalvando] = useState<string | null>(null);
+  const [editando, setEditando] = useState<{ pessoa: string; chave: string; valor: string } | null>(null);
+  const [avancado, setAvancado] = useState<Regra | null>(null);
   const [mais, setMais] = useState("");
   const montar = useCallback(async () => {
     if (!org) return;
     setCarregando(true);
-    const { data, error } = await supabase().rpc("dev_matriz", { p_org: org, p_chaves: chaves });
+    const sb = supabase();
+    const [m, r] = await Promise.all([sb.rpc("dev_matriz", { p_org: org, p_chaves: chaves }), sb.rpc("dev_regras")]);
     setCarregando(false);
-    if (error) return toast(erroDev(error.message), "erro");
-    setLinhas(data as typeof linhas);
+    if (m.error) return toast(erroDev(m.error.message), "erro");
+    setLinhas(m.data as LinhaMatriz[]);
+    setRegras((r.data ?? []) as Regra[]);
   }, [org, chaves]);
   useEffect(() => { void montar(); }, [montar]);
+
+  const regraDe = (escopo: Escopo, alvo: string, chave: string) => regras.find((r) => r.escopo === escopo && r.alvo === alvo && r.chave === chave);
+  async function gravar(escopo: Escopo, alvo: string, nomeAlvo: string, chave: string, valor: unknown, celula: string) {
+    setSalvando(celula);
+    const atual = regraDe(escopo, alvo, chave);
+    const p = atual ? { ...atual, valor, ativo: true } : { ...VAZIA, chave, escopo, alvo, valor, porque: escopo === "pessoa" ? `Mudado na matriz para ${nomeAlvo}` : `Mudado na matriz para a empresa` };
+    const { error } = await supabase().rpc("dev_salvar_regra", { p });
+    setSalvando(null);
+    if (error) return toast(erroDev(error.message), "erro", { titulo: "Não salvou" });
+    toast(`${rotuloChave(catalogo, chave)}: ${mostrarValor(valor)} para ${nomeAlvo}.`, "ok");
+    void montar();
+  }
+  async function tirar(escopo: Escopo, alvo: string, chave: string, celula: string) {
+    const atual = regraDe(escopo, alvo, chave);
+    if (!atual?.id) return;
+    setSalvando(celula);
+    const { error } = await supabase().rpc("dev_apagar_regra", { p_id: atual.id });
+    setSalvando(null);
+    if (error) return toast(erroDev(error.message), "erro");
+    toast("Voltou ao que vinha antes.", "ok");
+    void montar();
+  }
+  const nomeOrg = empresas.find((e) => e.id === org)?.nome ?? "a empresa";
+
   return (
     <div className="matriz-dev">
       <div className="modulos-barra">
@@ -373,22 +407,66 @@ export function MatrizDev() {
         </select>
         {carregando && <span className="dica">Calculando…</span>}
       </div>
-      {!org ? <p className="vazio">Escolha uma empresa para ver o que cada pessoa (equipe e clientes) pode, e por quê.</p> : linhas && (
+      {!org ? <p className="vazio">Escolha uma empresa para ver o que cada pessoa (equipe e clientes) pode, e por quê.</p> : linhas && (<>
+        <p className="dica">Toque numa célula para mudar só para aquela pessoa. No topo da coluna, muda para {nomeOrg} inteira. ↺ volta ao que vinha antes. Vale na hora, no site e no app.</p>
         <div className="matriz-rolagem">
           <table className="dev-tabela matriz">
-            <thead><tr><th>Pessoa</th>{chaves.map((k) => <th key={k}><span>{rotuloChave(catalogo, k)}</span><button className="botao-texto" aria-label="Tirar coluna" onClick={() => setChaves(chaves.filter((x) => x !== k))}><X size={12} aria-hidden /></button></th>)}</tr></thead>
+            <thead><tr><th>Pessoa</th>{chaves.map((k) => {
+              const def = catalogo.find((c) => c.chave === k);
+              const daEmpresa = regraDe("empresa", org, k);
+              const bool = !def || def.valor === "booleano";
+              return (
+                <th key={k}>
+                  <div className="matriz-col">
+                    <span>{rotuloChave(catalogo, k)}</span>
+                    <button className="botao-texto" title="Tirar coluna" aria-label="Tirar coluna" onClick={() => setChaves(chaves.filter((x) => x !== k))}><X size={12} aria-hidden /></button>
+                  </div>
+                  {bool && <div className="matriz-empresa" aria-label={`${rotuloChave(catalogo, k)} para a empresa toda`}>
+                    <button className={daEmpresa?.valor === true ? "ativo" : ""} title={`Sim para ${nomeOrg}`} disabled={salvando !== null} onClick={() => void gravar("empresa", org, nomeOrg, k, true, `e:${k}`)}><Check size={12} aria-hidden /></button>
+                    <button className={daEmpresa?.valor === false ? "ativo" : ""} title={`Não para ${nomeOrg}`} disabled={salvando !== null} onClick={() => void gravar("empresa", org, nomeOrg, k, false, `e:${k}`)}><X size={12} aria-hidden /></button>
+                    {daEmpresa && <button title="Tirar a regra da empresa" disabled={salvando !== null} onClick={() => void tirar("empresa", org, k, `e:${k}`)}><RotateCcw size={12} aria-hidden /></button>}
+                  </div>}
+                </th>
+              );
+            })}</tr></thead>
             <tbody>{linhas.map((l) => (
               <tr key={l.id}>
                 <td><strong>{l.nome}</strong><span className="dica">{l.cliente ? `cliente · ${l.cliente}` : l.cargo ?? l.papeis.join(", ")}</span></td>
                 {chaves.map((k) => {
                   const c = l.valores[k];
+                  const def = catalogo.find((x) => x.chave === k);
+                  const bool = typeof c?.valor === "boolean" || !def || def.valor === "booleano";
+                  const celula = `${l.id}:${k}`;
+                  const propria = regraDe("pessoa", l.id, k);
+                  const aqui = editando?.pessoa === l.id && editando.chave === k;
                   return (
                     <td key={k}>
-                      <button type="button" className={`celula ${c?.valor === true ? "sim" : c?.valor === false ? "nao" : ""} fonte-${c?.fonte}`} title={`${c?.motivo ?? ""} — clique para mudar só para ${l.nome}`}
-                        onClick={() => setEditando({ ...VAZIA, chave: k, escopo: "pessoa", alvo: l.id, alvo_nome: l.nome, valor: typeof c?.valor === "boolean" ? !c.valor : c?.valor ?? true })}>
-                        {c?.valor === true ? <Check size={14} aria-hidden /> : c?.valor === false ? <X size={14} aria-hidden /> : mostrarValor(c?.valor)}
+                      <div className={`celula ${c?.valor === true ? "sim" : c?.valor === false ? "nao" : ""} fonte-${c?.fonte}${salvando === celula ? " salvando" : ""}`}>
+                        {aqui ? (
+                          <div className="celula-editar">
+                            {def?.valor === "opcoes" && def.opcoes ? (
+                              <select autoFocus value={editando.valor} onChange={(e) => setEditando({ ...editando, valor: e.target.value })}>{def.opcoes.map((o) => <option key={String(o.valor)} value={String(o.valor)}>{o.rotulo}</option>)}</select>
+                            ) : (
+                              <input autoFocus type={def?.valor === "numero" ? "number" : "text"} value={editando.valor} onChange={(e) => setEditando({ ...editando, valor: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget.nextElementSibling as HTMLButtonElement | null)?.click(); if (e.key === "Escape") setEditando(null); }} />
+                            )}
+                            <button className="botao-icone" aria-label="Salvar" onClick={() => {
+                              const v = def?.valor === "numero" ? Number(editando.valor) : def?.opcoes?.find((o) => String(o.valor) === editando.valor)?.valor ?? editando.valor;
+                              setEditando(null); void gravar("pessoa", l.id, l.nome, k, v, celula);
+                            }}><Check size={14} aria-hidden /></button>
+                          </div>
+                        ) : (
+                          <button type="button" className="celula-valor" disabled={salvando !== null} title={`${c?.motivo ?? ""} — toque para mudar só para ${l.nome}`}
+                            onClick={() => bool ? void gravar("pessoa", l.id, l.nome, k, !(c?.valor === true), celula) : setEditando({ pessoa: l.id, chave: k, valor: String(c?.valor ?? "") })}>
+                            {salvando === celula ? <span className="dica">Salvando…</span> : c?.valor === true ? <Check size={15} aria-hidden /> : c?.valor === false ? <X size={15} aria-hidden /> : <strong>{mostrarValor(c?.valor)}</strong>}
+                          </button>
+                        )}
                         <small>{c?.motivo}</small>
-                      </button>
+                        <span className="celula-acoes">
+                          {propria && <button type="button" title="Voltar ao que vinha antes" aria-label="Voltar ao que vinha antes" disabled={salvando !== null} onClick={() => void tirar("pessoa", l.id, k, celula)}><RotateCcw size={12} aria-hidden /></button>}
+                          <button type="button" title="Mais opções (dias, horário, validade, porquê)" aria-label="Mais opções" onClick={() => setAvancado(propria ?? { ...VAZIA, chave: k, escopo: "pessoa", alvo: l.id, alvo_nome: l.nome, valor: typeof c?.valor === "boolean" ? !c.valor : c?.valor ?? true })}><Pencil size={12} aria-hidden /></button>
+                        </span>
+                      </div>
                     </td>
                   );
                 })}
@@ -396,8 +474,8 @@ export function MatrizDev() {
             ))}</tbody>
           </table>
         </div>
-      )}
-      {editando && <EditorRegra inicial={editando} catalogo={catalogo} onFechar={() => setEditando(null)} onSalvou={() => { setEditando(null); void montar(); }} />}
+      </>)}
+      {avancado && <EditorRegra inicial={avancado} catalogo={catalogo} onFechar={() => setAvancado(null)} onSalvou={() => { setAvancado(null); void montar(); }} />}
     </div>
   );
 }

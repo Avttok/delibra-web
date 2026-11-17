@@ -23,6 +23,9 @@ for (const [w, h, n] of (process.env.TAMS ?? "390x844m,1280x800d").split(",").ma
     if (u.includes("rpc/is_gestor")) return json(true);
     if (u.includes("rpc/meu_perfil")) return json(perfil);
     if (u.includes("rpc/minhas_permissoes")) return json({ dev: perfil.dev, ajustes: {}, acoes: {} });
+    if (u.includes("rpc/dev_matriz")) return json([{ id: "p1", nome: "Ana Gestora", papeis: ["gestor"], cargo: null, cliente: null, valores: Object.fromEntries(JSON.parse(r.request().postData() ?? "{}").p_chaves.map((k, i) => [k, { valor: i % 3 === 0 ? true : i % 3 === 1 ? false : 30, fonte: i === 1 ? "regra" : "padrao", motivo: i === 1 ? "Regra do Dev (só esta pessoa)" : "Liberado (padrão)" }])) }]);
+    if (u.includes("rpc/dev_regras")) return json([]);
+    if (u.includes("/rest/v1/organizacoes")) return json([{ id: "o1", nome: "PW Express" }]);
     if (u.includes("/rpc/")) return json(null);
     return json([]);
   });
@@ -32,6 +35,7 @@ for (const [w, h, n] of (process.env.TAMS ?? "390x844m,1280x800d").split(",").ma
   for (const rota of rotas) {
     await p.goto("http://localhost:3100" + rota, { waitUntil: "networkidle" }).catch(() => {});
     await p.waitForTimeout(1500);
+    if (process.env.ACAO) { await eval(process.env.ACAO); await p.waitForTimeout(1200); }
     const info = await p.evaluate(() => {
       const W = window.innerWidth;
       const fora = [...document.querySelectorAll("body *")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > W + 2 || r.left < -2); }).slice(0, 8)

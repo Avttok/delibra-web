@@ -2444,3 +2444,19 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .minha-conta-dev > section { display: flex; flex-direction: column; gap: 8px; }
 .linha-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-2); cursor: pointer; }
 .modal-mudo { position: absolute; top: 14px; right: 62px; display: inline-flex; align-items: center; gap: 6px; }
+.matriz-col { display: flex; align-items: flex-start; gap: 4px; }
+.matriz-empresa { display: inline-flex; gap: 2px; margin-top: 6px; padding: 2px; border-radius: 9px; border: 1px solid var(--borda); background: var(--vidro-sutil); }
+.matriz-empresa button { display: grid; place-items: center; width: 26px; height: 24px; border-radius: 7px; border: 0; background: none; color: var(--texto-2); cursor: pointer; }
+.matriz-empresa button.ativo { background: color-mix(in srgb, var(--cor-dev) 18%, transparent); color: var(--texto); }
+.celula { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 130px; padding: 6px 8px; border-radius: 9px; border: 1px solid transparent; position: relative; }
+.celula-valor { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--vidro-sutil); color: var(--texto); font: inherit; cursor: pointer; }
+.celula-valor:hover:not(:disabled) { border-color: var(--borda-forte); }
+.celula.sim .celula-valor { color: var(--verde); } .celula.nao .celula-valor { color: var(--vermelho); }
+.celula.salvando { opacity: 0.6; }
+.celula-editar { display: flex; gap: 4px; align-items: center; }
+.celula-editar input, .celula-editar select { width: 110px; height: 30px; padding: 0 8px; }
+.celula-editar .botao-icone { width: 30px; height: 30px; }
+.celula-acoes { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; }
+.celula-acoes button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; border: 0; background: none; color: var(--texto-3); cursor: pointer; }
+.celula-acoes button:hover { color: var(--texto); background: var(--vidro-sutil); }
+.matriz-col .botao-texto { padding: 2px; border: 0; background: none; box-shadow: none; min-height: 0; color: var(--texto-3); }
