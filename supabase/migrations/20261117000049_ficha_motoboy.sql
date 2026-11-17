@@ -26,3 +26,34 @@ begin
 end;
 $$;
 grant execute on function public.minha_ficha_rota(uuid) to authenticated;
+
+create or replace function public.salvar_ajuste(p_chave text, p_valor jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+declare v_org uuid := public.minha_org();
+begin
+  if not public.is_gestor() or not public.pode('ajustes') then raise exception 'sem_permissao' using errcode = '42501'; end if;
+  if p_chave is null or p_chave !~ '^[a-z0-9_]{2,60}$' then raise exception 'chave_invalida' using errcode = '22023'; end if;
+  if not public.is_dev() and privado.nivel_ajuste(v_org, p_chave) <> 'editar' then raise exception 'ajuste_bloqueado' using errcode = '42501'; end if;
+  if public.is_dev() and v_org is not null and p_chave = any (array['dev_criar_rota_manual']) then
+    insert into public.politicas (escopo, alvo, chave, valor, atualizado_em, atualizado_por)
+    values ('organizacao', v_org::text, p_chave, p_valor, now(), auth.uid())
+    on conflict (escopo, alvo, chave) do update set valor = excluded.valor, atualizado_em = now(), atualizado_por = auth.uid();
+    return;
+  end if;
+  if p_chave ~ '^(app_|dev_|saas_)' or v_org is null then
+    if not public.is_dev() then raise exception 'apenas_dev' using errcode = '42501'; end if;
+    insert into public.configuracoes (chave, valor, atualizado_em, atualizado_por) values (p_chave, p_valor, now(), auth.uid())
+    on conflict (chave) do update set valor = excluded.valor, atualizado_em = now(), atualizado_por = auth.uid();
+    return;
+  end if;
+  insert into public.politicas (escopo, alvo, chave, valor, atualizado_em, atualizado_por)
+  values ('organizacao', v_org::text, p_chave, p_valor, now(), auth.uid())
+  on conflict (escopo, alvo, chave) do update set valor = excluded.valor, atualizado_em = now(), atualizado_por = auth.uid();
+end;
+$$;
+create or replace function public.ajustes()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select coalesce((select jsonb_object_agg(chave, valor) from public.configuracoes), '{}'::jsonb)
+      || coalesce((select jsonb_object_agg(chave, valor) from public.politicas
+                    where escopo = 'organizacao' and alvo = public.minha_org()::text and (chave !~ '^(app_|dev_|saas_)' or chave = any (array['dev_criar_rota_manual']))), '{}'::jsonb);
+$$;
