@@ -90,3 +90,7 @@ select case when (select status from public.organizacoes where id = :'ob') = 'at
              and exists (select 1 from jsonb_array_elements(public.dev_registro(200)) r where r ->> 'area' = 'organizacoes') then 'OK emergência anotada no registro do Dev' else 'FALHA registro' end;
 select set_config('request.uid','00000000-0000-0000-0000-0000000000a1',false) \g /dev/null
 select case when (select count(*) from public.registro_dev) = 0 then 'OK registro do Dev invisível ao gestor' else 'FALHA registro vazou' end;
+-- 13. novidades pelo app do Dev
+select set_config('request.uid','00000000-0000-0000-0000-0000000000d1',false) \g /dev/null
+select public.dev_salvar_novidade('{"versao":"Lote 99","area":"gestor","titulo":"Teste"}') as nv \gset
+select case when exists (select 1 from jsonb_array_elements(public.dev_novidades()) n where n ->> 'id' = :'nv') then 'OK novidade criada pelo app' else 'FALHA novidade app' end;
