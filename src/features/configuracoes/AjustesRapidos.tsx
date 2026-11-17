@@ -26,8 +26,9 @@ export function AjustesRapidos({ grupos = [], chaves = [], titulo = "Ajustes des
   if (!conta.dev && !perm.pode("ajustes")) return null;
   return (
     <>
-      <button type="button" className="botao-vidro pequeno ajustes-rapidos-botao" onClick={() => setAberto(true)} title={titulo}>
-        <Settings2 size={14} aria-hidden /> {rotulo}
+      {/* só o ícone: o nome aparece ao passar o mouse e para leitores de tela */}
+      <button type="button" className="botao-icone ajustes-rapidos-botao" onClick={() => setAberto(true)} title={titulo} aria-label={`${rotulo}: ${titulo}`}>
+        <Settings2 size={17} aria-hidden />
       </button>
       {aberto && <JanelaAjustes grupos={grupos} chaves={chaves} titulo={titulo} onFechar={() => setAberto(false)} />}
     </>

@@ -2443,3 +2443,4 @@ span.avatar::before, span.avatar::after { content: none !important; }
 .minha-conta-dev { display: flex; flex-direction: column; gap: 22px; }
 .minha-conta-dev > section { display: flex; flex-direction: column; gap: 8px; }
 .linha-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-2); cursor: pointer; }
+.modal-mudo { position: absolute; top: 14px; right: 62px; display: inline-flex; align-items: center; gap: 6px; }

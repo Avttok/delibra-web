@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Activity, ArrowLeft, Building2, Database, Ghost, History, Megaphone, Radar, ScrollText, Settings2, ShieldCheck, ToggleRight, UserRound, Users } from "lucide-react";
+import { Activity, ArrowLeft, Building2, Database, Ghost, History, Megaphone, Radar, Settings2, ShieldCheck, ToggleRight, UserRound, Users } from "lucide-react";
 import { ModoDev } from "./ModoDev";
 import { useConta } from "@/features/conta/conta";
 
@@ -72,7 +72,7 @@ export function AreaDev({ children, nome }: { children: ReactNode; nome: string 
           </div>
           <span className="espaco" />
           <ModoDev />
-          <Link href="/gestor/configuracoes" className="botao-texto"><ScrollText size={15} aria-hidden /> Ajustes</Link>
+          <Link href="/gestor/configuracoes" className="botao-icone" title="Todos os ajustes" aria-label="Todos os ajustes"><Settings2 size={17} aria-hidden /></Link>
         </header>
         <main className="dev-corpo">{children}</main>
       </div>

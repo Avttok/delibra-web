@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Hand, LockOpen, UserX, X } from "lucide-react";
+import { Check, Hand, LockOpen, UserX, VolumeX, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/features/ui/toast";
 
@@ -139,6 +139,8 @@ export function ChamadoUrgente() {
   const [fila, setFila] = useState<Chamado[]>([]);
   const dispensados = useRef(new Set<string>());
   const avisados = useRef(new Set<string>());
+  // silenciar: para o som deste pedido (a janela continua até responder)
+  const [mudos, setMudos] = useState<string[]>([]);
   const router = useRouter();
   const carregar = useCallback(async () => {
     const { data } = await supabase().rpc("chamados_abertos");
@@ -148,7 +150,7 @@ export function ChamadoUrgente() {
   const atual = fila[0];
   useEffect(() => {
     if (!atual) return;
-    const parar = tocarAlarme();
+    const parar = mudos.includes(atual.id) ? () => {} : tocarAlarme();
     if (!avisados.current.has(atual.id)) {
       avisados.current.add(atual.id);
       try {
@@ -158,13 +160,16 @@ export function ChamadoUrgente() {
       } catch { /* sem notificação do navegador */ }
     }
     return parar;
-  }, [atual?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [atual?.id, mudos.includes(atual?.id ?? "")]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!atual) return null;
   const dispensar = () => { dispensados.current.add(atual.id); setFila((f) => f.slice(1)); };
   return (
     <div className="modal-fundo" role="alertdialog" aria-modal="true" aria-label="Pedido urgente do motoboy">
       <div className="modal modal-perigo">
         <button type="button" className="botao-icone modal-fechar" aria-label="Responder depois" onClick={dispensar}><X size={16} aria-hidden /></button>
+        {!mudos.includes(atual.id) && (
+          <button type="button" className="botao-vidro pequeno modal-mudo" onClick={() => setMudos((m) => [...m, atual.id])}><VolumeX size={15} aria-hidden /> Silenciar</button>
+        )}
         <h2>{ehPular(atual) ? "Liberar parada?" : "Cancelar a rota?"}</h2>
         <RespostaChamado c={atual} onMudou={() => { dispensar(); void carregar(); }} />
         <div className="linha-botoes">
